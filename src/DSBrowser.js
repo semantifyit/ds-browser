@@ -61,7 +61,7 @@ class DSBrowser {
 
     async initDS() {
         if (this.type === BROWSER_TYPES.DS) {
-            this.ds = await this.util.parseToObject(this.vocabOrList);
+            this.ds = await this.util.parseToObject(this.dsOrList);
         } else if (this.type === BROWSER_TYPES.LIST) {
             const searchParams = new URLSearchParams(window.location.search);
             this.dsUID = searchParams.get('ds');
