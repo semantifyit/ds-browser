@@ -1,4 +1,5 @@
 import Util from './Util';
+import DSRenderer from './DSRenderer';
 
 const BROWSER_TYPES = {
     DS: 'DS',
@@ -12,6 +13,7 @@ class DSBrowser {
         this.type = type;
 
         this.util = new Util(this);
+        this.dsRenderer = new DSRenderer(this);
 
         window.addEventListener('popstate', async () => {
             await this.render();
@@ -24,6 +26,10 @@ class DSBrowser {
             + 'alt="Loading Animation" style="margin-top: 6px">';
 
         await this.init();
+
+        if (this.isDSRendering()) {
+            this.dsRenderer.render();
+        }
     }
 
     async init() {
@@ -69,4 +75,12 @@ class DSBrowser {
             }
         }
     }
+
+    isDSRendering() {
+        const searchParams = new URLSearchParams(window.location.search);
+        return ((this.type === BROWSER_TYPES.LIST && searchParams.get('ds')) ||
+            (this.type === BROWSER_TYPES.DS));
+    }
 }
+
+module.exports = DSBrowser;
