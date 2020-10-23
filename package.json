@@ -1,0 +1,22 @@
+{
+  "name": "ds-browser",
+  "version": "0.0.1",
+  "description": "Browser for Domain Specifications",
+  "main": "src/DSBrowser.js",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/YarnSeemannsgarn/ds-browser.git"
+  },
+  "keywords": [
+    "schema.org",
+    "Domain Specification",
+    "SHACL",
+    "semantic web"
+  ],
+  "author": "Jan Schlenker for STI Innsbruck",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/YarnSeemannsgarn/ds-browser/issues"
+  },
+  "homepage": "https://github.com/YarnSeemannsgarn/ds-browser#readme"
+}
