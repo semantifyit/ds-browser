@@ -1,3 +1,5 @@
+import SDOAdapter from 'schema-org-adapter';
+
 import Util from './Util';
 import DSRenderer from './DSRenderer';
 
@@ -74,6 +76,32 @@ class DSBrowser {
                 }
             }
         }
+
+        this.sdoAdapter = new SDOAdapter();
+        const vocabUrls = await this.getVocabUrlsForDS();
+        await this.sdoAdapter.addVocabularies(vocabUrls);
+    }
+
+    /**
+     * Extracts the URLs needed for the SDO-Adapter to handle the data of the given DS
+     * @return {[String]} - The Array of URLs where the vocabularies can be fetched (for the SDO Adapter)
+     */
+    async getVocabUrlsForDS() {
+        let vocabs = [];
+        if (this.ds && this.ds["@graph"][0] && Array.isArray(this.ds["@graph"][0]["ds:usedVocabularies"])) {
+            vocabs = this.ds["@graph"][0]["ds:usedVocabularies"];
+        }
+        if (this.ds && this.ds["@graph"][0] && this.ds["@graph"][0]["schema:schemaVersion"]) {
+            const sdoVersion = this.getSDOVersion();
+            vocabs.push(await this.sdoAdapter.constructSDOVocabularyURL(sdoVersion));
+        }
+        return vocabs;
+    }
+
+    getSDOVersion() {
+        let versionRegex = /.*schema\.org\/version\/([0-9\.]+)\//g;
+        let match = versionRegex.exec(this.ds["@graph"][0]["schema:schemaVersion"]);
+        return match[1];
     }
 
     isDSRendering() {
