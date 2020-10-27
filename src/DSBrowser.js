@@ -1,6 +1,7 @@
 import SDOAdapter from 'schema-org-adapter';
 
 import Util from './Util';
+import DSHandler from './DSHandler';
 import DSRenderer from './DSRenderer';
 
 const BROWSER_TYPES = {
@@ -15,6 +16,7 @@ class DSBrowser {
         this.type = type;
 
         this.util = new Util(this);
+        this.dsHandler = new DSHandler(this);
         this.dsRenderer = new DSRenderer(this);
 
         window.addEventListener('popstate', async () => {

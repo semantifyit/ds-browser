@@ -1,16 +1,24 @@
 class DSRenderer {
     constructor(browser) {
         this.browser = browser;
-        this.util = this.browser.util;
+        this.util = browser.util;
+        this.dsHandler = browser.dsHandler;
     }
 
     render() {
         this.graph = this.browser.ds['@graph'][0];
 
+        // TODO parse path with ds handler
+
         this.browser.elem.innerHTML = '' +
-            '<h1 property="schema:name">' + this.graph['schema:name'] + '</h1>' +
-            '<div property="schema:description">' + this.graph['schema:description'] + '<br><br></div>' +
+            this.createHeader() +
             this.createPropertyTable();
+    }
+
+    createHeader() {
+        return '' +
+            '<h1 property="schema:name">' + this.graph['schema:name'] + '</h1>' +
+            '<div property="schema:description">' + this.graph['schema:description'] + '<br><br></div>';
     }
 
     createPropertyTable() {
