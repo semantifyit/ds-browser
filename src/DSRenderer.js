@@ -94,15 +94,10 @@ class DSRenderer {
                     this.util.dataTypeMapperFromSHACL(name) + '</a><br>');
             } else {
                 name = this.util.rangesToString(name);
+                const newPath = propertyName + '-' + name;
+                const newIRI = this.util.createIriWithQueryParam('path', newPath, '-');
 
-                /**
-                let newUrl = this.dsd.hash + "/";
-                if (glob.dsPath === undefined) {
-                    newUrl = newUrl.concat(propertyName + "/" + name);
-                } else {
-                    newUrl = newUrl.concat(glob.dsPath + "/" + propertyName + "/" + name);
-                }*/
-                html += '<a href="TODO">' + name + '</a><br>';
+                html += '<a href="' + newIRI + '">' + name + '</a><br>';
             }
         });
         return html;

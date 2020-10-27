@@ -131,6 +131,32 @@ class Util {
             return this.prettyPrintIri(ranges); // Is already string
         }
     }
+
+    /**
+     * Create an IRI with the current browser IRI and the given query parameter.
+     * The query parameter can be either set, overwritten, deleted or enhanced.
+     *
+     * @param {string} key - The query parameter key.
+     * @param {string} val - The query parameter values.
+     * @param {string} enhanceSymbol - TODO
+     * @returns {string} The resulting IRI.
+     */
+    createIriWithQueryParam(key, val, enhanceSymbol=null) {
+        const searchParams = new URLSearchParams(window.location.search);
+        if (val && val !== '') {
+            const prevVal = searchParams.get(key);
+            if (prevVal !== null && enhanceSymbol) {
+                searchParams.set(key, prevVal + enhanceSymbol + val);
+            } else {
+                searchParams.set(key, val);
+            }
+        } else {
+             searchParams.delete(key);
+        }
+        const queryString = searchParams.toString();
+        const origin = window.location.protocol + '//' + (window.location.host ? window.location.host : '');
+        return origin + window.location.pathname + (queryString !== '' ? '?' + queryString : '');
+    }
 }
 
 module.exports = Util;
