@@ -151,11 +151,65 @@ class Util {
                 searchParams.set(key, val);
             }
         } else {
-             searchParams.delete(key);
+            searchParams.delete(key);
         }
         const queryString = searchParams.toString();
         const origin = window.location.protocol + '//' + (window.location.host ? window.location.host : '');
         return origin + window.location.pathname + (queryString !== '' ? '?' + queryString : '');
+    }
+
+    /**
+     * Create a HTML JavaScript link that imitates a standard link with the current browser IRI and the given query
+     * parameter.
+     *
+     * @param {string} queryKey - The query parameter key.
+     * @param {string|null} queryVal - The query parameter value.
+     * @param {string|null} enhanceSymbol - TODO
+     * @param {string|null} text - The text of the link.
+     * @param {object|null} attr - The HTML attributes of the link.
+     * @returns {string} The resulting HTML.
+     */
+    createJSLink(queryKey, queryVal, enhanceSymbol = null, text = null, attr = null) {
+        const iri = this.createIriWithQueryParam(queryKey, queryVal, enhanceSymbol);
+        return '' +
+            '<a ' +
+            'class="a-js-link" ' +
+            'href="' + this.escHtml(iri) + '" ' +
+            'onclick="return false;"' +
+            this.createHtmlAttr(attr) + '>' +
+            (text ? this.escHtml(text) : this.escHtml(queryVal)) +
+            '</a>';
+    }
+
+    /**
+     * Escape HTML characters.
+     *
+     * @param {string} chars - The characters that should be escaped.
+     * @returns {string} The escaped characters.
+     */
+    escHtml(chars) {
+        return chars
+            .replace(/&/g, "&amp;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;")
+            .replace(/"/g, "&quot;")
+            .replace(/'/g, "&#039;");
+    }
+
+    /**
+     * Create HTML attributes for elements.
+     *
+     * @param {object|null} attr - The attributes as key-value pairs.
+     * @returns {string} The resulting HTML.
+     */
+    createHtmlAttr(attr) {
+        if (attr) {
+            return Object.entries(attr).map((a) => {
+                return ' ' + this.escHtml(a[0]) + '="' + this.escHtml(a[1]) + '"';
+            }).join('');
+        } else {
+            return '';
+        }
     }
 }
 

@@ -32,6 +32,9 @@ class DSBrowser {
         if (this.isDSRendering()) {
             this.dsRenderer.render();
         }
+
+        this.addJSLinkEventListener();
+        document.body.scrollTop = document.documentElement.scrollTop = 0;
     }
 
     async init() {
@@ -108,6 +111,25 @@ class DSBrowser {
         const searchParams = new URLSearchParams(window.location.search);
         return ((this.type === BROWSER_TYPES.LIST && searchParams.get('ds')) ||
             (this.type === BROWSER_TYPES.DS));
+    }
+
+    /**
+     * Add an 'EventListener' to every JavaScript link in the HTML element.
+     * Depending on the user action, the link will either open a new window or trigger the 'render' method.
+     */
+    addJSLinkEventListener() {
+        const aJSLinks = this.elem.getElementsByClassName('a-js-link');
+
+        for (const aJSLink of aJSLinks) { // forEach() not possible ootb for HTMLCollections
+            aJSLink.addEventListener('click', async (event) => {
+                if (event.ctrlKey) {
+                    window.open(aJSLink.href);
+                } else {
+                    history.pushState(null, null, aJSLink.href);
+                    await this.render();
+                }
+            });
+        }
     }
 }
 

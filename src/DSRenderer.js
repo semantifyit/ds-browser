@@ -91,14 +91,13 @@ class DSRenderer {
             }
             if (this.util.dataTypeMapperFromSHACL(name) !== null) {
                 html += this.util.repairLinksInHTMLCode('<a href="/' + this.util.dataTypeMapperFromSHACL(name) + '">' +
-                    this.util.dataTypeMapperFromSHACL(name) + '</a><br>');
+                    this.util.dataTypeMapperFromSHACL(name) + '</a>');
             } else {
                 name = this.util.rangesToString(name);
                 const newPath = propertyName + '-' + name;
-                const newIRI = this.util.createIriWithQueryParam('path', newPath, '-');
-
-                html += '<a href="' + newIRI + '">' + name + '</a><br>';
+                html += this.util.createJSLink('path', newPath, '-', name);
             }
+            html += '<br>';
         });
         return html;
     }
