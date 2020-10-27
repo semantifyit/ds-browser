@@ -88,10 +88,10 @@ class DSBrowser {
      */
     async getVocabUrlsForDS() {
         let vocabs = [];
-        if (this.ds && this.ds["@graph"][0] && Array.isArray(this.ds["@graph"][0]["ds:usedVocabularies"])) {
-            vocabs = this.ds["@graph"][0]["ds:usedVocabularies"];
+        if (this.ds && this.ds['@graph'][0] && Array.isArray(this.ds['@graph'][0]['ds:usedVocabularies'])) {
+            vocabs = this.ds['@graph'][0]['ds:usedVocabularies'];
         }
-        if (this.ds && this.ds["@graph"][0] && this.ds["@graph"][0]["schema:schemaVersion"]) {
+        if (this.ds && this.ds['@graph'][0] && this.ds['@graph'][0]['schema:schemaVersion']) {
             const sdoVersion = this.getSDOVersion();
             vocabs.push(await this.sdoAdapter.constructSDOVocabularyURL(sdoVersion));
         }
@@ -100,7 +100,7 @@ class DSBrowser {
 
     getSDOVersion() {
         let versionRegex = /.*schema\.org\/version\/([0-9\.]+)\//g;
-        let match = versionRegex.exec(this.ds["@graph"][0]["schema:schemaVersion"]);
+        let match = versionRegex.exec(this.ds['@graph'][0]['schema:schemaVersion']);
         return match[1];
     }
 
