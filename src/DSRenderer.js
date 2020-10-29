@@ -74,15 +74,16 @@ class DSRenderer {
     }
 
     createClassProperty(propertyNode) {
-        const name = this.util.prettyPrintIri(propertyNode['sh:path']);
+        const property = this.browser.sdoAdapter.getProperty(propertyNode['sh:path']);
+        const name = this.util.prettyPrintIri(property.getIRI(true));
         const expectedTypes = this.createExpectedTypes(name, propertyNode['sh:or']);
         const cardinalityCode = this.createCardinality(propertyNode);
+
         return '' +
             '<tr>' +
             '<th class="prop-nam" scope="row">' +
             '<code property="rdfs:label">' +
-            this.util.repairLinksInHTMLCode('<a href="' + this.util.makeURLFromIRI(propertyNode['sh:path']) + '">' +
-                name + '</a>') +
+            this.util.repairLinksInHTMLCode('<a href="' + property.getIRI() + '">' + name + '</a>') +
             '</code>' +
             '</th>' +
             '<td class="prop-ect">' + expectedTypes + '</td>' +

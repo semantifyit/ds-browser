@@ -1,4 +1,3 @@
-
 class DSHandler {
     constructor(browser) {
         this.browser = browser;

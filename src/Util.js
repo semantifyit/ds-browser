@@ -86,13 +86,18 @@ class Util {
 
     repairLinksInHTMLCode(htmlCode) {
         htmlCode = htmlCode.replace(/ href="\//g, ' href="https://schema.org/');
+        let style = '' +
+            'background-position: center right; ' +
+            'background-repeat: no-repeat; ' +
+            'background-size: 10px 10px; ' +
+            'padding-right: 13px; ';
         if (htmlCode.indexOf('href="https://schema.org') === -1 && htmlCode.indexOf('href="http://schema.org') === -1) {
             // No sdo
-            htmlCode = htmlCode.replace(/<a /g, '<a class="outgoingLink" ');
+            style += 'background-image: url(https://raw.githubusercontent.com/YarnSeemannsgarn/ds-browser/main/images/external-link-icon-blue.png);';
         } else {
-            htmlCode = htmlCode.replace(/<a /g, '<a class="outgoingLinkRed" ');
+            style += 'background-image: url(https://raw.githubusercontent.com/YarnSeemannsgarn/ds-browser/main/images/external-link-icon-red.png);';
         }
-        htmlCode = htmlCode.replace(/<a /g, '<a target="_blank" ');
+        htmlCode = htmlCode.replace(/<a /g, '<a target="_blank" style="' + style  +'" ');
         return htmlCode;
     }
 
