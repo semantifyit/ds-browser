@@ -6,9 +6,11 @@ class DSRenderer {
 
     render() {
         // Cannot be in constructor, cause at this time the node is not initialized
-        this.node = this.browser.dsNode.node;
+        this.dsNode = this.browser.dsNode;
+        this.node = this.dsNode.node;
 
-        const mainContent = this.createHeader() + this.createPropertyTable();
+        const mainContent = this.createHeader() +
+            (this.dsNode.type === 'Class' ? this.createClassPropertyTable() : this.createEnumerationMembers());
         this.browser.elem.innerHTML = this.createMainContent('rdfs:Class', mainContent);
     }
 
@@ -26,7 +28,6 @@ class DSRenderer {
             mainContent +
             '</div>';
     }
-
 
     createHeader() {
         let name, description;
@@ -46,7 +47,7 @@ class DSRenderer {
             '<div property="schema:description">' + description + '<br><br></div>';
     }
 
-    createPropertyTable() {
+    createClassPropertyTable() {
         let properties;
         if (!this.browser.path) {
             properties = this.node['sh:property'].slice(0);
@@ -66,13 +67,13 @@ class DSRenderer {
             '</thead>' +
             '<tbody>' +
             properties.map((p) => {
-                return this.createProperty(p);
+                return this.createClassProperty(p);
             }).join('') +
             '</tbody>' +
             '</table>'
     }
 
-    createProperty(propertyNode) {
+    createClassProperty(propertyNode) {
         const name = this.util.prettyPrintIri(propertyNode['sh:path']);
         const expectedTypes = this.createExpectedTypes(name, propertyNode['sh:or']);
         const cardinalityCode = this.createCardinality(propertyNode);
@@ -85,12 +86,12 @@ class DSRenderer {
             '</code>' +
             '</th>' +
             '<td class="prop-ect">' + expectedTypes + '</td>' +
-            '<td class="prop-desc">' + this.createPropertyDescText(propertyNode) + '</td>' +
+            '<td class="prop-desc">' + this.createClassPropertyDescText(propertyNode) + '</td>' +
             '<td class="prop-ect">' + cardinalityCode + '</td>' +
             '</tr>';
     }
 
-    createPropertyDescText(propertyNode) {
+    createClassPropertyDescText(propertyNode) {
         const name = this.util.prettyPrintIri(propertyNode['sh:path']);
         let description = '';
         try { description = this.browser.sdoAdapter.getProperty(name).getDescription(); } catch (e) {}
@@ -165,6 +166,38 @@ class DSRenderer {
         }
 
         return '<span title="' + title + '">' + cardinality + '</span>';
+    }
+
+    /**
+     * Create HTML for the enumeration members of the Enumeration.
+     *
+     * @returns {string} The resulting HTML.
+     */
+    createEnumerationMembers() {
+        const enumMembers = this.browser.sdoAdapter.getTerm(this.node['sh:class']).getEnumerationMembers();
+        if (enumMembers.length !== 0) {
+            return '' +
+                'An Enumeration with:<br>' +
+                '<b>' +
+                '<a id="enumbers" title="Link: #enumbers" href="#enumbers" class="clickableAnchor">' +
+                'Enumeration members' +
+                '</a>' +
+                '</b>' +
+                '<ul>' +
+                enumMembers.map((e) => {
+                    const enumMember = this.browser.sdoAdapter.getEnumerationMember(e);
+                    return '' +
+                        '<li>' +
+                        this.util.repairLinksInHTMLCode(
+                            '<a href="' + enumMember.getIRI() + '">' + this.util.prettyPrintIri(e) + '</a>'
+                        ) +
+                        '</li>';
+                }).join('') +
+                '</ul>' +
+                '<br>';
+        } else {
+            return '';
+        }
     }
 }
 
