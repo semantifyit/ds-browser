@@ -76,16 +76,16 @@ class DSRenderer {
         const expectedTypes = this.createExpectedTypes(name, propertyNode['sh:or']);
         const cardinalityCode = this.createCardinality(propertyNode);
         return '' +
-            '<tr class="removable">' +
-            '<th class="prop-nam">' +
+            '<tr>' +
+            '<th class="prop-nam" scope="row">' +
             '<code property="rdfs:label">' +
             this.util.repairLinksInHTMLCode('<a href="' + this.util.makeURLFromIRI(propertyNode['sh:path']) + '">' +
                 name + '</a>') +
             '</code>' +
             '</th>' +
-            '<td class="prop-ect" style="text-align: center; vertical-align: middle;">' + expectedTypes + '</td>' +
+            '<td class="prop-ect">' + expectedTypes + '</td>' +
             '<td class="prop-desc">' + this.createPropertyDescText(propertyNode) + '</td>' +
-            '<td class="prop-ect" style="text-align: center; vertical-align: middle;">' + cardinalityCode + '</td>' +
+            '<td class="prop-ect">' + cardinalityCode + '</td>' +
             '</tr>';
     }
 
