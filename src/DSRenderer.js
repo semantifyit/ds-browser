@@ -2,13 +2,10 @@ class DSRenderer {
     constructor(browser) {
         this.browser = browser;
         this.util = browser.util;
-        this.dsHandler = browser.dsHandler;
     }
 
     render() {
         this.graph = this.browser.ds['@graph'][0];
-
-        // TODO parse path with ds handler
 
         this.browser.elem.innerHTML = '' +
             this.createHeader() +
@@ -16,9 +13,20 @@ class DSRenderer {
     }
 
     createHeader() {
+        let name, description;
+        if (!this.browser.path) {
+            name = this.graph['schema:name'];
+            description = this.graph['schema:description'];
+        } else {
+            const nodeName = this.browser.dsNode.node['sh:class'];
+            name = this.util.prettyPrintIri(nodeName);
+            description = this.browser.sdoAdapter.getTerm(nodeName).getDescription();
+        }
+        description = this.util.repairLinksInHTMLCode(description);
+
         return '' +
-            '<h1 property="schema:name">' + this.graph['schema:name'] + '</h1>' +
-            '<div property="schema:description">' + this.graph['schema:description'] + '<br><br></div>';
+            '<h1 property="schema:name">' + name + '</h1>' +
+            '<div property="schema:description">' + description + '<br><br></div>';
     }
 
     createPropertyTable() {

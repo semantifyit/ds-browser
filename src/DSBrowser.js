@@ -45,10 +45,15 @@ class DSBrowser {
             await this.initList();
         }
 
-        // Init vocab
+        // Init ds and/or ds node
         if (this.dsNeedsInit()) {
             await this.initDS();
+            this.initDSNode();
+        } else if (this.dsNodeNeedsInit()) {
+            this.initDSNode();
         }
+
+        this.path = (new URLSearchParams(window.location.search)).get('path');
     }
 
     listNeedsInit() {
@@ -107,6 +112,17 @@ class DSBrowser {
         let versionRegex = /.*schema\.org\/version\/([0-9\.]+)\//g;
         let match = versionRegex.exec(this.ds['@graph'][0]['schema:schemaVersion']);
         return match[1];
+    }
+
+    initDSNode() {
+        const searchParams =  new URLSearchParams(window.location.search);
+        this.path = searchParams.get('path');
+        this.dsNode = this.dsHandler.getDSNodeForPath();
+    }
+
+    dsNodeNeedsInit() {
+        const searchParams =  new URLSearchParams(window.location.search);
+        return (!this.path || !this.dsNode || searchParams.get('path') !== this.path);
     }
 
     isDSRendering() {

@@ -7,18 +7,15 @@ class DSHandler {
 
     getDSNodeForPath() {
         // DSNode is then the corresponding node from the domain specification
-        let ds = this.browser.ds["@graph"][0];
+        let ds = this.browser.ds['@graph'][0];
         let result = {
-            "type": "",
-            "DSNode": {}
+            'type': '',
+            'node': {}
         };
-        // Check if DS 7provided
+        // Check if DS provided
         if (this.browser.ds) {
-
-            const searchParams = new URLSearchParams(window.location.search);
-            const path = searchParams.get('path');
-            if (path) {
-                let pathSteps = path.split('-');
+            if (this.browser.path) {
+                let pathSteps = this.browser.path.split('-');
                 for (let i = 0; i < pathSteps.length; i++) {
                     if (pathSteps[i] === "") {
                         continue;
@@ -60,11 +57,11 @@ class DSHandler {
             // No DS
             result.type = "error";
         }
-        result.DSNode = ds;
+        result.node = ds;
         return result;
     }
 
-// Get the class or enumeration with that name
+    // Get the class or enumeration with that name
     getClass(DSNode, name) {
         for (let i = 0; i < DSNode.length; i++) {
             if (DSNode[i]["sh:class"] !== undefined && this.util.rangesToString(DSNode[i]["sh:class"]) === name) {
@@ -74,7 +71,7 @@ class DSHandler {
         return null;
     }
 
-// Get the property with that name
+    // Get the property with that name
     getProperty(propertyArray, name) {
         for (let i = 0; i < propertyArray.length; i++) {
             if (this.util.rangesToString(propertyArray[i]["sh:path"]) === name) {
