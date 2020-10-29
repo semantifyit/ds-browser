@@ -85,20 +85,24 @@ class Util {
     }
 
     repairLinksInHTMLCode(htmlCode) {
-        htmlCode = htmlCode.replace(/ href="\//g, ' href="https://schema.org/');
-        let style = '' +
-            'background-position: center right; ' +
-            'background-repeat: no-repeat; ' +
-            'background-size: 10px 10px; ' +
-            'padding-right: 13px; ';
-        if (htmlCode.indexOf('href="https://schema.org') === -1 && htmlCode.indexOf('href="http://schema.org') === -1) {
-            // No sdo
-            style += 'background-image: url(https://raw.githubusercontent.com/YarnSeemannsgarn/ds-browser/main/images/external-link-icon-blue.png);';
-        } else {
-            style += 'background-image: url(https://raw.githubusercontent.com/YarnSeemannsgarn/ds-browser/main/images/external-link-icon-red.png);';
-        }
-        htmlCode = htmlCode.replace(/<a /g, '<a target="_blank" style="' + style  +'" ');
-        return htmlCode;
+        return htmlCode.replace(/<a(.*?)href="(.*?)"/g, (match, group1, group2) => {
+            if (group2.startsWith('/')) {
+                group2 = 'http://schema.org' + group2;
+            }
+
+            let style = '' +
+                'background-position: center right; ' +
+                'background-repeat: no-repeat; ' +
+                'background-size: 10px 10px; ' +
+                'padding-right: 13px; ';
+            if ((/^https?:\/\/schema.org/).test(group2)) {
+                style += 'background-image: url(https://raw.githubusercontent.com/YarnSeemannsgarn/ds-browser/main/images/external-link-icon-red.png);';
+            } else {
+                style += 'background-image: url(https://raw.githubusercontent.com/YarnSeemannsgarn/ds-browser/main/images/external-link-icon-blue.png);';
+            }
+
+            return '<a' + group1 + 'href="' + group2 + '" style="' + style + '" target="_blank"';
+        });
     }
 
     // Get the corresponding SDO datatype from a given SHACL XSD datatype
