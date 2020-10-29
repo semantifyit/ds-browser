@@ -2,6 +2,8 @@ import SDOAdapter from 'schema-org-adapter';
 
 import Util from './Util';
 import DSHandler from './DSHandler';
+
+import ListRenderer from './ListRenderer';
 import DSRenderer from './DSRenderer';
 
 const BROWSER_TYPES = {
@@ -15,9 +17,13 @@ class DSBrowser {
         this.dsOrList = dsOrList;
         this.type = type;
 
+        this.path = null;
+
         this.util = new Util(this);
         this.dsHandler = new DSHandler(this);
+
         this.dsRenderer = new DSRenderer(this);
+        this.listRenderer = new ListRenderer(this);
 
         window.addEventListener('popstate', async () => {
             await this.render();
@@ -33,6 +39,8 @@ class DSBrowser {
 
         if (this.isDSRendering()) {
             this.dsRenderer.render();
+        } else if (this.isListRendering()) {
+            this.listRenderer.render();
         }
 
         this.addJSLinkEventListener();
@@ -52,8 +60,6 @@ class DSBrowser {
         } else if (this.dsNodeNeedsInit()) {
             this.initDSNode();
         }
-
-        this.path = (new URLSearchParams(window.location.search)).get('path');
     }
 
     listNeedsInit() {
@@ -121,13 +127,24 @@ class DSBrowser {
 
     dsNodeNeedsInit() {
         const searchParams =  new URLSearchParams(window.location.search);
-        return (!this.path || !this.dsNode || searchParams.get('path') !== this.path);
+        const path = searchParams.get('path');
+        return (path !== this.path);
     }
 
     isDSRendering() {
         const searchParams = new URLSearchParams(window.location.search);
         return ((this.type === BROWSER_TYPES.LIST && searchParams.get('ds')) ||
             (this.type === BROWSER_TYPES.DS));
+    }
+
+    /**
+     * Check if the list should be rendered.
+     *
+     * @returns {boolean} 'true' if the list should be rendered.
+     */
+    isListRendering() {
+        const searchParams = new URLSearchParams(window.location.search);
+        return (this.type === BROWSER_TYPES.LIST && !searchParams.get('voc'));
     }
 
     /**

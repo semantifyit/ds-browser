@@ -11,22 +11,7 @@ class DSRenderer {
 
         const mainContent = this.createHeader() +
             (this.dsNode.type === 'Class' ? this.createClassPropertyTable() : this.createEnumerationMembers());
-        this.browser.elem.innerHTML = this.createMainContent('rdfs:Class', mainContent);
-    }
-
-    /**
-     * Create a HTML div with the main content for the vocab browser element.
-     *
-     * @param {string} rdfaTypeOf - The RDFa type of the main content.
-     * @param {string} mainContent - The HTML of the main content.
-     * @returns {string} The resulting HTML.
-     */
-    createMainContent(rdfaTypeOf, mainContent) {
-        return '' +
-            '<div id="mainContent" vocab="http://schema.org/" typeof="' + rdfaTypeOf + '" ' +
-            'resource="' + window.location + '">' +
-            mainContent +
-            '</div>';
+        this.browser.elem.innerHTML = this.util.createMainContent('rdfs:Class', mainContent);
     }
 
     createHeader() {
