@@ -5,11 +5,11 @@ class DSRenderer {
     }
 
     render() {
-        this.graph = this.browser.ds['@graph'][0];
+        // Cannot be in constructor, cause at this time the node is not initialized
+        this.node = this.browser.dsNode.node;
 
         const mainContent = this.createHeader() + this.createPropertyTable();
         this.browser.elem.innerHTML = this.createMainContent('rdfs:Class', mainContent);
-
     }
 
     /**
@@ -31,10 +31,11 @@ class DSRenderer {
     createHeader() {
         let name, description;
         if (!this.browser.path) {
-            name = this.graph['schema:name'];
-            description = this.graph['schema:description'];
+            const graph = this.browser.ds['@graph'][0];
+            name = graph['schema:name'];
+            description = graph['schema:description'];
         } else {
-            const nodeName = this.browser.dsNode.node['sh:class'];
+            const nodeName = this.node['sh:class'];
             name = this.util.prettyPrintIri(nodeName);
             description = this.browser.sdoAdapter.getTerm(nodeName).getDescription();
         }
@@ -47,10 +48,10 @@ class DSRenderer {
 
     createPropertyTable() {
         let properties;
-        if (this.graph['sh:targetClass'] !== undefined) { //root node
-            properties = this.graph['sh:property'].slice(0);
-        } else { //nested node
-            properties = this.graph['sh:node']['sh:property'].slice(0);
+        if (!this.browser.path) {
+            properties = this.node['sh:property'].slice(0);
+        } else {
+            properties = this.node['sh:node']['sh:property'].slice(0);
         }
 
         return '' +

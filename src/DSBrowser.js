@@ -81,7 +81,6 @@ class DSBrowser {
                 const id = part['@id'];
                 if (id.split('/').pop() === this.dsUID) {
                     this.ds = await this.util.parseToObject(id);
-                    this.dsName = part['schema:name'];
                     break;
                 }
             }
