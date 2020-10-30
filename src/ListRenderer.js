@@ -26,7 +26,8 @@ class ListRenderer {
     createHeader() {
         return '' +
             '<h1>' + this.browser.list['schema:name'] + '</h1>' +
-            this.util.createExternalLinkLegend();
+            this.util.createExternalLinkLegend() +
+            this.browser.list['schema:description'] || '';
     }
 
     /**
