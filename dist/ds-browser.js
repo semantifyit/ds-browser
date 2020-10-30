@@ -20849,7 +20849,7 @@ class DSRenderer {
     }
 
     description = this.util.repairLinksInHTMLCode(description);
-    return '' + '<h1 property="schema:name">' + name + '</h1>' + '<div property="schema:description">' + description + '<br><br></div>';
+    return '' + '<h1 property="schema:name">' + name + '</h1>' + this.util.createExternalLinkLegend() + '<div property="schema:description">' + description + '<br><br></div>';
   }
 
   createClassPropertyTable() {
@@ -20915,8 +20915,10 @@ class DSRenderer {
         name = expectedType['sh:class'];
       }
 
-      if (this.util.dataTypeMapperFromSHACL(name) !== null) {
-        html += this.util.createLink(this.util.dataTypeMapperFromSHACL(name) + this.util.dataTypeMapperFromSHACL(name));
+      var mappedDataType = this.util.dataTypeMapperFromSHACL(name);
+
+      if (mappedDataType !== null) {
+        html += this.util.createLink(mappedDataType);
       } else {
         name = this.util.rangesToString(name);
         var newPath = propertyName + '-' + name;
@@ -21014,7 +21016,7 @@ class ListRenderer {
 
 
   createHeader() {
-    return '' + '<h1>' + this.browser.list['schema:name'] + '</h1>'; //this.util.createExternalLinkLegend();
+    return '' + '<h1>' + this.browser.list['schema:name'] + '</h1>' + this.util.createExternalLinkLegend() + this.browser.list['schema:description'] || '';
   }
   /**
    * Create HTML table for the vocabularies of the List.
@@ -21141,13 +21143,7 @@ class Util {
 
 
   prettyPrintIri(iri) {
-    var schema = 'schema:';
-
-    if (iri.startsWith(schema)) {
-      return iri.substring(schema.length);
-    }
-
-    return this.escHtml(iri);
+    return iri.replace(/^(schema:|https?:\/\/schema.org\/)(.+)/, '$2');
   }
 
   repairLinksInHTMLCode(htmlCode) {
@@ -21165,31 +21161,31 @@ class Util {
   dataTypeMapperFromSHACL(dataType) {
     switch (dataType) {
       case 'xsd:string':
-        return 'Text';
+        return 'http://schema.org/Text';
 
       case 'xsd:boolean':
-        return 'Boolean';
+        return 'http://schema.org/Boolean';
 
       case 'xsd:date':
-        return 'Date';
+        return 'http://schema.org/Date';
 
       case 'xsd:dateTime':
-        return 'DateTime';
+        return 'http://schema.org/DateTime';
 
       case 'xsd:time':
-        return 'Time';
+        return 'http://schema.org/Time';
 
       case 'xsd:double':
-        return 'Number';
+        return 'http://schema.org/Number';
 
       case 'xsd:float':
-        return 'Float';
+        return 'http://schema.org/Float';
 
       case 'xsd:integer':
-        return 'Integer';
+        return 'http://schema.org/Integer';
 
       case 'xsd:anyURI':
-        return 'URL';
+        return 'http://schema.org/URL';
     }
 
     return null; // If no match
@@ -21313,7 +21309,7 @@ class Util {
       }
     }
 
-    return '<a href="' + this.escHtml(href) + '" target="_blank"' + this.createHtmlAttr(attr) + '>' + (text ? this.prettyPrintIri(text) : href) + '</a>';
+    return '<a href="' + this.escHtml(href) + '" target="_blank"' + this.createHtmlAttr(attr) + '>' + (text ? this.prettyPrintIri(text) : this.prettyPrintIri(href)) + '</a>';
   }
   /**
    * Create HTML attribute 'style' for an external link.
@@ -21469,6 +21465,13 @@ class Util {
 
   createMainContent(rdfaTypeOf, mainContent) {
     return '' + '<div id="mainContent" vocab="http://schema.org/" typeof="' + rdfaTypeOf + '" ' + 'resource="' + window.location + '">' + mainContent + '</div>';
+  }
+
+  createExternalLinkLegend() {
+    var commonExtLinkStyle = 'margin-right: 3px; ';
+    var extLinkStyleBlue = commonExtLinkStyle + this.createExternalLinkStyle('');
+    var extLinkStyleRed = commonExtLinkStyle + this.createExternalLinkStyle('http://schema.org') + ' margin-left: 6px;';
+    return '' + '<p style="font-size: 12px; margin-top: 0">' + '(<span style="' + extLinkStyleBlue + '"></span>External link' + '<span style="' + extLinkStyleRed + '"></span>External link to schema.org )' + '</p>';
   }
 
 }
