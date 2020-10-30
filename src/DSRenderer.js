@@ -29,6 +29,7 @@ class DSRenderer {
 
         return '' +
             '<h1 property="schema:name">' + name + '</h1>' +
+            this.util.createExternalLinkLegend() +
             '<div property="schema:description">' + description + '<br><br></div>';
     }
 

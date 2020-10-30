@@ -384,6 +384,19 @@ class Util {
             mainContent +
             '</div>';
     }
+
+    createExternalLinkLegend() {
+        const commonExtLinkStyle = 'margin-right: 3px; ';
+        const extLinkStyleBlue = commonExtLinkStyle + this.createExternalLinkStyle('');
+        const extLinkStyleRed = commonExtLinkStyle + this.createExternalLinkStyle('http://schema.org') +
+            ' margin-left: 6px;';
+
+        return '' +
+            '<p style="font-size: 12px; margin-top: 0">' +
+            '(<span style="' + extLinkStyleBlue + '"></span>External link' +
+            '<span style="' + extLinkStyleRed + '"></span>External link to schema.org )' +
+            '</p>';
+    }
 }
 
 module.exports = Util;
