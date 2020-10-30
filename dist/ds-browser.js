@@ -20871,7 +20871,7 @@ class DSRenderer {
     var name = this.util.prettyPrintIri(property.getIRI(true));
     var expectedTypes = this.createExpectedTypes(name, propertyNode['sh:or']);
     var cardinalityCode = this.createCardinality(propertyNode);
-    return '' + '<tr>' + '<th class="prop-nam" scope="row">' + '<code property="rdfs:label">' + this.util.repairLinksInHTMLCode('<a href="' + property.getIRI() + '">' + name + '</a>') + '</code>' + '</th>' + '<td class="prop-ect">' + expectedTypes + '</td>' + '<td class="prop-desc">' + this.createClassPropertyDescText(propertyNode) + '</td>' + '<td class="prop-ect">' + cardinalityCode + '</td>' + '</tr>';
+    return '' + '<tr>' + '<th class="prop-nam" scope="row">' + '<code property="rdfs:label">' + this.util.createLink(property.getIRI(), name) + '</code>' + '</th>' + '<td class="prop-ect">' + expectedTypes + '</td>' + '<td class="prop-desc">' + this.createClassPropertyDescText(propertyNode) + '</td>' + '<td class="prop-ect">' + cardinalityCode + '</td>' + '</tr>';
   }
 
   createClassPropertyDescText(propertyNode) {
@@ -20916,7 +20916,7 @@ class DSRenderer {
       }
 
       if (this.util.dataTypeMapperFromSHACL(name) !== null) {
-        html += this.util.repairLinksInHTMLCode('<a href="/' + this.util.dataTypeMapperFromSHACL(name) + '">' + this.util.dataTypeMapperFromSHACL(name) + '</a>');
+        html += this.util.createLink(this.util.dataTypeMapperFromSHACL(name) + this.util.dataTypeMapperFromSHACL(name));
       } else {
         name = this.util.rangesToString(name);
         var newPath = propertyName + '-' + name;
@@ -20972,7 +20972,7 @@ class DSRenderer {
     if (enumMembers.length !== 0) {
       return '' + 'An Enumeration with:<br>' + '<b>' + '<a id="enumbers" title="Link: #enumbers" href="#enumbers" class="clickableAnchor">' + 'Enumeration members' + '</a>' + '</b>' + '<ul>' + enumMembers.map(e => {
         var enumMember = this.browser.sdoAdapter.getEnumerationMember(e);
-        return '' + '<li>' + this.util.repairLinksInHTMLCode('<a href="' + enumMember.getIRI() + '">' + this.util.prettyPrintIri(e) + '</a>') + '</li>';
+        return '' + '<li>' + this.util.createLink(enumMember.getIRI(), e) + '</li>';
       }).join('') + '</ul>' + '<br>';
     } else {
       return '';
@@ -21049,7 +21049,7 @@ class ListRenderer {
 
 
   createDSSideCols(ds) {
-    return '' + '<td property="@id">' + this.util.createExternalLink(ds['@id']) + '</td>' + '<td property="schema:description">' + (ds['schema:description'] || '') + '</td>';
+    return '' + '<td property="@id">' + this.util.createLink(ds['@id']) + '</td>' + '<td property="schema:description">' + (ds['schema:description'] || '') + '</td>';
   }
 
 }
@@ -21150,31 +21150,13 @@ class Util {
     return this.escHtml(iri);
   }
 
-  makeURLFromIRI(IRITerm) {
-    var vocabularies = this.browser.sdoAdapter.getVocabularies();
-    var vocabKeys = Object.keys(vocabularies);
-    vocabKeys.forEach(vocabKey => {
-      if (IRITerm.startsWith(vocabKey)) {
-        return vocabularies[vocabKey] + IRITerm.substring(IRITerm.indexOf(':') + 1);
-      }
-    });
-    return '';
-  }
-
   repairLinksInHTMLCode(htmlCode) {
     return htmlCode.replace(/<a(.*?)href="(.*?)"/g, (match, group1, group2) => {
       if (group2.startsWith('/')) {
         group2 = 'http://schema.org' + group2;
       }
 
-      var style = '' + 'background-position: center right; ' + 'background-repeat: no-repeat; ' + 'background-size: 10px 10px; ' + 'padding-right: 13px; ';
-
-      if (/^https?:\/\/schema.org/.test(group2)) {
-        style += 'background-image: url(https://raw.githubusercontent.com/YarnSeemannsgarn/ds-browser/main/images/external-link-icon-red.png);';
-      } else {
-        style += 'background-image: url(https://raw.githubusercontent.com/YarnSeemannsgarn/ds-browser/main/images/external-link-icon-blue.png);';
-      }
-
+      var style = this.createExternalLinkStyle(group2);
       return '<a' + group1 + 'href="' + group2 + '" style="' + style + '" target="_blank"';
     });
   } // Get the corresponding SDO datatype from a given SHACL XSD datatype
@@ -21312,22 +21294,26 @@ class Util {
    */
 
 
-  createExternalLink(href) {
+  createLink(href) {
     var text = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : null;
     var attr = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : null;
-    var additionalStyles = ' ' + this.createExternalLinkStyle(href);
+    var urlObj = new URL(href);
 
-    if (!attr) {
-      attr = {
-        style: additionalStyles
-      };
-    } else if (!attr.hasOwnProperty('style')) {
-      attr['style'] = additionalStyles;
-    } else {
-      attr['style'] = attr['style'] + additionalStyles;
+    if (window.location.host === urlObj.host) {
+      var additionalStyles = ' ' + this.createExternalLinkStyle(href);
+
+      if (!attr) {
+        attr = {
+          style: additionalStyles
+        };
+      } else if (!attr.hasOwnProperty('style')) {
+        attr['style'] = additionalStyles;
+      } else {
+        attr['style'] = attr['style'] + additionalStyles;
+      }
     }
 
-    return '<a href="' + this.escHtml(href) + '" target="_blank"' + this.createHtmlAttr(attr) + '>' + (text ? this.prettyPrintIri(text) : this.prettyPrintIri(href)) + '</a>';
+    return '<a href="' + this.escHtml(href) + '" target="_blank"' + this.createHtmlAttr(attr) + '>' + (text ? this.prettyPrintIri(text) : href) + '</a>';
   }
   /**
    * Create HTML attribute 'style' for an external link.
@@ -21340,10 +21326,10 @@ class Util {
   createExternalLinkStyle(iri) {
     var style = '' + 'background-position: center right; ' + 'background-repeat: no-repeat; ' + 'background-size: 10px 10px; ' + 'padding-right: 13px; ';
 
-    if (iri.indexOf('https://schema.org') === -1 && iri.indexOf('http://schema.org') === -1) {
-      style += 'background-image: url(https://raw.githubusercontent.com/YarnSeemannsgarn/ds-browser/main/images/external-link-icon-blue.png);';
-    } else {
+    if (/^https?:\/\/schema.org/.test(iri)) {
       style += 'background-image: url(https://raw.githubusercontent.com/YarnSeemannsgarn/ds-browser/main/images/external-link-icon-red.png);';
+    } else {
+      style += 'background-image: url(https://raw.githubusercontent.com/YarnSeemannsgarn/ds-browser/main/images/external-link-icon-blue.png);';
     }
 
     return style;
@@ -21444,24 +21430,6 @@ class Util {
     } else {
       */
     return this.browser.sdoAdapter.getTerm(term).getIRI(); //}
-  }
-  /**
-   * Create a HTML link for a term.
-   *
-   * @param {string} term - The vocabulary term.
-   * @param {object|null} attr - The HTML attributes as key-value pairs.
-   * @returns {string} The resulting HTML.
-   */
-
-
-  createLink(term) {
-    var attr = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : null;
-
-    /*
-    if (this.isTermOfVocab(term)) {
-        return this.createJSLink('term', term, null, attr);
-    } else {*/
-    return this.createExternalLink(this.createHref(term), term, attr); //}
   }
   /**
    * Create a HTML table with class 'definition-table'.
