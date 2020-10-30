@@ -21299,7 +21299,7 @@ class Util {
     var attr = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : null;
     var urlObj = new URL(href);
 
-    if (window.location.host === urlObj.host) {
+    if (window.location.hostname !== urlObj.hostname) {
       var additionalStyles = ' ' + this.createExternalLinkStyle(href);
 
       if (!attr) {

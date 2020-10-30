@@ -109,9 +109,9 @@ class DSRenderer {
             } else if (expectedType['sh:class']) {
                 name = expectedType['sh:class'];
             }
-            if (this.util.dataTypeMapperFromSHACL(name) !== null) {
-                html += this.util.createLink(this.util.dataTypeMapperFromSHACL(name) +
-                    this.util.dataTypeMapperFromSHACL(name));
+            const mappedDataType = this.util.dataTypeMapperFromSHACL(name);
+            if (mappedDataType !== null) {
+                html += this.util.createLink(mappedDataType);
             } else {
                 name = this.util.rangesToString(name);
                 const newPath = propertyName + '-' + name;

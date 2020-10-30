@@ -65,11 +65,7 @@ class Util {
      * @returns {string} The pretty-printed IRI.
      */
     prettyPrintIri(iri) {
-        const schema = 'schema:';
-        if (iri.startsWith(schema)) {
-            return iri.substring(schema.length);
-        }
-        return this.escHtml(iri);
+        return iri.replace(/(^schema:|^https?:\/\/schema.org\/)(.*)/, '$2');
     }
 
     repairLinksInHTMLCode(htmlCode) {
@@ -87,23 +83,23 @@ class Util {
     dataTypeMapperFromSHACL(dataType) {
         switch (dataType) {
             case 'xsd:string':
-                return 'Text';
+                return 'http://schema.org/Text';
             case 'xsd:boolean' :
-                return 'Boolean';
+                return 'http://schema.org/Boolean';
             case 'xsd:date' :
-                return 'Date';
+                return 'http://schema.org/Date';
             case 'xsd:dateTime':
-                return 'DateTime';
+                return 'http://schema.org/DateTime';
             case 'xsd:time':
-                return 'Time';
+                return 'http://schema.org/Time';
             case 'xsd:double':
-                return 'Number';
+                return 'http://schema.org/Number';
             case 'xsd:float':
-                return 'Float';
+                return 'http://schema.org/Float';
             case  'xsd:integer':
-                return 'Integer';
+                return 'http://schema.org/Integer';
             case 'xsd:anyURI':
-                return 'URL';
+                return 'http://schema.org/URL';
         }
         return null; // If no match
     }
@@ -209,7 +205,7 @@ class Util {
      */
     createLink(href, text = null, attr = null) {
         const urlObj = new URL(href);
-        if (window.location.host === urlObj.host) {
+        if (window.location.hostname !== urlObj.hostname) {
             let additionalStyles = ' ' + this.createExternalLinkStyle(href);
 
             if (!attr) {
@@ -222,7 +218,7 @@ class Util {
         }
 
         return '<a href="' + this.escHtml(href) + '" target="_blank"' + this.createHtmlAttr(attr) + '>' +
-            (text ? this.prettyPrintIri(text) : href) + '</a>';
+            (text ? this.prettyPrintIri(text) : this.prettyPrintIri(href)) + '</a>';
     }
 
     /**
