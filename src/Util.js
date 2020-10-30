@@ -65,7 +65,7 @@ class Util {
      * @returns {string} The pretty-printed IRI.
      */
     prettyPrintIri(iri) {
-        return iri.replace(/(^schema:|^https?:\/\/schema.org\/)(.*)/, '$2');
+        return iri.replace(/^(schema:|https?:\/\/schema.org\/)(.+)/, '$2');
     }
 
     repairLinksInHTMLCode(htmlCode) {
