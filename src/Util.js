@@ -72,35 +72,13 @@ class Util {
         return this.escHtml(iri);
     }
 
-    makeURLFromIRI(IRITerm) {
-        const vocabularies = this.browser.sdoAdapter.getVocabularies();
-        const vocabKeys = Object.keys(vocabularies);
-        vocabKeys.forEach((vocabKey) => {
-            if (IRITerm.startsWith(vocabKey)) {
-                return vocabularies[vocabKey] + IRITerm.substring(IRITerm.indexOf(':') + 1);
-            }
-        });
-
-        return '';
-    }
-
     repairLinksInHTMLCode(htmlCode) {
         return htmlCode.replace(/<a(.*?)href="(.*?)"/g, (match, group1, group2) => {
             if (group2.startsWith('/')) {
                 group2 = 'http://schema.org' + group2;
             }
 
-            let style = '' +
-                'background-position: center right; ' +
-                'background-repeat: no-repeat; ' +
-                'background-size: 10px 10px; ' +
-                'padding-right: 13px; ';
-            if ((/^https?:\/\/schema.org/).test(group2)) {
-                style += 'background-image: url(https://raw.githubusercontent.com/YarnSeemannsgarn/ds-browser/main/images/external-link-icon-red.png);';
-            } else {
-                style += 'background-image: url(https://raw.githubusercontent.com/YarnSeemannsgarn/ds-browser/main/images/external-link-icon-blue.png);';
-            }
-
+            const style = this.createExternalLinkStyle(group2);
             return '<a' + group1 + 'href="' + group2 + '" style="' + style + '" target="_blank"';
         });
     }
@@ -229,19 +207,22 @@ class Util {
      * @param {object|null} attr - The HTML attributes as key-value pairs.
      * @returns {string} The resulting HTML.
      */
-    createExternalLink(href, text = null, attr = null) {
-        let additionalStyles = ' ' + this.createExternalLinkStyle(href);
+    createLink(href, text = null, attr = null) {
+        const urlObj = new URL(href);
+        if (window.location.host === urlObj.host) {
+            let additionalStyles = ' ' + this.createExternalLinkStyle(href);
 
-        if (!attr) {
-            attr = {style: additionalStyles};
-        } else if (!attr.hasOwnProperty('style')) {
-            attr['style'] = additionalStyles;
-        } else {
-            attr['style'] = attr['style'] + additionalStyles;
+            if (!attr) {
+                attr = {style: additionalStyles};
+            } else if (!attr.hasOwnProperty('style')) {
+                attr['style'] = additionalStyles;
+            } else {
+                attr['style'] = attr['style'] + additionalStyles;
+            }
         }
 
         return '<a href="' + this.escHtml(href) + '" target="_blank"' + this.createHtmlAttr(attr) + '>' +
-            (text ? this.prettyPrintIri(text) : this.prettyPrintIri(href)) + '</a>';
+            (text ? this.prettyPrintIri(text) : href) + '</a>';
     }
 
     /**
@@ -256,10 +237,10 @@ class Util {
             'background-repeat: no-repeat; ' +
             'background-size: 10px 10px; ' +
             'padding-right: 13px; ';
-        if (iri.indexOf('https://schema.org') === -1 && iri.indexOf('http://schema.org') === -1) {
-            style += 'background-image: url(https://raw.githubusercontent.com/YarnSeemannsgarn/ds-browser/main/images/external-link-icon-blue.png);';
+        if ((/^https?:\/\/schema.org/).test(iri)) {
+            style += 'background-image: url(https://raw.githubusercontent.com/YarnSeemannsgarn/ds-browser/main/images/external-link-icon-red.png);';
         } else {
-            style += 'background-image: url(https://raw.githubusercontent.com/YarnSeemannsgarn/ds-browser/main/images/external-link-icon-red.png);'
+            style += 'background-image: url(https://raw.githubusercontent.com/YarnSeemannsgarn/ds-browser/main/images/external-link-icon-blue.png);'
         }
         return style;
     }
@@ -357,24 +338,7 @@ class Util {
         } else {
 
          */
-
-            return this.browser.sdoAdapter.getTerm(term).getIRI();
-        //}
-    }
-
-    /**
-     * Create a HTML link for a term.
-     *
-     * @param {string} term - The vocabulary term.
-     * @param {object|null} attr - The HTML attributes as key-value pairs.
-     * @returns {string} The resulting HTML.
-     */
-    createLink(term, attr = null) {
-        /*
-        if (this.isTermOfVocab(term)) {
-            return this.createJSLink('term', term, null, attr);
-        } else {*/
-            return this.createExternalLink(this.createHref(term), term, attr);
+        return this.browser.sdoAdapter.getTerm(term).getIRI();
         //}
     }
 

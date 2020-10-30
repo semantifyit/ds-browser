@@ -68,7 +68,7 @@ class DSRenderer {
             '<tr>' +
             '<th class="prop-nam" scope="row">' +
             '<code property="rdfs:label">' +
-            this.util.repairLinksInHTMLCode('<a href="' + property.getIRI() + '">' + name + '</a>') +
+            this.util.createLink(property.getIRI(), name) +
             '</code>' +
             '</th>' +
             '<td class="prop-ect">' + expectedTypes + '</td>' +
@@ -110,8 +110,8 @@ class DSRenderer {
                 name = expectedType['sh:class'];
             }
             if (this.util.dataTypeMapperFromSHACL(name) !== null) {
-                html += this.util.repairLinksInHTMLCode('<a href="/' + this.util.dataTypeMapperFromSHACL(name) + '">' +
-                    this.util.dataTypeMapperFromSHACL(name) + '</a>');
+                html += this.util.createLink(this.util.dataTypeMapperFromSHACL(name) +
+                    this.util.dataTypeMapperFromSHACL(name));
             } else {
                 name = this.util.rangesToString(name);
                 const newPath = propertyName + '-' + name;
@@ -174,9 +174,7 @@ class DSRenderer {
                     const enumMember = this.browser.sdoAdapter.getEnumerationMember(e);
                     return '' +
                         '<li>' +
-                        this.util.repairLinksInHTMLCode(
-                            '<a href="' + enumMember.getIRI() + '">' + this.util.prettyPrintIri(e) + '</a>'
-                        ) +
+                        this.util.createLink(enumMember.getIRI(), e) +
                         '</li>';
                 }).join('') +
                 '</ul>' +

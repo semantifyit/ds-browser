@@ -64,7 +64,7 @@ class ListRenderer {
      */
     createDSSideCols(ds) {
         return '' +
-            '<td property="@id">' + this.util.createExternalLink(ds['@id']) + '</td>' +
+            '<td property="@id">' + this.util.createLink(ds['@id']) + '</td>' +
             '<td property="schema:description">' + (ds['schema:description'] || '') + '</td>';
     }
 }
