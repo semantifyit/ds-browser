@@ -4,6 +4,36 @@ class DSRenderer {
         this.util = browser.util;
     }
 
+    /**
+     * Render the JSON-LD serialization of the Vocabulary.
+     */
+    renderShacl() {
+        const preStyle = '' +
+            // Overwrite schema.org CSS
+            'font-size: medium; ' +
+            'background: none; ' +
+            'text-align: left; ' +
+            'width: auto; ' +
+            'padding: 0; ' +
+            'overflow: visible; ' +
+            'color: rgb(0, 0, 0); ' +
+            'line-height: normal; ' +
+
+            // Defaults for pre https://www.w3schools.com/cssref/css_default_values.asp
+            'display: block; ' +
+            'font-family: monospace; ' +
+            'margin: 1em 0; ' +
+
+            // From Browser when loading SHACL file
+            'word-wrap: break-word; ' +
+            'white-space: pre-wrap;';
+
+        this.browser.elem.innerHTML = '' +
+            '<pre style="' + preStyle + '">' +
+            JSON.stringify(this.browser.ds, null, 2) +
+            '</pre>';
+    }
+
     render() {
         // Cannot be in constructor, cause at this time the node is not initialized
         this.dsNode = this.browser.dsNode;
@@ -28,9 +58,21 @@ class DSRenderer {
         description = this.util.repairLinksInHTMLCode(description);
 
         return '' +
+            this.createNavigation() +
             '<h1 property="schema:name">' + name + '</h1>' +
             this.util.createExternalLinkLegend() +
             '<div property="schema:description">' + description + '<br><br></div>';
+    }
+
+    createNavigation() {
+        return '' +
+            '<span style="float: right;">' +
+            '(' +
+            this.util.createJSLink('format', 'shacl', 'SHACL serialization') +
+            (this.browser.list ? ' | from List: ' +
+                this.util.createJSLink('ds', null, this.browser.list['schema:name']) : '') +
+            ')' +
+            '</span>';
     }
 
     createClassPropertyTable() {
@@ -116,7 +158,7 @@ class DSRenderer {
             } else {
                 name = this.util.rangesToString(name);
                 const newPath = propertyName + '-' + name;
-                html += this.util.createJSLink('path', newPath, '-', name);
+                html += this.util.createJSLink('path', newPath, name, null, '-');
             }
             html += '<br>';
         });

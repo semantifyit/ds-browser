@@ -152,7 +152,7 @@ class Util {
      * @param {object|null} attr - The HTML attributes of the link.
      * @returns {string} The resulting HTML.
      */
-    createJSLink(queryKey, queryVal, enhanceSymbol = null, text = null, attr = null) {
+    createJSLink(queryKey, queryVal, text = null, attr = null, enhanceSymbol = null) {
         const iri = this.createIriWithQueryParam(queryKey, queryVal, enhanceSymbol);
         return '' +
             '<a ' +

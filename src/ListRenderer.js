@@ -51,7 +51,7 @@ class ListRenderer {
             return this.util.createTableRow('http://vocab.sti2.at/ds/Domain Specification',
                 ds['@id'],
                 'schema:name',
-                this.util.createJSLink('ds', ds['@id'].split('/').pop(), null, ds['schema:name'] || 'No Name'),
+                this.util.createJSLink('ds', ds['@id'].split('/').pop(), ds['schema:name'] || 'No Name'),
                 this.createDSSideCols(ds)
             );
         }).join('');

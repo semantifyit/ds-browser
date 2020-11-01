@@ -38,7 +38,13 @@ class DSBrowser {
         await this.init();
 
         if (this.isDSRendering()) {
-            this.dsRenderer.render();
+            const searchParams = new URLSearchParams(window.location.search);
+            const format = searchParams.get('format');
+            if (format && format === 'shacl') {
+                this.dsRenderer.renderShacl();
+            } else {
+                this.dsRenderer.render();
+            }
         } else if (this.isListRendering()) {
             this.listRenderer.render();
         }
