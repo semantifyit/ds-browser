@@ -20552,7 +20552,14 @@ class DSBrowser {
       yield _this2.init();
 
       if (_this2.isDSRendering()) {
-        _this2.dsRenderer.render();
+        var searchParams = new URLSearchParams(window.location.search);
+        var format = searchParams.get('format');
+
+        if (format && format === 'shacl') {
+          _this2.dsRenderer.renderShacl();
+        } else {
+          _this2.dsRenderer.render();
+        }
       } else if (_this2.isListRendering()) {
         _this2.listRenderer.render();
       }
@@ -20826,6 +20833,18 @@ class DSRenderer {
     this.browser = browser;
     this.util = browser.util;
   }
+  /**
+   * Render the JSON-LD serialization of the Vocabulary.
+   */
+
+
+  renderShacl() {
+    var preStyle = '' + // Overwrite schema.org CSS
+    'font-size: medium; ' + 'background: none; ' + 'text-align: left; ' + 'width: auto; ' + 'padding: 0; ' + 'overflow: visible; ' + 'color: rgb(0, 0, 0); ' + 'line-height: normal; ' + // Defaults for pre https://www.w3schools.com/cssref/css_default_values.asp
+    'display: block; ' + 'font-family: monospace; ' + 'margin: 1em 0; ' + // From Browser when loading SHACL file
+    'word-wrap: break-word; ' + 'white-space: pre-wrap;';
+    this.browser.elem.innerHTML = '' + '<pre style="' + preStyle + '">' + JSON.stringify(this.browser.ds, null, 2) + '</pre>';
+  }
 
   render() {
     // Cannot be in constructor, cause at this time the node is not initialized
@@ -20836,7 +20855,9 @@ class DSRenderer {
   }
 
   createHeader() {
-    var name, description;
+    var name,
+        description,
+        breadcrumbs = '';
 
     if (!this.browser.path) {
       var graph = this.browser.ds['@graph'][0];
@@ -20846,10 +20867,26 @@ class DSRenderer {
       var nodeName = this.node['sh:class'];
       name = this.util.prettyPrintIri(nodeName);
       description = this.browser.sdoAdapter.getTerm(nodeName).getDescription();
+      breadcrumbs = this.createBreadcrumbs();
     }
 
     description = this.util.repairLinksInHTMLCode(description);
-    return '' + '<h1 property="schema:name">' + name + '</h1>' + this.util.createExternalLinkLegend() + '<div property="schema:description">' + description + '<br><br></div>';
+    return '' + this.createNavigation() + '<h1 property="schema:name">' + name + '</h1>' + this.util.createExternalLinkLegend() + breadcrumbs + '<div property="schema:description">' + description + '<br><br></div>';
+  }
+
+  createBreadcrumbs() {
+    return '' + '<h4>' + '<span class="breadcrumbs">' + this.util.createJSLink('path', null, this.browser.ds['@graph'][0]['schema:name']) + ' > ' + this.browser.path.split('-').map((term, index, pathSplitted) => {
+      if (index % 2 === 0) {
+        return term;
+      } else {
+        var newPath = pathSplitted.slice(0, index + 1).join('-');
+        return this.util.createJSLink('path', newPath, term);
+      }
+    }).join(' > ') + '</span>' + '</h4>';
+  }
+
+  createNavigation() {
+    return '' + '<span style="float: right;">' + '(' + this.util.createJSLink('format', 'shacl', 'SHACL serialization') + (this.browser.list ? ' | from List: ' + this.util.createJSLink('ds', null, this.browser.list['schema:name']) : '') + ')' + '</span>';
   }
 
   createClassPropertyTable() {
@@ -20861,17 +20898,22 @@ class DSRenderer {
       properties = this.node['sh:node']['sh:property'].slice(0);
     }
 
-    return '' + '<table class="definition-table">' + '<thead>' + '<tr>' + '<th>Property</th>' + '<th>Expected Type</th>' + '<th>Description</th>' + '<th>Cardinality</th>' + '</tr>' + '</thead>' + '<tbody>' + properties.map(p => {
+    var trs = properties.map(p => {
       return this.createClassProperty(p);
-    }).join('') + '</tbody>' + '</table>';
+    }).join('');
+    return this.util.createDefinitionTable(['Property', 'Expected Type', 'Description', 'Cardinality'], trs);
   }
 
   createClassProperty(propertyNode) {
     var property = this.browser.sdoAdapter.getProperty(propertyNode['sh:path']);
     var name = this.util.prettyPrintIri(property.getIRI(true));
+    return this.util.createTableRow('rdf:Property', property.getIRI(), 'rdfs:label', this.util.createLink(property.getIRI(), name), this.createClassPropertySideCols(propertyNode, name), 'prop-name');
+  }
+
+  createClassPropertySideCols(propertyNode, name) {
     var expectedTypes = this.createExpectedTypes(name, propertyNode['sh:or']);
     var cardinalityCode = this.createCardinality(propertyNode);
-    return '' + '<tr>' + '<th class="prop-nam" scope="row">' + '<code property="rdfs:label">' + this.util.createLink(property.getIRI(), name) + '</code>' + '</th>' + '<td class="prop-ect">' + expectedTypes + '</td>' + '<td class="prop-desc">' + this.createClassPropertyDescText(propertyNode) + '</td>' + '<td class="prop-ect">' + cardinalityCode + '</td>' + '</tr>';
+    return '' + '<td class="prop-ect">' + expectedTypes + '</td>' + '<td class="prop-desc">' + this.createClassPropertyDescText(propertyNode) + '</td>' + '<td class="prop-ect">' + cardinalityCode + '</td>';
   }
 
   createClassPropertyDescText(propertyNode) {
@@ -20922,7 +20964,7 @@ class DSRenderer {
       } else {
         name = this.util.rangesToString(name);
         var newPath = propertyName + '-' + name;
-        html += this.util.createJSLink('path', newPath, '-', name);
+        html += this.util.createJSLink('path', newPath, name, null, '-');
       }
 
       html += '<br>';
@@ -21039,7 +21081,7 @@ class ListRenderer {
 
   createDSTbody() {
     return this.browser.list['schema:hasPart'].map(ds => {
-      return this.util.createTableRow('http://vocab.sti2.at/ds/Domain Specification', ds['@id'], 'schema:name', this.util.createJSLink('ds', ds['@id'].split('/').pop(), null, ds['schema:name'] || 'No Name'), this.createDSSideCols(ds));
+      return this.util.createTableRow('http://vocab.sti2.at/ds/Domain Specification', ds['@id'], 'schema:name', this.util.createJSLink('ds', ds['@id'].split('/').pop(), ds['schema:name'] || 'No Name'), this.createDSSideCols(ds));
     }).join('');
   }
   /**
@@ -21246,9 +21288,9 @@ class Util {
 
 
   createJSLink(queryKey, queryVal) {
-    var enhanceSymbol = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : null;
-    var text = arguments.length > 3 && arguments[3] !== undefined ? arguments[3] : null;
-    var attr = arguments.length > 4 && arguments[4] !== undefined ? arguments[4] : null;
+    var text = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : null;
+    var attr = arguments.length > 3 && arguments[3] !== undefined ? arguments[3] : null;
+    var enhanceSymbol = arguments.length > 4 && arguments[4] !== undefined ? arguments[4] : null;
     var iri = this.createIriWithQueryParam(queryKey, queryVal, enhanceSymbol);
     return '' + '<a ' + 'class="a-js-link" ' + 'href="' + this.escHtml(iri) + '" ' + 'onclick="return false;"' + this.createHtmlAttr(attr) + '>' + (text ? this.escHtml(text) : this.escHtml(queryVal)) + '</a>';
   }
