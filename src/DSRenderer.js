@@ -104,22 +104,10 @@ class DSRenderer {
             properties = this.node['sh:node']['sh:property'].slice(0);
         }
 
-        return '' +
-            '<table class="definition-table">' +
-            '<thead>' +
-            '<tr>' +
-            '<th>Property</th>' +
-            '<th>Expected Type</th>' +
-            '<th>Description</th>' +
-            '<th>Cardinality</th>' +
-            '</tr>' +
-            '</thead>' +
-            '<tbody>' +
-            properties.map((p) => {
-                return this.createClassProperty(p);
-            }).join('') +
-            '</tbody>' +
-            '</table>'
+        const trs = properties.map((p) => {
+            return this.createClassProperty(p);
+        }).join('');
+        return this.util.createDefinitionTable(['Property', 'Expected Type', 'Description', 'Cardinality'], trs);
     }
 
     createClassProperty(propertyNode) {
