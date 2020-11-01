@@ -45,7 +45,7 @@ class DSRenderer {
     }
 
     createHeader() {
-        let name, description;
+        let name, description, breadcrumbs = '';
         if (!this.browser.path) {
             const graph = this.browser.ds['@graph'][0];
             name = graph['schema:name'];
@@ -54,6 +54,7 @@ class DSRenderer {
             const nodeName = this.node['sh:class'];
             name = this.util.prettyPrintIri(nodeName);
             description = this.browser.sdoAdapter.getTerm(nodeName).getDescription();
+            breadcrumbs = this.createBreadcrumbs();
         }
         description = this.util.repairLinksInHTMLCode(description);
 
@@ -61,8 +62,28 @@ class DSRenderer {
             this.createNavigation() +
             '<h1 property="schema:name">' + name + '</h1>' +
             this.util.createExternalLinkLegend() +
+            breadcrumbs +
             '<div property="schema:description">' + description + '<br><br></div>';
     }
+
+    createBreadcrumbs() {
+        return '' +
+            '<h4>' +
+            '<span class="breadcrumbs">' +
+            this.util.createJSLink('path', null, this.browser.ds['@graph'][0]['schema:name']) +
+            ' > ' +
+            this.browser.path.split('-').map((term, index, pathSplitted) => {
+                if (index % 2 === 0) {
+                    return term;
+                } else {
+                    const newPath = pathSplitted.slice(0, index + 1).join('-');
+                    return this.util.createJSLink('path', newPath, term);
+                }
+            }).join(' > ') +
+            '</span>' +
+            '</h4>';
+    }
+
 
     createNavigation() {
         return '' +
