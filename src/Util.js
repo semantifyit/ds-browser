@@ -215,9 +215,10 @@ class Util {
             } else {
                 attr['style'] = attr['style'] + additionalStyles;
             }
+            attr['target'] = '_blank';
         }
 
-        return '<a href="' + this.escHtml(href) + '" target="_blank"' + this.createHtmlAttr(attr) + '>' +
+        return '<a href="' + this.escHtml(href) + '"' +  this.createHtmlAttr(attr) + '>' +
             (text ? this.prettyPrintIri(text) : this.prettyPrintIri(href)) + '</a>';
     }
 
