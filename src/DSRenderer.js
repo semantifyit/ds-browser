@@ -113,20 +113,24 @@ class DSRenderer {
     createClassProperty(propertyNode) {
         const property = this.browser.sdoAdapter.getProperty(propertyNode['sh:path']);
         const name = this.util.prettyPrintIri(property.getIRI(true));
+
+        return this.util.createTableRow(
+            'rdf:Property', property.getIRI(),
+            'rdfs:label',
+            this.util.createLink(property.getIRI(), name),
+            this.createClassPropertySideCols(propertyNode, name),
+            'prop-name'
+        )
+
+    }
+
+    createClassPropertySideCols(propertyNode, name) {
         const expectedTypes = this.createExpectedTypes(name, propertyNode['sh:or']);
         const cardinalityCode = this.createCardinality(propertyNode);
-
         return '' +
-            '<tr>' +
-            '<th class="prop-nam" scope="row">' +
-            '<code property="rdfs:label">' +
-            this.util.createLink(property.getIRI(), name) +
-            '</code>' +
-            '</th>' +
             '<td class="prop-ect">' + expectedTypes + '</td>' +
             '<td class="prop-desc">' + this.createClassPropertyDescText(propertyNode) + '</td>' +
-            '<td class="prop-ect">' + cardinalityCode + '</td>' +
-            '</tr>';
+            '<td class="prop-ect">' + cardinalityCode + '</td>';
     }
 
     createClassPropertyDescText(propertyNode) {
