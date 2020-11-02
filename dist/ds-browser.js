@@ -20861,8 +20861,8 @@ class DSRenderer {
 
     if (!this.browser.path) {
       var graph = this.browser.ds['@graph'][0];
-      name = graph['schema:name'];
-      description = graph['schema:description'];
+      name = graph['schema:name'] || 'Domain Specification';
+      description = graph['schema:description'] || '';
     } else {
       var nodeName = this.node['sh:class'];
       name = this.util.prettyPrintIri(nodeName);
@@ -20875,7 +20875,7 @@ class DSRenderer {
   }
 
   createBreadcrumbs() {
-    return '' + '<h4>' + '<span class="breadcrumbs">' + this.util.createJSLink('path', null, this.browser.ds['@graph'][0]['schema:name']) + ' > ' + this.browser.path.split('-').map((term, index, pathSplitted) => {
+    return '' + '<h4>' + '<span class="breadcrumbs">' + this.util.createJSLink('path', null, this.browser.ds['@graph'][0]['schema:name'] || 'Domain Specification') + ' > ' + this.browser.path.split('-').map((term, index, pathSplitted) => {
       if (index % 2 === 0) {
         return term;
       } else {
