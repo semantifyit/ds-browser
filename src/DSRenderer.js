@@ -48,8 +48,8 @@ class DSRenderer {
         let name, description, breadcrumbs = '';
         if (!this.browser.path) {
             const graph = this.browser.ds['@graph'][0];
-            name = graph['schema:name'];
-            description = graph['schema:description'];
+            name = graph['schema:name'] || 'Domain Specification';
+            description = graph['schema:description'] || '';
         } else {
             const nodeName = this.node['sh:class'];
             name = this.util.prettyPrintIri(nodeName);
@@ -70,7 +70,7 @@ class DSRenderer {
         return '' +
             '<h4>' +
             '<span class="breadcrumbs">' +
-            this.util.createJSLink('path', null, this.browser.ds['@graph'][0]['schema:name']) +
+            this.util.createJSLink('path', null, this.browser.ds['@graph'][0]['schema:name'] || 'Domain Specification') +
             ' > ' +
             this.browser.path.split('-').map((term, index, pathSplitted) => {
                 if (index % 2 === 0) {
