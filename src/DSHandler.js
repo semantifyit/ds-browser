@@ -63,7 +63,7 @@ class DSHandler {
     // Get the class or enumeration with that name
     getClass(DSNode, name) {
         for (let i = 0; i < DSNode.length; i++) {
-            if (DSNode[i]["sh:class"] !== undefined && this.util.rangesToString(DSNode[i]["sh:class"]) === name) {
+            if (DSNode[i]["sh:class"] !== undefined && this.rangesToString(DSNode[i]["sh:class"]) === name) {
                 return DSNode[i];
             }
         }
@@ -73,11 +73,47 @@ class DSHandler {
     // Get the property with that name
     getProperty(propertyArray, name) {
         for (let i = 0; i < propertyArray.length; i++) {
-            if (this.util.rangesToString(propertyArray[i]["sh:path"]) === name) {
+            if (this.rangesToString(propertyArray[i]["sh:path"]) === name) {
                 return propertyArray[i];
             }
         }
         return null;
+    }
+
+    // Get the corresponding SDO datatype from a given SHACL XSD datatype
+    dataTypeMapperFromSHACL(dataType) {
+        switch (dataType) {
+            case 'xsd:string':
+                return 'http://schema.org/Text';
+            case 'xsd:boolean' :
+                return 'http://schema.org/Boolean';
+            case 'xsd:date' :
+                return 'http://schema.org/Date';
+            case 'xsd:dateTime':
+                return 'http://schema.org/DateTime';
+            case 'xsd:time':
+                return 'http://schema.org/Time';
+            case 'xsd:double':
+                return 'http://schema.org/Number';
+            case 'xsd:float':
+                return 'http://schema.org/Float';
+            case  'xsd:integer':
+                return 'http://schema.org/Integer';
+            case 'xsd:anyURI':
+                return 'http://schema.org/URL';
+        }
+        return null; // If no match
+    }
+
+    // Converts a range array/string into a string usable in functions
+    rangesToString(ranges) {
+        if (Array.isArray(ranges)) {
+            return ranges.map((range) => {
+                return this.util.prettyPrintIri(range);
+            }).join(' + ');
+        } else {
+            return this.util.prettyPrintIri(ranges); // Is already string
+        }
     }
 }
 

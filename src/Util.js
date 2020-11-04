@@ -79,42 +79,6 @@ class Util {
         });
     }
 
-    // Get the corresponding SDO datatype from a given SHACL XSD datatype
-    dataTypeMapperFromSHACL(dataType) {
-        switch (dataType) {
-            case 'xsd:string':
-                return 'http://schema.org/Text';
-            case 'xsd:boolean' :
-                return 'http://schema.org/Boolean';
-            case 'xsd:date' :
-                return 'http://schema.org/Date';
-            case 'xsd:dateTime':
-                return 'http://schema.org/DateTime';
-            case 'xsd:time':
-                return 'http://schema.org/Time';
-            case 'xsd:double':
-                return 'http://schema.org/Number';
-            case 'xsd:float':
-                return 'http://schema.org/Float';
-            case  'xsd:integer':
-                return 'http://schema.org/Integer';
-            case 'xsd:anyURI':
-                return 'http://schema.org/URL';
-        }
-        return null; // If no match
-    }
-
-    // Converts a range array/string into a string usable in functions
-    rangesToString(ranges) {
-        if (Array.isArray(ranges)) {
-            return ranges.map((range) => {
-                return this.prettyPrintIri(range);
-            }).join(' + ');
-        } else {
-            return this.prettyPrintIri(ranges); // Is already string
-        }
-    }
-
     /**
      * Create an IRI with the current browser IRI and the given query parameter.
      * The query parameter can be either set, overwritten, deleted or enhanced.

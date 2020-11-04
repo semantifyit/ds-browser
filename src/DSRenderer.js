@@ -2,6 +2,7 @@ class DSRenderer {
     constructor(browser) {
         this.browser = browser;
         this.util = browser.util;
+        this.dsHandler = browser.dsHandler;
     }
 
     /**
@@ -165,11 +166,11 @@ class DSRenderer {
             } else if (expectedType['sh:class']) {
                 name = expectedType['sh:class'];
             }
-            const mappedDataType = this.util.dataTypeMapperFromSHACL(name);
+            const mappedDataType = this.dsHandler.dataTypeMapperFromSHACL(name);
             if (mappedDataType !== null) {
                 html += this.util.createLink(mappedDataType);
             } else {
-                name = this.util.rangesToString(name);
+                name = this.dsHandler.rangesToString(name);
                 const newPath = propertyName + '-' + name;
                 html += this.util.createJSLink('path', newPath, name, null, '-');
             }
