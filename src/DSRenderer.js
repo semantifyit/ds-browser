@@ -119,19 +119,16 @@ class DSRenderer {
             'rdf:Property', property.getIRI(),
             'rdfs:label',
             this.util.createLink(property.getIRI(), name),
-            this.createClassPropertySideCols(propertyNode, name),
+            this.createClassPropertySideCols(propertyNode),
             'prop-name'
         )
-
     }
 
-    createClassPropertySideCols(propertyNode, name) {
-        const expectedTypes = this.createExpectedTypes(name, propertyNode['sh:or']);
-        const cardinalityCode = this.createCardinality(propertyNode);
+    createClassPropertySideCols(propertyNode) {
         return '' +
-            '<td class="prop-ect">' + expectedTypes + '</td>' +
+            '<td class="prop-ect">' + this.createExpectedTypes(propertyNode) + '</td>' +
             '<td class="prop-desc">' + this.createClassPropertyDescText(propertyNode) + '</td>' +
-            '<td class="prop-ect">' + cardinalityCode + '</td>';
+            '<td class="prop-ect">' + this.createCardinality(propertyNode) + '</td>';
     }
 
     createClassPropertyDescText(propertyNode) {
@@ -157,7 +154,10 @@ class DSRenderer {
         return this.util.repairLinksInHTMLCode(descText);
     }
 
-    createExpectedTypes(propertyName, expectedTypes) {
+    createExpectedTypes(propertyNode) {
+        const property = this.browser.sdoAdapter.getProperty(propertyNode['sh:path']);
+        const propertyName = this.util.prettyPrintIri(property.getIRI(true));
+        const expectedTypes = propertyNode['sh:or'];
         let html = '';
         expectedTypes.forEach((expectedType) => {
             let name;
