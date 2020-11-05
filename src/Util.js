@@ -362,6 +362,22 @@ class Util {
             '<span style="' + extLinkStyleRed + '"></span>External link to schema.org )' +
             '</p>';
     }
+
+    createTermLink(term) {
+        const termObj = this.browser.sdoAdapter.getTerm(term);
+        const vocabURLs = termObj.getVocabURLs();
+        let href;
+        if (vocabURLs) {
+            for (const vocabURL of vocabURLs) {
+                if (vocabURL.startsWith('https://semantify.it/voc/')) {
+                    href = vocabURL + '?term=' + term;
+                    break;
+                }
+            }
+        }
+        href = (href ? href : termObj.getIRI());
+        return this.createLink(href, termObj.getIRI(true));
+    }
 }
 
 module.exports = Util;

@@ -112,13 +112,13 @@ class DSRenderer {
     }
 
     createClassProperty(propertyNode) {
-        const property = this.browser.sdoAdapter.getProperty(propertyNode['sh:path']);
-        const name = this.util.prettyPrintIri(property.getIRI(true));
+        const path = propertyNode['sh:path'];
+        const property = this.browser.sdoAdapter.getProperty(path);
 
         return this.util.createTableRow(
             'rdf:Property', property.getIRI(),
             'rdfs:label',
-            this.util.createLink(property.getIRI(), name),
+            this.util.createTermLink(path),
             this.createClassPropertySideCols(propertyNode),
             'prop-name'
         )
