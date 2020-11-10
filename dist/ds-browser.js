@@ -17203,14 +17203,18 @@ class Graph {
    * Adds a new vocabulary (in JSON-LD format) to the graph data
    *
    * @param {object} vocab - The vocabulary to add the graph, in JSON-LD format
+   * @param {string|null} vocabURL - The URL of the vocabulary
    * @returns {boolean} returns true on success
    */
 
 
   addVocabulary(vocab) {
-    var _this = this;
+    var _arguments = arguments,
+        _this = this;
 
     return _asyncToGenerator(function* () {
+      var vocabURL = _arguments.length > 1 && _arguments[1] !== undefined ? _arguments[1] : null;
+
       // this algorithm is well-documented in /docu/algorithm.md
       try {
         // A) Pre-process Vocabulary
@@ -17241,18 +17245,18 @@ class Graph {
           if (util.isString(curNode['@type'])) {
             switch (curNode['@type']) {
               case 'rdfs:Class':
-                _this.addGraphNode(_this.classes, curNode);
+                _this.addGraphNode(_this.classes, curNode, vocabURL);
 
                 break;
 
               case 'rdf:Property':
-                _this.addGraphNode(_this.properties, curNode);
+                _this.addGraphNode(_this.properties, curNode, vocabURL);
 
                 break;
 
               default:
                 // @type is not something expected -> assume enumerationMember
-                _this.addGraphNode(_this.enumerationMembers, curNode);
+                _this.addGraphNode(_this.enumerationMembers, curNode, vocabURL);
 
                 break;
             }
@@ -17268,10 +17272,10 @@ class Graph {
             // ]
             if (curNode['@type'].includes('rdfs:Class') && curNode['@type'].includes('schema:DataType')) {
               // datatype
-              _this.addGraphNode(_this.dataTypes, curNode);
+              _this.addGraphNode(_this.dataTypes, curNode, vocabURL);
             } else {
               // enumeration member
-              _this.addGraphNode(_this.enumerationMembers, curNode);
+              _this.addGraphNode(_this.enumerationMembers, curNode, vocabURL);
             }
           } else {
             console.log('unexpected @type format for the following node:');
@@ -17601,14 +17605,21 @@ class Graph {
    *
    * @param {object} memory - The memory object where the new node should be added (Classes, Properties, Enumerations, EnumerationMembers, DataTypes)
    * @param {object} newNode - The node in JSON-LD format to be added
+   * @param {string|null} vocabURL - The vocabulary URL of the node
    * @returns {boolean} returns true on success
    */
 
 
   addGraphNode(memory, newNode) {
+    var vocabURL = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : null;
+
     try {
       if (!memory[newNode['@id']]) {
         memory[newNode['@id']] = newNode;
+
+        if (vocabURL) {
+          memory[newNode['@id']]['vocabURLs'] = [vocabURL];
+        }
       } else {
         // merging algorithm
         var oldNode = memory[newNode['@id']]; // @id stays the same
@@ -17753,6 +17764,16 @@ class Graph {
               // add new entry
               oldNode['schema:superPropertyOf'].push(_actProp3);
             }
+          }
+        }
+
+        if (vocabURL) {
+          if (oldNode['vocabURLs']) {
+            if (!oldNode['vocabURLs'].includes(vocabURL)) {
+              oldNode['vocabURLs'].push(vocabURL);
+            }
+          } else {
+            oldNode['vocabURLs'] = [vocabURL];
           }
         }
       }
@@ -18631,7 +18652,7 @@ class SDOAdapter {
               // assume it is a URL
               try {
                 var fetchedVocab = yield _this.fetchVocabularyFromURL(vocabArray[i]);
-                yield _this.graph.addVocabulary(fetchedVocab);
+                yield _this.graph.addVocabulary(fetchedVocab, vocabArray[i]);
               } catch (e) {
                 throw new Error('The given URL ' + vocabArray[i] + ' did not contain a valid JSON-LD vocabulary.');
               }
@@ -19247,6 +19268,22 @@ class Term {
     throw new Error('must be implemented by subclass!');
   }
   /**
+   * Retrieves the original vocabulary urls of this Term
+   *
+   * @returns {Array|null} The original vocabulary urls of this Term
+   */
+
+
+  getVocabURLs() {
+    var termObj = this.getTermObj();
+
+    if (!util.isNil(termObj['vocabURLs'])) {
+      return termObj['vocabURLs'];
+    }
+
+    return null;
+  }
+  /**
    * Retrieves the original vocabulary (schema:isPartOf) of this Term
    *
    * @returns {string|null} The vocabulary IRI given by the "schema:isPartOf" of this Term
@@ -19354,6 +19391,7 @@ class Term {
     result['id'] = this.getIRI(true);
     result['IRI'] = this.getIRI();
     result['type'] = this.getTermType();
+    result['vocabURLs'] = this.getVocabURLs();
     result['vocabulary'] = this.getVocabulary();
     result['source'] = this.getSource();
     result['supersededBy'] = this.isSupersededBy();
@@ -20802,7 +20840,7 @@ class DSHandler {
 
   getClass(DSNode, name) {
     for (var i = 0; i < DSNode.length; i++) {
-      if (DSNode[i]["sh:class"] !== undefined && this.util.rangesToString(DSNode[i]["sh:class"]) === name) {
+      if (DSNode[i]["sh:class"] !== undefined && this.rangesToString(DSNode[i]["sh:class"]) === name) {
         return DSNode[i];
       }
     }
@@ -20813,12 +20851,57 @@ class DSHandler {
 
   getProperty(propertyArray, name) {
     for (var i = 0; i < propertyArray.length; i++) {
-      if (this.util.rangesToString(propertyArray[i]["sh:path"]) === name) {
+      if (this.rangesToString(propertyArray[i]["sh:path"]) === name) {
         return propertyArray[i];
       }
     }
 
     return null;
+  } // Get the corresponding SDO datatype from a given SHACL XSD datatype
+
+
+  dataTypeMapperFromSHACL(dataType) {
+    switch (dataType) {
+      case 'xsd:string':
+        return 'http://schema.org/Text';
+
+      case 'xsd:boolean':
+        return 'http://schema.org/Boolean';
+
+      case 'xsd:date':
+        return 'http://schema.org/Date';
+
+      case 'xsd:dateTime':
+        return 'http://schema.org/DateTime';
+
+      case 'xsd:time':
+        return 'http://schema.org/Time';
+
+      case 'xsd:double':
+        return 'http://schema.org/Number';
+
+      case 'xsd:float':
+        return 'http://schema.org/Float';
+
+      case 'xsd:integer':
+        return 'http://schema.org/Integer';
+
+      case 'xsd:anyURI':
+        return 'http://schema.org/URL';
+    }
+
+    return null; // If no match
+  } // Converts a range array/string into a string usable in functions
+
+
+  rangesToString(ranges) {
+    if (Array.isArray(ranges)) {
+      return ranges.map(range => {
+        return this.util.prettyPrintIri(range);
+      }).join(' + ');
+    } else {
+      return this.util.prettyPrintIri(ranges); // Is already string
+    }
   }
 
 }
@@ -20832,6 +20915,7 @@ class DSRenderer {
   constructor(browser) {
     this.browser = browser;
     this.util = browser.util;
+    this.dsHandler = browser.dsHandler;
   }
   /**
    * Render the JSON-LD serialization of the Vocabulary.
@@ -20905,15 +20989,13 @@ class DSRenderer {
   }
 
   createClassProperty(propertyNode) {
-    var property = this.browser.sdoAdapter.getProperty(propertyNode['sh:path']);
-    var name = this.util.prettyPrintIri(property.getIRI(true));
-    return this.util.createTableRow('rdf:Property', property.getIRI(), 'rdfs:label', this.util.createLink(property.getIRI(), name), this.createClassPropertySideCols(propertyNode, name), 'prop-name');
+    var path = propertyNode['sh:path'];
+    var property = this.browser.sdoAdapter.getProperty(path);
+    return this.util.createTableRow('rdf:Property', property.getIRI(), 'rdfs:label', this.util.createTermLink(path), this.createClassPropertySideCols(propertyNode), 'prop-name');
   }
 
-  createClassPropertySideCols(propertyNode, name) {
-    var expectedTypes = this.createExpectedTypes(name, propertyNode['sh:or']);
-    var cardinalityCode = this.createCardinality(propertyNode);
-    return '' + '<td class="prop-ect">' + expectedTypes + '</td>' + '<td class="prop-desc">' + this.createClassPropertyDescText(propertyNode) + '</td>' + '<td class="prop-ect">' + cardinalityCode + '</td>';
+  createClassPropertySideCols(propertyNode) {
+    return '' + '<td class="prop-ect">' + this.createExpectedTypes(propertyNode) + '</td>' + '<td class="prop-desc">' + this.createClassPropertyDescText(propertyNode) + '</td>' + '<td class="prop-ect">' + this.createCardinality(propertyNode) + '</td>';
   }
 
   createClassPropertyDescText(propertyNode) {
@@ -20946,7 +21028,10 @@ class DSRenderer {
     return this.util.repairLinksInHTMLCode(descText);
   }
 
-  createExpectedTypes(propertyName, expectedTypes) {
+  createExpectedTypes(propertyNode) {
+    var property = this.browser.sdoAdapter.getProperty(propertyNode['sh:path']);
+    var propertyName = this.util.prettyPrintIri(property.getIRI(true));
+    var expectedTypes = propertyNode['sh:or'];
     var html = '';
     expectedTypes.forEach(expectedType => {
       var name;
@@ -20957,12 +21042,12 @@ class DSRenderer {
         name = expectedType['sh:class'];
       }
 
-      var mappedDataType = this.util.dataTypeMapperFromSHACL(name);
+      var mappedDataType = this.dsHandler.dataTypeMapperFromSHACL(name);
 
       if (mappedDataType !== null) {
         html += this.util.createLink(mappedDataType);
       } else {
-        name = this.util.rangesToString(name);
+        name = this.dsHandler.rangesToString(name);
         var newPath = propertyName + '-' + name;
         html += this.util.createJSLink('path', newPath, name, null, '-');
       }
@@ -21197,51 +21282,6 @@ class Util {
       var style = this.createExternalLinkStyle(group2);
       return '<a' + group1 + 'href="' + group2 + '" style="' + style + '" target="_blank"';
     });
-  } // Get the corresponding SDO datatype from a given SHACL XSD datatype
-
-
-  dataTypeMapperFromSHACL(dataType) {
-    switch (dataType) {
-      case 'xsd:string':
-        return 'http://schema.org/Text';
-
-      case 'xsd:boolean':
-        return 'http://schema.org/Boolean';
-
-      case 'xsd:date':
-        return 'http://schema.org/Date';
-
-      case 'xsd:dateTime':
-        return 'http://schema.org/DateTime';
-
-      case 'xsd:time':
-        return 'http://schema.org/Time';
-
-      case 'xsd:double':
-        return 'http://schema.org/Number';
-
-      case 'xsd:float':
-        return 'http://schema.org/Float';
-
-      case 'xsd:integer':
-        return 'http://schema.org/Integer';
-
-      case 'xsd:anyURI':
-        return 'http://schema.org/URL';
-    }
-
-    return null; // If no match
-  } // Converts a range array/string into a string usable in functions
-
-
-  rangesToString(ranges) {
-    if (Array.isArray(ranges)) {
-      return ranges.map(range => {
-        return this.prettyPrintIri(range);
-      }).join(' + ');
-    } else {
-      return this.prettyPrintIri(ranges); // Is already string
-    }
   }
   /**
    * Create an IRI with the current browser IRI and the given query parameter.
@@ -21516,6 +21556,24 @@ class Util {
     var extLinkStyleBlue = commonExtLinkStyle + this.createExternalLinkStyle('');
     var extLinkStyleRed = commonExtLinkStyle + this.createExternalLinkStyle('http://schema.org') + ' margin-left: 6px;';
     return '' + '<p style="font-size: 12px; margin-top: 0">' + '(<span style="' + extLinkStyleBlue + '"></span>External link' + '<span style="' + extLinkStyleRed + '"></span>External link to schema.org )' + '</p>';
+  }
+
+  createTermLink(term) {
+    var termObj = this.browser.sdoAdapter.getTerm(term);
+    var vocabURLs = termObj.getVocabURLs();
+    var href;
+
+    if (vocabURLs) {
+      for (var vocabURL of vocabURLs) {
+        if (/http(s)?:\/\/(staging\.)?semantify\.it\/voc\//.test(vocabURL)) {
+          href = vocabURL + '?term=' + term;
+          break;
+        }
+      }
+    }
+
+    href = href ? href : termObj.getIRI();
+    return this.createLink(href, termObj.getIRI(true));
   }
 
 }
