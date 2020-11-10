@@ -369,7 +369,7 @@ class Util {
         let href;
         if (vocabURLs) {
             for (const vocabURL of vocabURLs) {
-                if (vocabURL.startsWith('https://semantify.it/voc/')) {
+                if (/http(s)?:\/\/(staging\.)?semantify\.it\/voc\//.test(vocabURL)) {
                     href = vocabURL + '?term=' + term;
                     break;
                 }
