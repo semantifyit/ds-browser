@@ -170,8 +170,7 @@ class DSRenderer {
         const property = this.browser.sdoAdapter.getProperty(propertyNode['sh:path']);
         const propertyName = this.util.prettyPrintIri(property.getIRI(true));
         const expectedTypes = propertyNode['sh:or'];
-        let html = '';
-        expectedTypes.forEach((expectedType) => {
+        return expectedTypes.map((expectedType) => {
             let name;
             if (expectedType['sh:datatype']) {
                 name = expectedType['sh:datatype'];
@@ -180,15 +179,17 @@ class DSRenderer {
             }
             const mappedDataType = this.dsHandler.dataTypeMapperFromSHACL(name);
             if (mappedDataType !== null) {
-                html += this.util.createLink(mappedDataType);
+                return this.util.createLink(mappedDataType);
             } else {
                 name = this.dsHandler.rangesToString(name);
-                const newPath = propertyName + '-' + name;
-                html += this.util.createJSLink('path', newPath, name, null, '-');
+                if (expectedType['sh:node'] && expectedType['sh:node']['sh:property'].length !== 0) {
+                    const newPath = propertyName + '-' + name;
+                    return this.util.createJSLink('path', newPath, name, null, '-');
+                } else {
+                    return this.util.createTermLink(name);
+                }
             }
-            html += '<br>';
-        });
-        return html;
+        }).join('<br>');
     }
 
     createCardinality(dsPropertyNode) {
