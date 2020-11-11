@@ -52,9 +52,9 @@ class DSRenderer {
             name = graph['schema:name'] || 'Domain Specification';
             description = graph['schema:description'] || '';
         } else {
-            const nodeName = this.node['sh:class'];
-            name = this.util.prettyPrintIri(nodeName);
-            description = this.browser.sdoAdapter.getTerm(nodeName).getDescription();
+            const nodeClass = this.node['sh:class'];
+            name = this.dsHandler.rangesToString(nodeClass);
+            description = this.createNodeDescription(nodeClass);
             breadcrumbs = this.createBreadcrumbs();
         }
         description = this.util.repairLinksInHTMLCode(description);
@@ -65,6 +65,18 @@ class DSRenderer {
             this.util.createExternalLinkLegend() +
             breadcrumbs +
             '<div property="schema:description">' + description + '<br><br></div>';
+    }
+
+    createNodeDescription(nodeClass) {
+        if (this.util.isString(nodeClass)) {
+            return this.browser.sdoAdapter.getTerm(nodeClass).getDescription();
+        } else {
+            return nodeClass.map((c) => {
+                return '' +
+                    '<b>' + this.util.prettyPrintIri(c) + ':</b> ' +
+                    this.browser.sdoAdapter.getTerm(c).getDescription();
+            }).join('<br>');
+        }
     }
 
     createBreadcrumbs() {
