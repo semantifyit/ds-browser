@@ -212,15 +212,15 @@ class Util {
      * @param {string} rdfaTypeOf - The RDFa type of the table row.
      * @param {string} rdfaResource - The RDFa resource.
      * @param {string} mainColRdfaProp - The RDFa property of the main column.
-     * @param {string} mainColTermOrLink - The term name that should be linked or the link of the main column.
+     * @param {string} mainColLink - The link of the main column.
      * @param {string} sideCols - The HTML of the side columns.
      * @param {string|null} mainColClass - The CSS class of the main column.
      * @returns {string} The resulting HTML.
      */
-    createTableRow(rdfaTypeOf, rdfaResource, mainColRdfaProp, mainColTermOrLink, sideCols, mainColClass = null) {
+    createTableRow(rdfaTypeOf, rdfaResource, mainColRdfaProp, mainColLink, sideCols, mainColClass = null) {
         return '' +
             '<tr typeof="' + rdfaTypeOf + '" resource="' + rdfaResource + '">' +
-            this.createMainCol(mainColRdfaProp, mainColTermOrLink, mainColClass) +
+            this.createMainCol(mainColRdfaProp, mainColLink, mainColClass) +
             sideCols +
             '</tr>';
     }
@@ -229,78 +229,29 @@ class Util {
      * Create a HTML main column for a table row with RDFa (https://en.wikipedia.org/wiki/RDFa) attributes.
      *
      * @param {string} rdfaProp - The RDFa property of the column.
-     * @param {string} termOrLink - The term name that should be linked or the link of the column.
+     * @param {string} link - The link of the column.
      * @param {string|null} className -  The CSS class of the column.
      * @returns {string} The resulting HTML.
      */
-    createMainCol(rdfaProp, termOrLink, className = null) {
+    createMainCol(rdfaProp, link, className = null) {
         return '' +
             '<th' + (className ? ' class="' + className + '"' : '') + ' scope="row">' +
-            this.createCodeLink(termOrLink, {'property': rdfaProp}) +
+            this.createCodeLink(link, {'property': rdfaProp}) +
             '</th>';
     }
 
     /**
      * Create a HTML code element with a link inside it.
      *
-     * @param {string} termOrLink - The term name that should be linked or the link.
+     * @param {string} link - The link.
      * @param {object|null} codeAttr - The HTML attributes of the code element.
-     * @param {object|null} linkAttr - The HTML attributes of the link.
-     * @param {string|null} rdfaProp - The RDFa property of the link.
      * @returns {string} The resulting HTML.
      */
-    createCodeLink(termOrLink, codeAttr = null, linkAttr = null, rdfaProp = null) {
+    createCodeLink(link, codeAttr = null) {
         return '' +
             '<code' + this.createHtmlAttr(codeAttr) + '>' +
-            this.createFullLink(termOrLink, linkAttr, rdfaProp) +
+            link +
             '</code>';
-    }
-
-    /**
-     * Create a HTML link, optionally with semantic attributes.
-     *
-     * @param termOrLink - The term name that should be linked or a link.
-     * @param linkAttr - The HTML attributes of the link.
-     * @param rdfaProp - The RDFa property of the link.
-     * @returns {string} The resulting HTML.
-     */
-    createFullLink(termOrLink, linkAttr, rdfaProp) {
-        let term = null;
-        try {
-            term = this.browser.sdoAdapter.getTerm(termOrLink);
-        } catch (e) {
-        }
-        return '' +
-            (rdfaProp ? this.createSemanticLink(rdfaProp, termOrLink) : '') +
-            (term ? this.createLink(termOrLink, linkAttr) : termOrLink);
-    }
-
-    /**
-     * Create a HTML semantic link for a term.
-     *
-     * @param {string} property - The RDFa property of the link.
-     * @param {string} term - The vocabulary term.
-     * @returns {string} The resulting HTML.
-     */
-    createSemanticLink(property, term) {
-        return '<link property="' + this.escHtml(property) + '" href="' + this.escHtml(this.createHref(term)) + '">';
-    }
-
-    /**
-     * Create a HTML href for a vocabulary term.
-     *
-     * @param {string} term - The vocabulary term.
-     * @returns {string} The resulting HTML.
-     */
-    createHref(term) {
-        /*
-        if (this.isTermOfVocab(term)) {
-            return this.createIriWithQueryParam('term', term);
-        } else {
-
-         */
-        return this.browser.sdoAdapter.getTerm(term).getIRI();
-        //}
     }
 
     /**
