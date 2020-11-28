@@ -12,49 +12,50 @@ class TreeRenderer {
     }
 
     mapNodeForJSTree() {
-        $('#jsTree')
-            .jstree({
-                plugins: ['search', 'grid'],
-                core: {
-                    'themes': {
-                        'icons': true,
-                        'dots': true,
-                        'responsive': true,
-                        'stripes': true,
-                        rootVisible: false,
-                    },
-                    'data': [ /* TODO */]
+        $('#jsTree').jstree({
+            plugins: ['search', 'grid'],
+            core: {
+                themes: {
+                    icons: true,
+                    dots: true,
+                    responsive: true,
+                    stripes: true,
+                    rootVisible: false,
                 },
-                grid: {
-                    columns: [
-                        {'width': '20%', header: 'Class / Property'},
-                        // { header: 'Class / Property'},
-                        {
-                            header: 'Range / Type',
-                            value: function (node) {
-                                // TODO
-                            }
-                        },
-                        {
-                            width: '60%',
-                            header: 'Description',
-                            value: function (node) {
-                                // TODO
-                            }
-                        },
-                        {
-                            width: '20%',
-                            header: 'Cardinality',
-                            value: function (node) {
-                                // TODO
-                            }
+                data: [ /* TODO */]
+            },
+            grid: {
+                columns: [
+                    {
+                        width: '20%',
+                        header: 'Class / Property'
+                    },
+                    {
+                        header: 'Range / Type',
+                        value: function (node) {
+                            // TODO
                         }
-                    ],
-                }
-            })
-            .bind('select_node.jstree', function (event, data) {
-                // TODO
-            });
+                    },
+                    {
+                        width: '60%',
+                        header: 'Description',
+                        value: function (node) {
+                            // TODO
+                        }
+                    },
+                    {
+                        width: '20%',
+                        header: 'Cardinality',
+                        value: function (node) {
+                            // TODO
+                        }
+                    }
+                ],
+            }
+        })
+        .bind('select_node.jstree', (event, data) => {
+            // TODO
+        });
     }
 }
 
