@@ -5,6 +5,7 @@ import DSHandler from './DSHandler';
 
 import ListRenderer from './ListRenderer';
 import DSRenderer from './DSRenderer';
+import TreeRenderer from './TreeRenderer';
 
 const BROWSER_TYPES = {
     DS: 'DS',
@@ -23,6 +24,7 @@ class DSBrowser {
         this.dsHandler = new DSHandler(this);
 
         this.dsRenderer = new DSRenderer(this);
+        this.treeRenderer = new TreeRenderer(this);
         this.listRenderer = new ListRenderer(this);
 
         window.addEventListener('popstate', async () => {
@@ -45,6 +47,8 @@ class DSBrowser {
             } else {
                 this.dsRenderer.render();
             }
+        } else if (this.isTreeRendering()) {
+            this.treeRenderer.render();
         } else if (this.isListRendering()) {
             this.listRenderer.render();
         }
@@ -139,8 +143,22 @@ class DSBrowser {
 
     isDSRendering() {
         const searchParams = new URLSearchParams(window.location.search);
-        return ((this.type === BROWSER_TYPES.LIST && searchParams.get('ds')) ||
-            (this.type === BROWSER_TYPES.DS));
+        const ds = searchParams.get('ds');
+        const mode = searchParams.get('mode');
+        return (!mode && (
+            (this.type === BROWSER_TYPES.LIST && ds) ||
+            (this.type === BROWSER_TYPES.DS)
+        ));
+    }
+
+    isTreeRendering() {
+        const searchParams = new URLSearchParams(window.location.search);
+        const ds = searchParams.get('ds');
+        const treeMode = searchParams.get('mode') === 'tree';
+        return (treeMode && (
+            (this.type === BROWSER_TYPES.LIST && ds) ||
+            (this.type === BROWSER_TYPES.DS)
+        ));
     }
 
     /**

@@ -25,6 +25,7 @@
     "buildMinified": "browserify src/DSBrowser.js -s DSBrowser -g [uglifyify] > dist/ds-browser.min.js"
   },
   "dependencies": {
+    "jstree": "^3.3.10",
     "schema-org-adapter": "^3.3.0"
   },
   "devDependencies": {
