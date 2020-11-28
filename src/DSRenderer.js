@@ -202,7 +202,7 @@ class DSRenderer {
                 if (minCount !== maxCount) {
                     title = 'This property is required. It must have between ' + minCount + ' and ' + maxCount +
                         ' value(s).';
-                    cardinality = minCount + ".." + maxCount;
+                    cardinality = minCount + '..' + maxCount;
                 } else {
                     title = 'This property is required. It must have ' + minCount + ' value(s).';
                     cardinality = minCount;
