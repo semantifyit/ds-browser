@@ -297,6 +297,9 @@ class Util {
         return '' +
             '<div id="mainContent" vocab="http://schema.org/" typeof="' + rdfaTypeOf + '" ' +
             'resource="' + window.location + '">' +
+            '<style scoped>' +
+            '@import url("https://schema.org/docs/schemaorg.css");' +
+            '</style>' +
             mainContent +
             '</div>';
     }
@@ -328,6 +331,20 @@ class Util {
         }
         href = (href ? href : termObj.getIRI());
         return this.createLink(href, termObj.getIRI(true));
+    }
+
+    prettyPrintClassDefinition(classDef) {
+        // ClassDefinition can be a string, or an array of strings (MTE)
+        // ClassDefinition include strings with the vocab indicator in them
+        // Remove vocab if it is the standard schema:
+        // Return a human readable string of the classDefinition
+        if (Array.isArray(classDef)) {
+            return classDef.map((classDefPart) => {
+                return this.prettyPrintIri(classDefPart);
+            }).join(', ');
+        } else {
+            return this.prettyPrintIri(classDef);
+        }
     }
 }
 

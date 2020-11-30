@@ -26,6 +26,7 @@
   },
   "dependencies": {
     "jstree": "^3.3.10",
+    "jstreegrid": "3.10.1",
     "schema-org-adapter": "^3.3.0"
   },
   "devDependencies": {
