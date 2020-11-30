@@ -136,11 +136,13 @@ class DSRenderer {
         )
     }
 
-    createClassPropertySideCols(propertyNode) {
+    createClassPropertySideCols(node) {
         return '' +
-            '<td class="prop-ect">' + this.createExpectedTypes(propertyNode) + '</td>' +
-            '<td class="prop-desc">' + this.createClassPropertyDescText(propertyNode) + '</td>' +
-            '<td class="prop-ect">' + this.dsHandler.createCardinality(propertyNode) + '</td>';
+            '<td class="prop-ect">' + this.createExpectedTypes(node) + '</td>' +
+            '<td class="prop-desc">' + this.createClassPropertyDescText(node) + '</td>' +
+            '<td class="prop-ect">' +
+            this.dsHandler.createCardinality(node['sh:minCount'], node['sh:minCount']) +
+            '</td>';
     }
 
     createClassPropertyDescText(propertyNode) {

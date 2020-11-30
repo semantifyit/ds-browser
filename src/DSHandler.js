@@ -116,9 +116,7 @@ class DSHandler {
         }
     }
 
-    createCardinality(dsPropertyNode) {
-        const minCount = dsPropertyNode['sh:minCount'];
-        const maxCount = dsPropertyNode['sh:maxCount'];
+    createCardinality(minCount, maxCount) {
         let title, cardinality = '';
 
         if (minCount && minCount !== 0) {

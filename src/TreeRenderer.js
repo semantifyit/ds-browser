@@ -63,7 +63,9 @@ class TreeRenderer {
                         width: '20%',
                         header: 'Cardinality',
                         value: function (node) {
-                            return self.dsHandler.createCardinality(node.data);
+                            if (node.data.dsRange) {
+                                return self.dsHandler.createCardinality(node.data.minCount, node.data.maxCount);
+                            }
                         }
                     }
                 ],
