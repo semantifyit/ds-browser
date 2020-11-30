@@ -1,4 +1,5 @@
 import $ from 'jquery';
+import jQuery from 'jquery';
 
 import 'jstree';
 import 'jstreegrid';
@@ -26,6 +27,7 @@ class TreeRenderer {
     }
 
     mapNodeForJSTree(data) {
+        const self = this;
         $('#jsTree').jstree({
             plugins: ['search', 'grid'],
             core: {
@@ -47,21 +49,21 @@ class TreeRenderer {
                     {
                         header: 'Range / Type',
                         value: function (node) {
-                            // TODO
+                            return (node.data.dsRange);
                         }
                     },
                     {
                         width: '60%',
                         header: 'Description',
                         value: function (node) {
-                            // TODO
+                            return (node.data.dsDescription);
                         }
                     },
                     {
                         width: '20%',
                         header: 'Cardinality',
                         value: function (node) {
-                            // TODO
+                            return self.dsHandler.createCardinality(node.data);
                         }
                     }
                 ],

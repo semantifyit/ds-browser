@@ -140,7 +140,7 @@ class DSRenderer {
         return '' +
             '<td class="prop-ect">' + this.createExpectedTypes(propertyNode) + '</td>' +
             '<td class="prop-desc">' + this.createClassPropertyDescText(propertyNode) + '</td>' +
-            '<td class="prop-ect">' + this.createCardinality(propertyNode) + '</td>';
+            '<td class="prop-ect">' + this.dsHandler.createCardinality(propertyNode) + '</td>';
     }
 
     createClassPropertyDescText(propertyNode) {
@@ -192,37 +192,7 @@ class DSRenderer {
         }).join('<br>');
     }
 
-    createCardinality(dsPropertyNode) {
-        const minCount = dsPropertyNode['sh:minCount'];
-        const maxCount = dsPropertyNode['sh:maxCount'];
-        let title, cardinality = '';
 
-        if (minCount && minCount !== 0) {
-            if (maxCount && maxCount !== 0) {
-                if (minCount !== maxCount) {
-                    title = 'This property is required. It must have between ' + minCount + ' and ' + maxCount +
-                        ' value(s).';
-                    cardinality = minCount + '..' + maxCount;
-                } else {
-                    title = 'This property is required. It must have ' + minCount + ' value(s).';
-                    cardinality = minCount;
-                }
-            } else {
-                title = 'This property is required. It must have at least ' + minCount + ' value(s).';
-                cardinality = minCount + '..N';
-            }
-        } else {
-            if (maxCount && maxCount !== 0) {
-                title = 'This property is optional. It must have at most ' + maxCount + ' value(s).';
-                cardinality = '0..' + maxCount;
-            } else {
-                title = 'This property is optional. It may have any amount of values.';
-                cardinality = '0..N';
-            }
-        }
-
-        return '<span title="' + title + '">' + cardinality + '</span>';
-    }
 
     /**
      * Create HTML for the enumeration members of the Enumeration.
