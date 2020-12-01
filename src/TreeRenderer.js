@@ -14,18 +14,7 @@ class TreeRenderer {
     render() {
         this.browser.elem.innerHTML = '' +
             '<div>' +
-            '<style>' +
-            '@import url("https://cdnjs.cloudflare.com/ajax/libs/jstree/3.3.8/themes/default/style.min.css");' +
-            '@import url("https://maxcdn.bootstrapcdn.com/bootstrap/3.4.1/css/bootstrap.min.css");' +
-            '.optional-property { color: #ffa517; }' +
-            '.mandatory-property { color: #00ce0c; }' +
-            '#btn-row { padding: 12px 0px 12px 5px; }' +
-            '.btn-vis { padding: 5px; }' +
-            '.btn-vis-shadow {' +
-            '    webkit-box-shadow: 0 4px 5px 0 rgba(0, 0, 0, 0.14), 0 1px 10px 0 rgba(0, 0, 0, 0.12), 0 2px 4px -1px rgba(0, 0, 0, 0.2);' +
-            '    box-shadow: 0 4px 5px 0 rgba(0, 0, 0, 0.14), 0 1px 10px 0 rgba(0, 0, 0, 0.12), 0 2px 4px -1px rgba(0, 0, 0, 0.2);' +
-            '}'+
-            '</style>' +
+            this.createTreeStyle() +
             '<div id="btn-row">' +
             'Show: ' +
             '<span class="btn-vis btn-vis-shadow" style="margin-left: 10px;">' +
@@ -39,6 +28,22 @@ class TreeRenderer {
             '</div>';
         const dsClass = this.generateDsClass(this.browser.ds['@graph'][0], false, false);
         this.mapNodeForJSTree([dsClass]);
+    }
+
+    createTreeStyle() {
+        return '' +
+            '<style>' +
+            '@import url("https://cdnjs.cloudflare.com/ajax/libs/jstree/3.3.8/themes/default/style.min.css");' +
+            '@import url("https://maxcdn.bootstrapcdn.com/bootstrap/3.4.1/css/bootstrap.min.css");' +
+            '.optional-property { color: #ffa517; }' +
+            '.mandatory-property { color: #00ce0c; }' +
+            '#btn-row { padding: 12px 0px 12px 5px; }' +
+            '.btn-vis { padding: 5px; }' +
+            '.btn-vis-shadow {' +
+            '    webkit-box-shadow: 0 4px 5px 0 rgba(0, 0, 0, 0.14), 0 1px 10px 0 rgba(0, 0, 0, 0.12), 0 2px 4px -1px rgba(0, 0, 0, 0.2);' +
+            '    box-shadow: 0 4px 5px 0 rgba(0, 0, 0, 0.14), 0 1px 10px 0 rgba(0, 0, 0, 0.12), 0 2px 4px -1px rgba(0, 0, 0, 0.2);' +
+            '}'+
+            '</style>';
     }
 
     mapNodeForJSTree(data) {
