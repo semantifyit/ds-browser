@@ -19,7 +19,22 @@ class TreeRenderer {
             '@import url("https://maxcdn.bootstrapcdn.com/bootstrap/3.4.1/css/bootstrap.min.css");' +
             '.optional-property { color: #ffa517; }' +
             '.mandatory-property { color: #00ce0c; }' +
+            '#btn-row { padding: 12px 0px 12px 5px; }' +
+            '.btn-vis { padding: 5px; }' +
+            '.btn-vis-shadow {' +
+            '    webkit-box-shadow: 0 4px 5px 0 rgba(0, 0, 0, 0.14), 0 1px 10px 0 rgba(0, 0, 0, 0.12), 0 2px 4px -1px rgba(0, 0, 0, 0.2);' +
+            '    box-shadow: 0 4px 5px 0 rgba(0, 0, 0, 0.14), 0 1px 10px 0 rgba(0, 0, 0, 0.12), 0 2px 4px -1px rgba(0, 0, 0, 0.2);' +
+            '}'+
             '</style>' +
+            '<div id="btn-row">' +
+            'Show: ' +
+            '<span class="btn-vis btn-vis-shadow" style="margin-left: 10px;">' +
+            '<img src="" class="glyphicon glyphicon-tag optional-property"> optional' +
+            '</span>' +
+            '<span class="btn-vis" style="margin-left: 10px;">' +
+            '<img src="" class="glyphicon glyphicon-tag mandatory-property"> mandatory' +
+            '</span>' +
+            '</div>' +
             '<div id="jsTree"></div>' +
             '</div>';
         const dsClass = this.generateDsClass(this.browser.ds['@graph'][0], false, false);
