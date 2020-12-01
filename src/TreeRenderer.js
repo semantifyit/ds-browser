@@ -70,9 +70,6 @@ class TreeRenderer {
                     }
                 ],
             }
-        })
-        .bind('select_node.jstree', (event, data) => {
-            // TODO
         });
     }
 
