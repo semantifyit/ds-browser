@@ -16,10 +16,10 @@ class TreeRenderer {
             this.createTreeStyle() +
             '<div id="btn-row">' +
             'Show: ' +
-            '<span class="btn-vis btn-vis-shadow" style="margin-left: 10px;">' +
+            '<span id="btn-opt" class="btn-vis btn-vis-shadow" style="margin-left: 10px;">' +
             '<img src="" class="glyphicon glyphicon-tag optional-property"> optional' +
             '</span>' +
-            '<span class="btn-vis" style="margin-left: 10px;">' +
+            '<span id="btn-man" class="btn-vis" style="margin-left: 10px;">' +
             '<img src="" class="glyphicon glyphicon-tag mandatory-property"> mandatory' +
             '</span>' +
             '</div>' +
@@ -27,6 +27,7 @@ class TreeRenderer {
             '</div>';
         const dsClass = this.generateDsClass(this.browser.ds['@graph'][0], false, false);
         this.mapNodeForJSTree([dsClass]);
+        this.addEventListenerForSwitchingVisibility();
     }
 
     createTreeStyle() {
@@ -39,6 +40,7 @@ class TreeRenderer {
             '#btn-row { padding: 12px 0px 12px 5px; }' +
             '.btn-vis { padding: 5px; }' +
             '.btn-vis-shadow {' +
+            '    cursor: pointer;' +
             '    webkit-box-shadow: 0 4px 5px 0 rgba(0, 0, 0, 0.14), 0 1px 10px 0 rgba(0, 0, 0, 0.12), 0 2px 4px -1px rgba(0, 0, 0, 0.2);' +
             '    box-shadow: 0 4px 5px 0 rgba(0, 0, 0, 0.14), 0 1px 10px 0 rgba(0, 0, 0, 0.12), 0 2px 4px -1px rgba(0, 0, 0, 0.2);' +
             '}'+
@@ -281,6 +283,29 @@ class TreeRenderer {
         }).join(' or ');
 
         return returnObj;
+    }
+
+    addEventListenerForSwitchingVisibility() {
+        $('.btn-vis-shadow').click((event) => {
+            const $button = $(event.currentTarget);
+            $button.removeClass('btn-vis-shadow');
+            let $otherButton, showOptional;
+            if ($button.attr('id') === 'btn-opt') {
+                $otherButton = $('#btn-man');
+                showOptional = true;
+            } else {
+                $otherButton = $('#btn-opt');
+                showOptional = false;
+            }
+            $otherButton.addClass('btn-vis-shadow');
+            $button.off('click');
+            this.addEventListenerForSwitchingVisibility();
+
+            const dsClass = this.generateDsClass(this.browser.ds['@graph'][0], false, showOptional);
+            const jsTree = $('#jsTree').jstree(true);
+            jsTree.settings.core.data = dsClass;
+            jsTree.refresh();
+        })
     }
 }
 
