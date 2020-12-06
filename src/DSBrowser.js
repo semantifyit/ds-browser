@@ -5,6 +5,7 @@ import DSHandler from './DSHandler';
 
 import ListRenderer from './ListRenderer';
 import DSRenderer from './DSRenderer';
+import NativeRenderer from './NativeRenderer';
 import TreeRenderer from './TreeRenderer';
 
 const BROWSER_TYPES = {
@@ -23,9 +24,10 @@ class DSBrowser {
         this.util = new Util(this);
         this.dsHandler = new DSHandler(this);
 
-        this.dsRenderer = new DSRenderer(this);
-        this.treeRenderer = new TreeRenderer(this);
         this.listRenderer = new ListRenderer(this);
+        this.dsRenderer = new DSRenderer(this);
+        this.nativeRenderer = new NativeRenderer(this);
+        this.treeRenderer = new TreeRenderer(this);
 
         window.addEventListener('popstate', async () => {
             await this.render();
@@ -39,14 +41,10 @@ class DSBrowser {
 
         await this.init();
 
-        if (this.isDSRendering()) {
-            const searchParams = new URLSearchParams(window.location.search);
-            const format = searchParams.get('format');
-            if (format && format === 'shacl') {
-                this.dsRenderer.renderShacl();
-            } else {
-                this.dsRenderer.render();
-            }
+        if (this.isShaclRendering()) {
+            this.dsRenderer.renderShacl();
+        } else if (this.isNativeRendering()) {
+            this.nativeRenderer.render();
         } else if (this.isTreeRendering()) {
             this.treeRenderer.render();
         } else if (this.isListRendering()) {
@@ -141,14 +139,19 @@ class DSBrowser {
         return (path !== this.path);
     }
 
-    isDSRendering() {
+    isShaclRendering() {
+        const searchParams = new URLSearchParams(window.location.search);
+        const format = searchParams.get('format');
+        return (format && format === 'shacl');
+    }
+
+    isNativeRendering() {
         const searchParams = new URLSearchParams(window.location.search);
         const ds = searchParams.get('ds');
         const mode = searchParams.get('mode');
-        return (!mode && (
-            (this.type === BROWSER_TYPES.LIST && ds) ||
-            (this.type === BROWSER_TYPES.DS)
-        ));
+        return (!mode &&
+            ((this.type === BROWSER_TYPES.LIST && ds) ||
+            (this.type === BROWSER_TYPES.DS)));
     }
 
     isTreeRendering() {

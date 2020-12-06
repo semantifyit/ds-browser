@@ -295,12 +295,14 @@ class Util {
      */
     createMainContent(rdfaTypeOf, mainContent) {
         return '' +
-            '<div id="mainContent" vocab="http://schema.org/" typeof="' + rdfaTypeOf + '" ' +
-            'resource="' + window.location + '">' +
-            '<style scoped>' +
+            '<div>' +
+            '<style>' +
             '@import url("https://schema.org/docs/schemaorg.css");' +
             '</style>' +
+            '<div id="mainContent" vocab="http://schema.org/" typeof="' + rdfaTypeOf + '" ' +
+            'resource="' + window.location + '">' +
             mainContent +
+            '</div>' +
             '</div>';
     }
 

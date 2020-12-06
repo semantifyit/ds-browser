@@ -1,8 +1,3 @@
-import $ from 'jquery';
-
-import 'jstree';
-import 'jstreegrid';
-
 class TreeRenderer {
     constructor(browser) {
         this.browser = browser;
@@ -11,9 +6,38 @@ class TreeRenderer {
     }
 
     render() {
-        this.browser.elem.innerHTML = '' +
-            '<div>' +
+        const mainContent = '' +
+            this.browser.dsRenderer.createHeader() +
+            '<iframe id="iframe-jsTree" frameborder="0" width="100%" scrolling="no"></iframe>';
+        this.browser.elem.innerHTML = this.util.createMainContent('rdfs:Class', mainContent);
+
+        this.initIFrameForJSTree();
+    }
+
+    initIFrameForJSTree () {
+        this.iFrame = document.getElementById('iframe-jsTree');
+        this.iFrameCW = this.iFrame.contentWindow;
+        const doc = this.iFrameCW.document;
+        const jsTreeHtml = this.createJSTreeHTML();
+        doc.open();
+        doc.write(jsTreeHtml);
+        doc.close();
+
+        const dsClass = this.generateDsClass(this.browser.ds['@graph'][0], false, false);
+        this.mapNodeForJSTree([dsClass]);
+    }
+
+    createJSTreeHTML() {
+        return '' +
+            '<head>' +
+            '<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.1.1/jquery.min.js"></script>' +
+            '<script src="https://cdnjs.cloudflare.com/ajax/libs/jstree/3.3.8/jstree.min.js"></script>' +
+            '<script src="https://cdnjs.cloudflare.com/ajax/libs/jstreegrid/3.10.2/jstreegrid.min.js"></script>' +
+            '<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.1/css/bootstrap.min.css" />' +
+            '<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/jstree/3.3.8/themes/default/style.min.css" />' +
             this.createTreeStyle() +
+            '</head>' +
+            '<body>' +
             '<div id="btn-row">' +
             'Show: ' +
             '<span id="btn-opt" class="btn-vis btn-vis-shadow" style="margin-left: 10px;">' +
@@ -24,17 +48,12 @@ class TreeRenderer {
             '</span>' +
             '</div>' +
             '<div id="jsTree"></div>' +
-            '</div>';
-        const dsClass = this.generateDsClass(this.browser.ds['@graph'][0], false, false);
-        this.mapNodeForJSTree([dsClass]);
-        this.addEventListenerForSwitchingVisibility();
+            '</body>';
     }
 
     createTreeStyle() {
         return '' +
             '<style>' +
-            '@import url("https://cdnjs.cloudflare.com/ajax/libs/jstree/3.3.8/themes/default/style.min.css");' +
-            '@import url("https://maxcdn.bootstrapcdn.com/bootstrap/3.4.1/css/bootstrap.min.css");' +
             '.optional-property { color: #ffa517; }' +
             '.mandatory-property { color: #00ce0c; }' +
             '#btn-row { padding: 12px 0px 12px 5px; }' +
@@ -43,55 +62,8 @@ class TreeRenderer {
             '    cursor: pointer;' +
             '    webkit-box-shadow: 0 4px 5px 0 rgba(0, 0, 0, 0.14), 0 1px 10px 0 rgba(0, 0, 0, 0.12), 0 2px 4px -1px rgba(0, 0, 0, 0.2);' +
             '    box-shadow: 0 4px 5px 0 rgba(0, 0, 0, 0.14), 0 1px 10px 0 rgba(0, 0, 0, 0.12), 0 2px 4px -1px rgba(0, 0, 0, 0.2);' +
-            '}'+
+            '}' +
             '</style>';
-    }
-
-    mapNodeForJSTree(data) {
-        const self = this;
-        $('#jsTree').jstree({
-            plugins: ['search', 'grid'],
-            core: {
-                themes: {
-                    icons: true,
-                    dots: true,
-                    responsive: true,
-                    stripes: true,
-                    rootVisible: false,
-                },
-                data: data
-            },
-            grid: {
-                columns: [
-                    {
-                        width: '20%',
-                        header: 'Class / Property'
-                    },
-                    {
-                        header: 'Range / Type',
-                        value: function (node) {
-                            return (node.data.dsRange);
-                        }
-                    },
-                    {
-                        width: '60%',
-                        header: 'Description',
-                        value: function (node) {
-                            return (node.data.dsDescription);
-                        }
-                    },
-                    {
-                        width: '20%',
-                        header: 'Cardinality',
-                        value: function (node) {
-                            if (node.data.dsRange) {
-                                return self.dsHandler.createCardinality(node.data.minCount, node.data.maxCount);
-                            }
-                        }
-                    }
-                ],
-            }
-        });
     }
 
     generateDsClass(dsvClass, closed, showOptional) {
@@ -285,28 +257,90 @@ class TreeRenderer {
         return returnObj;
     }
 
-    addEventListenerForSwitchingVisibility() {
-        $('.btn-vis-shadow').click((event) => {
-            const $button = $(event.currentTarget);
+    mapNodeForJSTree(data) {
+        const self = this;
+        this.iFrame.addEventListener('load', function() {
+            self.iFrameCW.$('#jsTree').jstree({
+                plugins: ['search', 'grid'],
+                core: {
+                    themes: {
+                        icons: true,
+                        dots: true,
+                        responsive: true,
+                        stripes: true,
+                        rootVisible: false,
+                    },
+                    data: data
+                },
+                grid: {
+                    columns: [
+                        {
+                            maxWidth: '20%',
+                            header: 'Class / Property'
+                        },
+                        {
+                            header: 'Range / Type',
+                            maxWidth: '20%',
+                            value: function (node) {
+                                return (node.data.dsRange);
+                            }
+                        },
+                        {
+                            maxWidth: '39%',
+                            header: 'Description',
+                            value: function (node) {
+                                return (node.data.dsDescription);
+                            }
+                        },
+                        {
+                            maxWidth: '20%',
+                            header: 'Cardinality',
+                            value: function (node) {
+                                if (node.data.dsRange) {
+                                    return self.dsHandler.createCardinality(node.data.minCount, node.data.maxCount);
+                                }
+                            }
+                        }
+                    ],
+                }
+            }).bind('loaded.jstree after_open.jstree after_close.jstree refresh.jstree', self.adaptIframe.bind(self));
+
+            self.addIframeClickEvent();
+        });
+    }
+
+    adaptIframe() {
+        const scrollY = window.scrollY;
+        const scrollX = window.scrollX;
+        this.iFrame.height = "0px";
+        this.iFrame.height = this.iFrameCW.document.body.scrollHeight;
+        window.scrollTo(scrollX, scrollY);
+    }
+
+    addIframeClickEvent() {
+        this.iFrameCW.$('.btn-vis-shadow').click((event) => {
+            const $button = this.iFrameCW.$(event.currentTarget);
             $button.removeClass('btn-vis-shadow');
             let $otherButton, showOptional;
             if ($button.attr('id') === 'btn-opt') {
-                $otherButton = $('#btn-man');
+                $otherButton = this.iFrameCW.$('#btn-man');
                 showOptional = true;
             } else {
-                $otherButton = $('#btn-opt');
+                $otherButton = this.iFrameCW.$('#btn-opt');
                 showOptional = false;
             }
             $otherButton.addClass('btn-vis-shadow');
             $button.off('click');
-            this.addEventListenerForSwitchingVisibility();
+            this.addIframeClickEvent();
 
             const dsClass = this.generateDsClass(this.browser.ds['@graph'][0], false, showOptional);
-            const jsTree = $('#jsTree').jstree(true);
+            const jsTree = this.iFrameCW.$('#jsTree').jstree(true);
             jsTree.settings.core.data = dsClass;
             jsTree.refresh();
         })
     }
+
+
 }
 
 module.exports = TreeRenderer;
