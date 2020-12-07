@@ -21891,7 +21891,7 @@ class Util {
 
 
   createMainContent(rdfaTypeOf, mainContent) {
-    return '' + '<div>' + '<style>' + '@import url("https://schema.org/docs/schemaorg.css");' + '#mainContent {' + 'border-bottom: none;' + '}' + '.ds-selector {' + 'text-align: right;' + 'padding: 0px' + '}' + '#div-iframe {' + 'padding-right: 6px;' + '}' + '#iframe-jsTree {' + 'padding: 2px;' + 'border-left: 1px solid #ccc;' + 'border-right: 1px solid #ccc;' + 'border-bottom: 1px solid #ccc;' + '}' + '</style>' + '<div id="mainContent" vocab="http://schema.org/" typeof="' + rdfaTypeOf + '" ' + 'resource="' + window.location + '">' + mainContent + '</div>' + '</div>';
+    return '' + '<div>' + '<style>' + '@import url("https://schema.org/docs/schemaorg.css");' + '#mainContent { border-bottom: none; }' + 'table.definition-table { border: 1px solid #ccc }' + '.ds-selector {padding: 0px}' + '.ds-selector-tabs .selectors a:first-child { margin-left: 0px; }' + '#div-iframe { padding-right: 6px; }' + '#iframe-jsTree {' + 'padding: 2px;' + 'border-left: 1px solid #ccc;' + 'border-right: 1px solid #ccc;' + 'border-bottom: 1px solid #ccc;' + '}' + '</style>' + '<div id="mainContent" vocab="http://schema.org/" typeof="' + rdfaTypeOf + '" ' + 'resource="' + window.location + '">' + mainContent + '</div>' + '</div>';
   }
 
   createExternalLinkLegend() {
