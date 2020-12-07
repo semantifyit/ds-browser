@@ -309,7 +309,7 @@ class TreeRenderer {
                         }
                     ],
                 }
-            }).bind('loaded.jstree after_open.jstree after_close.jstree refresh.jstree', self.adaptIframe.bind(self));
+            }).bind('ready.jstree after_open.jstree after_close.jstree refresh.jstree', self.adaptIframe.bind(self));
 
             self.addIframeClickEvent();
         });
