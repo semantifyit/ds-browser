@@ -20553,6 +20553,10 @@ var _ListRenderer = _interopRequireDefault(require("./ListRenderer"));
 
 var _DSRenderer = _interopRequireDefault(require("./DSRenderer"));
 
+var _NativeRenderer = _interopRequireDefault(require("./NativeRenderer"));
+
+var _TreeRenderer = _interopRequireDefault(require("./TreeRenderer"));
+
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
 function asyncGeneratorStep(gen, resolve, reject, _next, _throw, key, arg) { try { var info = gen[key](arg); var value = info.value; } catch (error) { reject(error); return; } if (info.done) { resolve(value); } else { Promise.resolve(value).then(_next, _throw); } }
@@ -20575,8 +20579,10 @@ class DSBrowser {
     this.path = null;
     this.util = new _Util.default(this);
     this.dsHandler = new _DSHandler.default(this);
-    this.dsRenderer = new _DSRenderer.default(this);
     this.listRenderer = new _ListRenderer.default(this);
+    this.dsRenderer = new _DSRenderer.default(this);
+    this.nativeRenderer = new _NativeRenderer.default(this);
+    this.treeRenderer = new _TreeRenderer.default(this);
     window.addEventListener('popstate', /*#__PURE__*/_asyncToGenerator(function* () {
       yield _this.render();
     }));
@@ -20586,18 +20592,15 @@ class DSBrowser {
     var _this2 = this;
 
     return _asyncToGenerator(function* () {
-      _this2.elem.innerHTML = '<img src="https://raw.githubusercontent.com/YarnSeemannsgarn/ds-browser/main/images/loading.gif" ' + 'alt="Loading Animation" style="margin-top: 6px">';
+      _this2.elem.innerHTML = '<div style="text-align: center">' + '<img src="https://raw.githubusercontent.com/YarnSeemannsgarn/ds-browser/main/images/loading.gif"' + ' alt="Loading Animation" style="margin-top: 6px;">' + '</div>';
       yield _this2.init();
 
-      if (_this2.isDSRendering()) {
-        var searchParams = new URLSearchParams(window.location.search);
-        var format = searchParams.get('format');
-
-        if (format && format === 'shacl') {
-          _this2.dsRenderer.renderShacl();
-        } else {
-          _this2.dsRenderer.render();
-        }
+      if (_this2.isShaclRendering()) {
+        _this2.dsRenderer.renderShacl();
+      } else if (_this2.isNativeRendering()) {
+        _this2.nativeRenderer.render();
+      } else if (_this2.isTreeRendering()) {
+        _this2.treeRenderer.render();
       } else if (_this2.isListRendering()) {
         _this2.listRenderer.render();
       }
@@ -20715,9 +20718,24 @@ class DSBrowser {
     return path !== this.path;
   }
 
-  isDSRendering() {
+  isShaclRendering() {
     var searchParams = new URLSearchParams(window.location.search);
-    return this.type === BROWSER_TYPES.LIST && searchParams.get('ds') || this.type === BROWSER_TYPES.DS;
+    var format = searchParams.get('format');
+    return format && format === 'shacl';
+  }
+
+  isNativeRendering() {
+    var searchParams = new URLSearchParams(window.location.search);
+    var ds = searchParams.get('ds');
+    var mode = searchParams.get('mode');
+    return !mode && (this.type === BROWSER_TYPES.LIST && ds || this.type === BROWSER_TYPES.DS);
+  }
+
+  isTreeRendering() {
+    var searchParams = new URLSearchParams(window.location.search);
+    var ds = searchParams.get('ds');
+    var treeMode = searchParams.get('mode') === 'tree';
+    return treeMode && (this.type === BROWSER_TYPES.LIST && ds || this.type === BROWSER_TYPES.DS);
   }
   /**
    * Check if the list should be rendered.
@@ -20768,7 +20786,7 @@ class DSBrowser {
 
 module.exports = DSBrowser;
 
-},{"./DSHandler":85,"./DSRenderer":86,"./ListRenderer":87,"./Util":88,"schema-org-adapter":78}],85:[function(require,module,exports){
+},{"./DSHandler":85,"./DSRenderer":86,"./ListRenderer":87,"./NativeRenderer":88,"./TreeRenderer":89,"./Util":90,"schema-org-adapter":78}],85:[function(require,module,exports){
 "use strict";
 
 class DSHandler {
@@ -20904,162 +20922,7 @@ class DSHandler {
     }
   }
 
-}
-
-module.exports = DSHandler;
-
-},{}],86:[function(require,module,exports){
-"use strict";
-
-class DSRenderer {
-  constructor(browser) {
-    this.browser = browser;
-    this.util = browser.util;
-    this.dsHandler = browser.dsHandler;
-  }
-  /**
-   * Render the JSON-LD serialization of the Vocabulary.
-   */
-
-
-  renderShacl() {
-    var preStyle = '' + // Overwrite schema.org CSS
-    'font-size: medium; ' + 'background: none; ' + 'text-align: left; ' + 'width: auto; ' + 'padding: 0; ' + 'overflow: visible; ' + 'color: rgb(0, 0, 0); ' + 'line-height: normal; ' + // Defaults for pre https://www.w3schools.com/cssref/css_default_values.asp
-    'display: block; ' + 'font-family: monospace; ' + 'margin: 1em 0; ' + // From Browser when loading SHACL file
-    'word-wrap: break-word; ' + 'white-space: pre-wrap;';
-    this.browser.elem.innerHTML = '' + '<pre style="' + preStyle + '">' + JSON.stringify(this.browser.ds, null, 2) + '</pre>';
-  }
-
-  render() {
-    // Cannot be in constructor, cause at this time the node is not initialized
-    this.dsNode = this.browser.dsNode;
-    this.node = this.dsNode.node;
-    var mainContent = this.createHeader() + (this.dsNode.type === 'Class' ? this.createClassPropertyTable() : this.createEnumerationMembers());
-    this.browser.elem.innerHTML = this.util.createMainContent('rdfs:Class', mainContent);
-  }
-
-  createHeader() {
-    var name,
-        description,
-        breadcrumbs = '';
-
-    if (!this.browser.path) {
-      var graph = this.browser.ds['@graph'][0];
-      name = graph['schema:name'] || 'Domain Specification';
-      description = graph['schema:description'] || '';
-    } else {
-      var nodeName = this.node['sh:class'];
-      name = this.util.prettyPrintIri(nodeName);
-      description = this.browser.sdoAdapter.getTerm(nodeName).getDescription();
-      breadcrumbs = this.createBreadcrumbs();
-    }
-
-    description = this.util.repairLinksInHTMLCode(description);
-    return '' + this.createNavigation() + '<h1 property="schema:name">' + name + '</h1>' + this.util.createExternalLinkLegend() + breadcrumbs + '<div property="schema:description">' + description + '<br><br></div>';
-  }
-
-  createBreadcrumbs() {
-    return '' + '<h4>' + '<span class="breadcrumbs">' + this.util.createJSLink('path', null, this.browser.ds['@graph'][0]['schema:name'] || 'Domain Specification') + ' > ' + this.browser.path.split('-').map((term, index, pathSplitted) => {
-      if (index % 2 === 0) {
-        return term;
-      } else {
-        var newPath = pathSplitted.slice(0, index + 1).join('-');
-        return this.util.createJSLink('path', newPath, term);
-      }
-    }).join(' > ') + '</span>' + '</h4>';
-  }
-
-  createNavigation() {
-    return '' + '<span style="float: right;">' + '(' + this.util.createJSLink('format', 'shacl', 'SHACL serialization') + (this.browser.list ? ' | from List: ' + this.util.createJSLink('ds', null, this.browser.list['schema:name']) : '') + ')' + '</span>';
-  }
-
-  createClassPropertyTable() {
-    var properties;
-
-    if (!this.browser.path) {
-      properties = this.node['sh:property'].slice(0);
-    } else {
-      properties = this.node['sh:node']['sh:property'].slice(0);
-    }
-
-    var trs = properties.map(p => {
-      return this.createClassProperty(p);
-    }).join('');
-    return this.util.createDefinitionTable(['Property', 'Expected Type', 'Description', 'Cardinality'], trs);
-  }
-
-  createClassProperty(propertyNode) {
-    var path = propertyNode['sh:path'];
-    var property = this.browser.sdoAdapter.getProperty(path);
-    return this.util.createTableRow('rdf:Property', property.getIRI(), 'rdfs:label', this.util.createTermLink(path), this.createClassPropertySideCols(propertyNode), 'prop-name');
-  }
-
-  createClassPropertySideCols(propertyNode) {
-    return '' + '<td class="prop-ect">' + this.createExpectedTypes(propertyNode) + '</td>' + '<td class="prop-desc">' + this.createClassPropertyDescText(propertyNode) + '</td>' + '<td class="prop-ect">' + this.createCardinality(propertyNode) + '</td>';
-  }
-
-  createClassPropertyDescText(propertyNode) {
-    var name = this.util.prettyPrintIri(propertyNode['sh:path']);
-    var description = '';
-
-    try {
-      description = this.browser.sdoAdapter.getProperty(name).getDescription();
-    } catch (e) {}
-
-    var dsDescription = propertyNode['rdfs:comment'] ? propertyNode['rdfs:comment'] : '';
-    var descText = '';
-
-    if (description !== '') {
-      if (dsDescription !== '') {
-        descText += '<b>From Vocabulary:</b> ';
-      }
-
-      descText += description;
-    }
-
-    if (dsDescription !== '') {
-      if (description !== '') {
-        descText += '<br>' + '<b>From Domain Specification:</b> ';
-      }
-
-      descText += dsDescription;
-    }
-
-    return this.util.repairLinksInHTMLCode(descText);
-  }
-
-  createExpectedTypes(propertyNode) {
-    var property = this.browser.sdoAdapter.getProperty(propertyNode['sh:path']);
-    var propertyName = this.util.prettyPrintIri(property.getIRI(true));
-    var expectedTypes = propertyNode['sh:or'];
-    var html = '';
-    expectedTypes.forEach(expectedType => {
-      var name;
-
-      if (expectedType['sh:datatype']) {
-        name = expectedType['sh:datatype'];
-      } else if (expectedType['sh:class']) {
-        name = expectedType['sh:class'];
-      }
-
-      var mappedDataType = this.dsHandler.dataTypeMapperFromSHACL(name);
-
-      if (mappedDataType !== null) {
-        html += this.util.createLink(mappedDataType);
-      } else {
-        name = this.dsHandler.rangesToString(name);
-        var newPath = propertyName + '-' + name;
-        html += this.util.createJSLink('path', newPath, name, null, '-');
-      }
-
-      html += '<br>';
-    });
-    return html;
-  }
-
-  createCardinality(dsPropertyNode) {
-    var minCount = dsPropertyNode['sh:minCount'];
-    var maxCount = dsPropertyNode['sh:maxCount'];
+  createCardinality(minCount, maxCount) {
     var title,
         cardinality = '';
 
@@ -21067,7 +20930,7 @@ class DSRenderer {
       if (maxCount && maxCount !== 0) {
         if (minCount !== maxCount) {
           title = 'This property is required. It must have between ' + minCount + ' and ' + maxCount + ' value(s).';
-          cardinality = minCount + ".." + maxCount;
+          cardinality = minCount + '..' + maxCount;
         } else {
           title = 'This property is required. It must have ' + minCount + ' value(s).';
           cardinality = minCount;
@@ -21088,24 +20951,90 @@ class DSRenderer {
 
     return '<span title="' + title + '">' + cardinality + '</span>';
   }
+
+}
+
+module.exports = DSHandler;
+
+},{}],86:[function(require,module,exports){
+"use strict";
+
+function _defineProperty(obj, key, value) { if (key in obj) { Object.defineProperty(obj, key, { value: value, enumerable: true, configurable: true, writable: true }); } else { obj[key] = value; } return obj; }
+
+class DSRenderer {
+  constructor(browser) {
+    _defineProperty(this, "MODES", {
+      'native': 'native',
+      'tree': 'tree'
+    });
+
+    this.browser = browser;
+    this.util = browser.util;
+    this.dsHandler = browser.dsHandler;
+  }
   /**
-   * Create HTML for the enumeration members of the Enumeration.
-   *
-   * @returns {string} The resulting HTML.
+   * Render the JSON-LD serialization of the Vocabulary.
    */
 
 
-  createEnumerationMembers() {
-    var enumMembers = this.browser.sdoAdapter.getTerm(this.node['sh:class']).getEnumerationMembers();
+  renderShacl() {
+    var preStyle = '' + // Overwrite schema.org CSS
+    'font-size: medium; ' + 'background: none; ' + 'text-align: left; ' + 'width: auto; ' + 'padding: 0; ' + 'overflow: visible; ' + 'color: rgb(0, 0, 0); ' + 'line-height: normal; ' + // Defaults for pre https://www.w3schools.com/cssref/css_default_values.asp
+    'display: block; ' + 'font-family: monospace; ' + 'margin: 1em 0; ' + // From Browser when loading SHACL file
+    'word-wrap: break-word; ' + 'white-space: pre-wrap;';
+    this.browser.elem.innerHTML = '' + '<pre style="' + preStyle + '">' + JSON.stringify(this.browser.ds, null, 2) + '</pre>';
+  }
 
-    if (enumMembers.length !== 0) {
-      return '' + 'An Enumeration with:<br>' + '<b>' + '<a id="enumbers" title="Link: #enumbers" href="#enumbers" class="clickableAnchor">' + 'Enumeration members' + '</a>' + '</b>' + '<ul>' + enumMembers.map(e => {
-        var enumMember = this.browser.sdoAdapter.getEnumerationMember(e);
-        return '' + '<li>' + this.util.createLink(enumMember.getIRI(), e) + '</li>';
-      }).join('') + '</ul>' + '<br>';
+  createViewModeSelectors() {
+    var selected = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : this.MODES.native;
+    return '' + '<div class="ds-selector-tabs ds-selector">' + '<div class="selectors">' + (selected === this.MODES.native ? '<a class="selected">Native View</a>' : this.util.createJSLink('mode', null, 'Native View')) + (selected === this.MODES.tree ? '<a class="selected">Tree View</a>' : this.util.createJSLink('mode', 'tree', 'Tree View')) + '</div>' + '</div>';
+  }
+
+  createHeader() {
+    this.dsNode = this.browser.dsNode;
+    this.node = this.dsNode.node;
+    var name,
+        description,
+        breadcrumbs = '';
+
+    if (!this.browser.path) {
+      var graph = this.browser.ds['@graph'][0];
+      name = graph['schema:name'] || 'Domain Specification';
+      description = graph['schema:description'] || '';
     } else {
-      return '';
+      var nodeClass = this.node['sh:class'];
+      name = this.dsHandler.rangesToString(nodeClass);
+      description = this.createNodeDescription(nodeClass);
+      breadcrumbs = this.createBreadcrumbs();
     }
+
+    description = this.util.repairLinksInHTMLCode(description);
+    return '' + this.createNavigation() + '<h1 property="schema:name">' + name + '</h1>' + this.util.createExternalLinkLegend() + breadcrumbs + '<div property="schema:description">' + description + '<br><br></div>';
+  }
+
+  createNodeDescription(nodeClass) {
+    if (this.util.isString(nodeClass)) {
+      return this.browser.sdoAdapter.getTerm(nodeClass).getDescription();
+    } else {
+      return nodeClass.map(c => {
+        return '' + '<b>' + this.util.prettyPrintIri(c) + ':</b> ' + this.browser.sdoAdapter.getTerm(c).getDescription();
+      }).join('<br>');
+    }
+  }
+
+  createBreadcrumbs() {
+    return '' + '<h4>' + '<span class="breadcrumbs">' + this.util.createJSLink('path', null, this.browser.ds['@graph'][0]['schema:name'] || 'Domain Specification') + ' > ' + this.browser.path.split('-').map((term, index, pathSplitted) => {
+      if (index % 2 === 0) {
+        return term;
+      } else {
+        var newPath = pathSplitted.slice(0, index + 1).join('-');
+        return this.util.createJSLink('path', newPath, term);
+      }
+    }).join(' > ') + '</span>' + '</h4>';
+  }
+
+  createNavigation() {
+    return '' + '<span style="float: right;">' + '(' + this.util.createJSLink('format', 'shacl', 'SHACL serialization') + (this.browser.list ? ' | from List: ' + this.util.createJSLink('ds', null, this.browser.list['schema:name']) : '') + ')' + '</span>';
   }
 
 }
@@ -21153,7 +21082,7 @@ class ListRenderer {
 
 
   createDSTable() {
-    return this.util.createDefinitionTable(['Name', 'IRI', 'Description'], this.createDSTbody(), {
+    return this.util.createDefinitionTable(['Name', 'IRI', 'Description'], this.createDSTbody(), null, {
       'class': 'supertype'
     });
   }
@@ -21186,6 +21115,469 @@ class ListRenderer {
 module.exports = ListRenderer;
 
 },{}],88:[function(require,module,exports){
+"use strict";
+
+class NativeRenderer {
+  constructor(browser) {
+    this.browser = browser;
+    this.util = browser.util;
+    this.dsHandler = browser.dsHandler;
+    this.dsRenderer = browser.dsRenderer;
+  }
+
+  render() {
+    // Cannot be in constructor, cause at this time the node is not initialized
+    this.dsNode = this.browser.dsNode;
+    this.node = this.dsNode.node;
+    var mainContent = this.dsRenderer.createHeader() + this.dsRenderer.createViewModeSelectors(this.dsRenderer.MODES.native) + (this.dsNode.type === 'Class' ? this.createClassPropertyTable() : this.createEnumerationMembers());
+    this.browser.elem.innerHTML = this.util.createMainContent('rdfs:Class', mainContent);
+  }
+
+  createClassPropertyTable() {
+    var properties;
+
+    if (!this.browser.path) {
+      properties = this.node['sh:property'].slice(0);
+    } else {
+      properties = this.node['sh:node']['sh:property'].slice(0);
+    }
+
+    var trs = properties.map(p => {
+      return this.createClassProperty(p);
+    }).join('');
+    return this.util.createDefinitionTable(['Property', 'Expected Type', 'Description', 'Cardinality'], trs, {
+      'style': 'margin-top: 0px; border-top: none;'
+    });
+  }
+
+  createClassProperty(propertyNode) {
+    var path = propertyNode['sh:path'];
+    var property = this.browser.sdoAdapter.getProperty(path);
+    return this.util.createTableRow('rdf:Property', property.getIRI(), 'rdfs:label', this.util.createTermLink(path), this.createClassPropertySideCols(propertyNode), 'prop-name');
+  }
+
+  createClassPropertySideCols(node) {
+    return '' + '<td class="prop-ect">' + this.createExpectedTypes(node) + '</td>' + '<td class="prop-desc">' + this.createClassPropertyDescText(node) + '</td>' + '<td class="prop-ect">' + this.dsHandler.createCardinality(node['sh:minCount'], node['sh:minCount']) + '</td>';
+  }
+
+  createClassPropertyDescText(propertyNode) {
+    var name = this.util.prettyPrintIri(propertyNode['sh:path']);
+    var description = '';
+
+    try {
+      description = this.browser.sdoAdapter.getProperty(name).getDescription();
+    } catch (e) {}
+
+    var dsDescription = propertyNode['rdfs:comment'] ? propertyNode['rdfs:comment'] : '';
+    var descText = '';
+
+    if (description !== '') {
+      if (dsDescription !== '') {
+        descText += '<b>From Vocabulary:</b> ';
+      }
+
+      descText += description;
+    }
+
+    if (dsDescription !== '') {
+      if (description !== '') {
+        descText += '<br>' + '<b>From Domain Specification:</b> ';
+      }
+
+      descText += dsDescription;
+    }
+
+    return this.util.repairLinksInHTMLCode(descText);
+  }
+
+  createExpectedTypes(propertyNode) {
+    var property = this.browser.sdoAdapter.getProperty(propertyNode['sh:path']);
+    var propertyName = this.util.prettyPrintIri(property.getIRI(true));
+    var expectedTypes = propertyNode['sh:or'];
+    return expectedTypes.map(expectedType => {
+      var name;
+
+      if (expectedType['sh:datatype']) {
+        name = expectedType['sh:datatype'];
+      } else if (expectedType['sh:class']) {
+        name = expectedType['sh:class'];
+      }
+
+      var mappedDataType = this.dsHandler.dataTypeMapperFromSHACL(name);
+
+      if (mappedDataType !== null) {
+        return this.util.createLink(mappedDataType);
+      } else {
+        name = this.dsHandler.rangesToString(name);
+
+        if (expectedType['sh:node'] && expectedType['sh:node']['sh:property'].length !== 0) {
+          var newPath = propertyName + '-' + name;
+          return this.util.createJSLink('path', newPath, name, null, '-');
+        } else {
+          return this.util.createTermLink(name);
+        }
+      }
+    }).join('<br>');
+  }
+  /**
+   * Create HTML for the enumeration members of the Enumeration.
+   *
+   * @returns {string} The resulting HTML.
+   */
+
+
+  createEnumerationMembers() {
+    var enumMembers = this.browser.sdoAdapter.getTerm(this.node['sh:class']).getEnumerationMembers();
+
+    if (enumMembers.length !== 0) {
+      return '' + 'An Enumeration with:<br>' + '<b>' + '<a id="enumbers" title="Link: #enumbers" href="#enumbers" class="clickableAnchor">' + 'Enumeration members' + '</a>' + '</b>' + '<ul>' + enumMembers.map(e => {
+        var enumMember = this.browser.sdoAdapter.getEnumerationMember(e);
+        return '' + '<li>' + this.util.createLink(enumMember.getIRI(), e) + '</li>';
+      }).join('') + '</ul>' + '<br>';
+    } else {
+      return '';
+    }
+  }
+
+}
+
+module.exports = NativeRenderer;
+
+},{}],89:[function(require,module,exports){
+"use strict";
+
+class TreeRenderer {
+  constructor(browser) {
+    this.browser = browser;
+    this.util = browser.util;
+    this.dsHandler = browser.dsHandler;
+    this.dsRenderer = browser.dsRenderer;
+  }
+
+  render() {
+    var mainContent = '' + this.dsRenderer.createHeader() + this.dsRenderer.createViewModeSelectors(this.dsRenderer.MODES.tree) + '<div id="div-iframe">' + // needed for padding
+    '<iframe id="iframe-jsTree" frameborder="0" width="100%" scrolling="no"></iframe>' + '</div>';
+    this.browser.elem.innerHTML = this.util.createMainContent('rdfs:Class', mainContent);
+    this.initIFrameForJSTree();
+  }
+
+  initIFrameForJSTree() {
+    this.iFrame = document.getElementById('iframe-jsTree');
+    this.iFrameCW = this.iFrame.contentWindow;
+    var doc = this.iFrameCW.document;
+    var jsTreeHtml = this.createJSTreeHTML();
+    doc.open();
+    doc.write(jsTreeHtml);
+    doc.close();
+    var dsClass = this.generateDsClass(this.browser.ds['@graph'][0], false, false);
+    this.mapNodeForJSTree([dsClass]);
+  }
+
+  createJSTreeHTML() {
+    return '' + '<head>' + '<script src="https://code.jquery.com/jquery-3.5.1.min.js" ' + '  integrity="sha256-9/aliU8dGd2tb6OSsuzixeV4y/faTqgFtohetphbbj0=" crossorigin="anonymous"></script>' + '<script src="https://cdnjs.cloudflare.com/ajax/libs/jstree/3.3.10/jstree.min.js"></script>' + '<script src="https://cdnjs.cloudflare.com/ajax/libs/jstreegrid/3.10.2/jstreegrid.min.js"></script>' + '<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.1/css/bootstrap.min.css" />' + '<link rel="stylesheet" ' + '  href="https://cdnjs.cloudflare.com/ajax/libs/jstree/3.3.10/themes/default/style.min.css" />' + this.createTreeStyle() + '</head>' + '<body>' + '<div id="btn-row">' + 'Show: ' + '<span id="btn-opt" class="btn-vis btn-vis-shadow" style="margin-left: 10px;">' + '<img src="" class="glyphicon glyphicon-tag optional-property"> optional' + '</span>' + '<span id="btn-man" class="btn-vis" style="margin-left: 10px;">' + '<img src="" class="glyphicon glyphicon-tag mandatory-property"> mandatory' + '</span>' + '</div>' + '<div id="jsTree"></div>' + '</body>';
+  }
+
+  createTreeStyle() {
+    return '' + '<style>' + '.optional-property { color: #ffa517; }' + '.mandatory-property { color: #00ce0c; }' + '#btn-row { padding: 12px 0px 12px 5px; }' + '.btn-vis { padding: 5px; }' + '.btn-vis-shadow {' + '    cursor: pointer;' + '    webkit-box-shadow: 0 4px 5px 0 rgba(0, 0, 0, 0.14), 0 1px 10px 0 rgba(0, 0, 0, 0.12), 0 2px 4px -1px rgba(0, 0, 0, 0.2);' + '    box-shadow: 0 4px 5px 0 rgba(0, 0, 0, 0.14), 0 1px 10px 0 rgba(0, 0, 0, 0.12), 0 2px 4px -1px rgba(0, 0, 0, 0.2);' + '}' + '</style>';
+  }
+
+  generateDsClass(dsvClass, closed, showOptional) {
+    var dsClass = {};
+    var targetClass = dsvClass['sh:targetClass'];
+    dsClass.text = targetClass ? this.util.prettyPrintClassDefinition(targetClass) : this.util.prettyPrintClassDefinition(dsvClass['sh:class']);
+    dsClass.icon = 'glyphicon glyphicon-list-alt';
+
+    if (!closed) {
+      dsClass.state = {
+        'opened': true
+      };
+    }
+
+    var description;
+
+    try {
+      if (dsClass.text.indexOf(',') === -1) {
+        description = this.browser.sdoAdapter.getClass(dsClass.text).getDescription();
+      } else {
+        description = 'No description found.';
+      }
+    } catch (e) {
+      description = 'No description found.';
+    }
+
+    dsClass.data = {};
+    dsClass.data.dsDescription = description;
+
+    if (dsvClass['rdfs:comment']) {
+      // Was dsv:justification
+      dsClass.justification = dsvClass['rdfs:comment'];
+    }
+
+    dsClass.children = this.processChildren(dsvClass, showOptional);
+    return dsClass;
+  }
+
+  processChildren(dsvClass, showOptional) {
+    var children = [];
+    var dsvProperties;
+    var shProperty = dsvClass['sh:property'];
+    var shNode = dsvClass['sh:node'];
+
+    if (shProperty) {
+      dsvProperties = shProperty;
+    } else if (shNode && shNode['sh:property']) {
+      dsvProperties = shNode['sh:property'];
+    }
+
+    if (dsvProperties !== undefined) {
+      dsvProperties.forEach(dsvProperty => {
+        var dsProperty = this.generateDsProperty(dsvProperty, showOptional);
+
+        if (dsProperty) {
+          children.push(dsProperty);
+        }
+      });
+    }
+
+    return children;
+  }
+
+  generateDsProperty(propertyObj, showOptional) {
+    var dsProperty = {};
+    dsProperty.justification = propertyObj['rdfs:comment'];
+    dsProperty.text = this.util.prettyPrintIri(propertyObj['sh:path']);
+    dsProperty.data = {};
+    dsProperty.data.minCount = propertyObj['sh:minCount'];
+    dsProperty.data.maxCount = propertyObj['sh:maxCount'];
+    dsProperty.children = [];
+    this.processEnum(dsProperty, propertyObj['sh:or'][0]);
+    this.processVisibility(dsProperty, propertyObj['sh:minCount']);
+    this.processExpectedTypes(dsProperty, propertyObj['sh:or'], showOptional);
+
+    if (showOptional) {
+      return dsProperty;
+    } else if (!dsProperty.data.isOptional) {
+      return dsProperty;
+    } // TODO: Probably a mistake: What happens when if / else if is not entered?
+
+  }
+
+  processEnum(dsProperty, shOr) {
+    dsProperty.isEnum = false;
+    var enuWithSdo;
+
+    try {
+      var rangeOfProp = shOr['sh:class'];
+      enuWithSdo = this.browser.sdoAdapter.getEnumeration(rangeOfProp);
+      dsProperty.isEnum = true;
+    } catch (e) {
+      /* Ignore */
+    }
+
+    if (dsProperty.isEnum) {
+      var enuMembersArray = this.getEnumMemberArray(shOr['sh:in'], enuWithSdo); // Get description
+
+      enuMembersArray.forEach(eachMember => {
+        var enuMemberDesc = this.browser.sdoAdapter.getEnumerationMember(eachMember.name);
+        eachMember.description = enuMemberDesc.getDescription();
+      });
+      dsProperty.data.enuMembers = enuMembersArray;
+      dsProperty.children = enuMembersArray.map(enuMem => {
+        return {
+          children: [],
+          data: {
+            dsRange: '',
+            dsDescription: enuMem.description
+          },
+          icon: 'glyphicon glyphicon-chevron-right',
+          text: enuMem.name
+        };
+      });
+    }
+  }
+
+  getEnumMemberArray(shIn, enuWithSdo) {
+    if (shIn) {
+      // Objects
+      return shIn.map(enuMember => {
+        var enuMemberName = enuMember['@id'];
+        enuMemberName = enuMemberName.replace('schema:', '');
+        return {
+          name: enuMemberName
+        };
+      });
+    } else {
+      // Strings
+      var enuMembersArrayString = enuWithSdo.getEnumerationMembers();
+      return enuMembersArrayString.map(enuMemName => {
+        return {
+          name: enuMemName
+        };
+      });
+    }
+  }
+
+  processVisibility(dsProperty, minCount) {
+    dsProperty.icon = 'glyphicon glyphicon-tag';
+
+    if (!minCount > 0) {
+      dsProperty.icon += ' optional-property';
+      dsProperty.data.isOptional = true;
+    } else {
+      dsProperty.icon += ' mandatory-property';
+      dsProperty.data.isOptional = false;
+    }
+  }
+
+  processExpectedTypes(dsProperty, dsvExpectedTypes, showOptional) {
+    var isOpened = false;
+
+    if (dsvExpectedTypes) {
+      var dsRange = this.generateDsRange(dsvExpectedTypes);
+      dsProperty.data.dsRange = dsRange.rangeAsString;
+      dsProperty.data.rangeJustification = dsRange.rangeJustification;
+
+      try {
+        dsProperty.data.dsDescription = this.browser.sdoAdapter.getProperty(dsProperty.text).getDescription();
+      } catch (e) {
+        dsProperty.data.dsDescription = 'No description found.';
+      }
+
+      dsvExpectedTypes.forEach(dsvExpectedType => {
+        if (dsvExpectedType['sh:node']) {
+          // Was dsv:restrictedClass
+          isOpened = true;
+          var dsClass = this.generateDsClass(dsvExpectedType, true, showOptional);
+          dsProperty.children.push(dsClass);
+        }
+      });
+    }
+
+    if (isOpened) {
+      dsProperty.state = {
+        'opened': true
+      };
+    }
+  }
+
+  generateDsRange(dsvExpectedTypes) {
+    var returnObj = {
+      rangeAsString: '',
+      rangeJustification: []
+    };
+    returnObj.rangeAsString = dsvExpectedTypes.map((dsvExpectedType, i) => {
+      var justification = {};
+      var name, rangePart;
+      var datatype = dsvExpectedType['sh:datatype'];
+      var shClass = dsvExpectedType['sh:class'];
+
+      if (datatype) {
+        // Datatype
+        name = this.util.prettyPrintIri(this.dsHandler.dataTypeMapperFromSHACL(datatype));
+        rangePart = name;
+      } else if (dsvExpectedType['sh:node']) {
+        // Restricted class
+        name = this.util.prettyPrintClassDefinition(shClass);
+        rangePart = '<strong>' + name + '</strong>';
+      } else {
+        // Enumeration
+        // Standard class
+        name = this.util.prettyPrintClassDefinition(shClass);
+        rangePart = name;
+      }
+
+      justification.name = name;
+      justification.justification = dsvExpectedType['rdfs:comment']; // Was dsv:justification
+
+      returnObj.rangeJustification.push(justification);
+      return rangePart;
+    }).join(' or ');
+    return returnObj;
+  }
+
+  mapNodeForJSTree(data) {
+    var self = this;
+    this.iFrame.addEventListener('load', function () {
+      self.iFrameCW.$('#jsTree').jstree({
+        plugins: ['search', 'grid'],
+        core: {
+          themes: {
+            icons: true,
+            dots: true,
+            responsive: true,
+            stripes: true,
+            rootVisible: false
+          },
+          data: data
+        },
+        grid: {
+          columns: [{
+            width: '20%',
+            header: 'Class / Property'
+          }, {
+            header: 'Range / Type',
+            width: '20%',
+            value: function value(node) {
+              return node.data.dsRange;
+            }
+          }, {
+            width: '40%',
+            header: 'Description',
+            value: function value(node) {
+              return node.data.dsDescription;
+            }
+          }, {
+            width: '20%',
+            header: 'Cardinality',
+            value: function value(node) {
+              if (node.data.dsRange) {
+                return self.dsHandler.createCardinality(node.data.minCount, node.data.maxCount);
+              }
+            }
+          }]
+        }
+      }).bind('loaded.jstree after_open.jstree after_close.jstree refresh.jstree', self.adaptIframe.bind(self));
+      self.addIframeClickEvent();
+    });
+  }
+
+  adaptIframe() {
+    var scrollY = window.scrollY;
+    var scrollX = window.scrollX;
+    this.iFrame.height = "0px";
+    this.iFrame.height = this.iFrameCW.document.body.scrollHeight;
+    window.scrollTo(scrollX, scrollY);
+  }
+
+  addIframeClickEvent() {
+    this.iFrameCW.$('.btn-vis-shadow').click(event => {
+      var $button = this.iFrameCW.$(event.currentTarget);
+      $button.removeClass('btn-vis-shadow');
+      var $otherButton, showOptional;
+
+      if ($button.attr('id') === 'btn-opt') {
+        $otherButton = this.iFrameCW.$('#btn-man');
+        showOptional = true;
+      } else {
+        $otherButton = this.iFrameCW.$('#btn-opt');
+        showOptional = false;
+      }
+
+      $otherButton.addClass('btn-vis-shadow');
+      $button.off('click');
+      this.addIframeClickEvent();
+      var dsClass = this.generateDsClass(this.browser.ds['@graph'][0], false, showOptional);
+      var jsTree = this.iFrameCW.$('#jsTree').jstree(true);
+      jsTree.settings.core.data = dsClass;
+      jsTree.refresh();
+    });
+  }
+
+}
+
+module.exports = TreeRenderer;
+
+},{}],90:[function(require,module,exports){
 "use strict";
 
 function asyncGeneratorStep(gen, resolve, reject, _next, _throw, key, arg) { try { var info = gen[key](arg); var value = info.value; } catch (error) { reject(error); return; } if (info.done) { resolve(value); } else { Promise.resolve(value).then(_next, _throw); } }
@@ -21420,109 +21812,60 @@ class Util {
    * @param {string} rdfaTypeOf - The RDFa type of the table row.
    * @param {string} rdfaResource - The RDFa resource.
    * @param {string} mainColRdfaProp - The RDFa property of the main column.
-   * @param {string} mainColTermOrLink - The term name that should be linked or the link of the main column.
+   * @param {string} mainColLink - The link of the main column.
    * @param {string} sideCols - The HTML of the side columns.
    * @param {string|null} mainColClass - The CSS class of the main column.
    * @returns {string} The resulting HTML.
    */
 
 
-  createTableRow(rdfaTypeOf, rdfaResource, mainColRdfaProp, mainColTermOrLink, sideCols) {
+  createTableRow(rdfaTypeOf, rdfaResource, mainColRdfaProp, mainColLink, sideCols) {
     var mainColClass = arguments.length > 5 && arguments[5] !== undefined ? arguments[5] : null;
-    return '' + '<tr typeof="' + rdfaTypeOf + '" resource="' + rdfaResource + '">' + this.createMainCol(mainColRdfaProp, mainColTermOrLink, mainColClass) + sideCols + '</tr>';
+    return '' + '<tr typeof="' + rdfaTypeOf + '" resource="' + rdfaResource + '">' + this.createMainCol(mainColRdfaProp, mainColLink, mainColClass) + sideCols + '</tr>';
   }
   /**
    * Create a HTML main column for a table row with RDFa (https://en.wikipedia.org/wiki/RDFa) attributes.
    *
    * @param {string} rdfaProp - The RDFa property of the column.
-   * @param {string} termOrLink - The term name that should be linked or the link of the column.
+   * @param {string} link - The link of the column.
    * @param {string|null} className -  The CSS class of the column.
    * @returns {string} The resulting HTML.
    */
 
 
-  createMainCol(rdfaProp, termOrLink) {
+  createMainCol(rdfaProp, link) {
     var className = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : null;
-    return '' + '<th' + (className ? ' class="' + className + '"' : '') + ' scope="row">' + this.createCodeLink(termOrLink, {
+    return '' + '<th' + (className ? ' class="' + className + '"' : '') + ' scope="row">' + this.createCodeLink(link, {
       'property': rdfaProp
     }) + '</th>';
   }
   /**
    * Create a HTML code element with a link inside it.
    *
-   * @param {string} termOrLink - The term name that should be linked or the link.
+   * @param {string} link - The link.
    * @param {object|null} codeAttr - The HTML attributes of the code element.
-   * @param {object|null} linkAttr - The HTML attributes of the link.
-   * @param {string|null} rdfaProp - The RDFa property of the link.
    * @returns {string} The resulting HTML.
    */
 
 
-  createCodeLink(termOrLink) {
+  createCodeLink(link) {
     var codeAttr = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : null;
-    var linkAttr = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : null;
-    var rdfaProp = arguments.length > 3 && arguments[3] !== undefined ? arguments[3] : null;
-    return '' + '<code' + this.createHtmlAttr(codeAttr) + '>' + this.createFullLink(termOrLink, linkAttr, rdfaProp) + '</code>';
-  }
-  /**
-   * Create a HTML link, optionally with semantic attributes.
-   *
-   * @param termOrLink - The term name that should be linked or a link.
-   * @param linkAttr - The HTML attributes of the link.
-   * @param rdfaProp - The RDFa property of the link.
-   * @returns {string} The resulting HTML.
-   */
-
-
-  createFullLink(termOrLink, linkAttr, rdfaProp) {
-    var term = null;
-
-    try {
-      term = this.browser.sdoAdapter.getTerm(termOrLink);
-    } catch (e) {}
-
-    return '' + (rdfaProp ? this.createSemanticLink(rdfaProp, termOrLink) : '') + (term ? this.createLink(termOrLink, linkAttr) : termOrLink);
-  }
-  /**
-   * Create a HTML semantic link for a term.
-   *
-   * @param {string} property - The RDFa property of the link.
-   * @param {string} term - The vocabulary term.
-   * @returns {string} The resulting HTML.
-   */
-
-
-  createSemanticLink(property, term) {
-    return '<link property="' + this.escHtml(property) + '" href="' + this.escHtml(this.createHref(term)) + '">';
-  }
-  /**
-   * Create a HTML href for a vocabulary term.
-   *
-   * @param {string} term - The vocabulary term.
-   * @returns {string} The resulting HTML.
-   */
-
-
-  createHref(term) {
-    /*
-    if (this.isTermOfVocab(term)) {
-        return this.createIriWithQueryParam('term', term);
-    } else {
-      */
-    return this.browser.sdoAdapter.getTerm(term).getIRI(); //}
+    return '' + '<code' + this.createHtmlAttr(codeAttr) + '>' + link + '</code>';
   }
   /**
    * Create a HTML table with class 'definition-table'.
    *
    * @param {string|string[]} ths - The table header cell/s. Must include <th> tags.
    * @param {string|string[]} trs - The table body row/s. Can already include <tr> tags to be more flexible.
+   * @param {object|null} tableAttr - The HTML attributes of the table.
    * @param {object|null} tbodyAttr - The HTML attributes of the table body.
    * @returns {string} The resulting HTML.
    */
 
 
   createDefinitionTable(ths, trs) {
-    var tbodyAttr = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : null;
+    var tableAttr = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : null;
+    var tbodyAttr = arguments.length > 3 && arguments[3] !== undefined ? arguments[3] : null;
 
     if (!Array.isArray(ths)) {
       ths = [ths];
@@ -21532,7 +21875,7 @@ class Util {
       trs = [trs];
     }
 
-    return '' + '<table class="definition-table">' + '<thead>' + '<tr>' + ths.map(th => {
+    return '' + '<table class="definition-table"' + this.createHtmlAttr(tableAttr) + '>' + '<thead>' + '<tr>' + ths.map(th => {
       return '<th>' + th + '</th>';
     }).join('') + '</tr>' + '</thead>' + '<tbody' + this.createHtmlAttr(tbodyAttr) + '>' + (trs[0].startsWith('<tr') ? trs.join('') : trs.map(tr => {
       return '<tr>' + tr + '</tr>';
@@ -21548,7 +21891,7 @@ class Util {
 
 
   createMainContent(rdfaTypeOf, mainContent) {
-    return '' + '<div id="mainContent" vocab="http://schema.org/" typeof="' + rdfaTypeOf + '" ' + 'resource="' + window.location + '">' + mainContent + '</div>';
+    return '' + '<div>' + '<style>' + '@import url("https://schema.org/docs/schemaorg.css");' + '#mainContent {' + 'border-bottom: none;' + '}' + '.ds-selector {' + 'text-align: right;' + 'padding: 0px' + '}' + '#div-iframe {' + 'padding-right: 6px;' + '}' + '#iframe-jsTree {' + 'padding: 2px;' + 'border-left: 1px solid #ccc;' + 'border-right: 1px solid #ccc;' + 'border-bottom: 1px solid #ccc;' + '}' + '</style>' + '<div id="mainContent" vocab="http://schema.org/" typeof="' + rdfaTypeOf + '" ' + 'resource="' + window.location + '">' + mainContent + '</div>' + '</div>';
   }
 
   createExternalLinkLegend() {
@@ -21574,6 +21917,20 @@ class Util {
 
     href = href ? href : termObj.getIRI();
     return this.createLink(href, termObj.getIRI(true));
+  }
+
+  prettyPrintClassDefinition(classDef) {
+    // ClassDefinition can be a string, or an array of strings (MTE)
+    // ClassDefinition include strings with the vocab indicator in them
+    // Remove vocab if it is the standard schema:
+    // Return a human readable string of the classDefinition
+    if (Array.isArray(classDef)) {
+      return classDef.map(classDefPart => {
+        return this.prettyPrintIri(classDefPart);
+      }).join(', ');
+    } else {
+      return this.prettyPrintIri(classDef);
+    }
   }
 
 }
