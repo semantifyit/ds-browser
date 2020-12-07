@@ -259,10 +259,11 @@ class Util {
      *
      * @param {string|string[]} ths - The table header cell/s. Must include <th> tags.
      * @param {string|string[]} trs - The table body row/s. Can already include <tr> tags to be more flexible.
+     * @param {object|null} tableAttr - The HTML attributes of the table.
      * @param {object|null} tbodyAttr - The HTML attributes of the table body.
      * @returns {string} The resulting HTML.
      */
-    createDefinitionTable(ths, trs, tbodyAttr=null) {
+    createDefinitionTable(ths, trs, tableAttr=null, tbodyAttr=null) {
         if (!Array.isArray(ths)) {
             ths = [ths];
         }
@@ -270,7 +271,7 @@ class Util {
             trs = [trs];
         }
         return '' +
-            '<table class="definition-table">' +
+            '<table class="definition-table"' + this.createHtmlAttr(tableAttr) + '>' +
             '<thead>' +
             '<tr>' +
             ths.map((th) => {
@@ -298,6 +299,22 @@ class Util {
             '<div>' +
             '<style>' +
             '@import url("https://schema.org/docs/schemaorg.css");' +
+            '#mainContent {' +
+            'border-bottom: none;' +
+            '}' +
+            '.ds-selector {' +
+            'text-align: right;' +
+            'padding: 0px' +
+            '}' +
+            '#div-iframe {' +
+            'padding-right: 6px;' +
+            '}' +
+            '#iframe-jsTree {' +
+            'padding: 2px;' +
+            'border-left: 1px solid #ccc;' +
+            'border-right: 1px solid #ccc;' +
+            'border-bottom: 1px solid #ccc;' +
+            '}' +
             '</style>' +
             '<div id="mainContent" vocab="http://schema.org/" typeof="' + rdfaTypeOf + '" ' +
             'resource="' + window.location + '">' +

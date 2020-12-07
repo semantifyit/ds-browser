@@ -3,6 +3,7 @@ class NativeRenderer {
         this.browser = browser;
         this.util = browser.util;
         this.dsHandler = browser.dsHandler;
+        this.dsRenderer = browser.dsRenderer;
     }
 
     render() {
@@ -10,8 +11,10 @@ class NativeRenderer {
         this.dsNode = this.browser.dsNode;
         this.node = this.dsNode.node;
 
-        const mainContent = this.browser.dsRenderer.createHeader() +
+        const mainContent = this.dsRenderer.createHeader() +
+            this.dsRenderer.createViewModeSelectors(this.dsRenderer.MODES.native) +
             (this.dsNode.type === 'Class' ? this.createClassPropertyTable() : this.createEnumerationMembers());
+
         this.browser.elem.innerHTML = this.util.createMainContent('rdfs:Class', mainContent);
     }
 
@@ -26,7 +29,11 @@ class NativeRenderer {
         const trs = properties.map((p) => {
             return this.createClassProperty(p);
         }).join('');
-        return this.util.createDefinitionTable(['Property', 'Expected Type', 'Description', 'Cardinality'], trs);
+        return this.util.createDefinitionTable(
+            ['Property', 'Expected Type', 'Description', 'Cardinality'],
+            trs,
+            {'style': 'margin-top: 0px; border-top: none;'}
+        );
     }
 
     createClassProperty(propertyNode) {

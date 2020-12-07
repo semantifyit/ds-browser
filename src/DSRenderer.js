@@ -1,4 +1,9 @@
 class DSRenderer {
+    MODES = {
+        'native' : 'native',
+        'tree' : 'tree'
+    };
+
     constructor(browser) {
         this.browser = browser;
         this.util = browser.util;
@@ -33,6 +38,18 @@ class DSRenderer {
             '<pre style="' + preStyle + '">' +
             JSON.stringify(this.browser.ds, null, 2) +
             '</pre>';
+    }
+
+    createViewModeSelectors(selected=this.MODES.native) {
+        return '' +
+            '<div class="ds-selector-tabs ds-selector">' +
+            '<div class="selectors">' +
+            (selected === this.MODES.native ? '<a class="selected">Native View</a>' :
+                this.util.createJSLink('mode', null, 'Native View')) +
+            (selected === this.MODES.tree ? '<a class="selected">Tree View</a>' :
+                this.util.createJSLink('mode', 'tree', 'Tree View')) +
+            '</div>' +
+            '</div>';
     }
 
     createHeader() {

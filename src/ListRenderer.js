@@ -36,9 +36,12 @@ class ListRenderer {
      * @returns {string} The resulting HTML.
      */
     createDSTable() {
-        return this.util.createDefinitionTable(['Name', 'IRI', 'Description'],
+        return this.util.createDefinitionTable(
+            ['Name', 'IRI', 'Description'],
             this.createDSTbody(),
-            {'class': 'supertype'});
+            null,
+            {'class': 'supertype'}
+        );
     }
 
     /**

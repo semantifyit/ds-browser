@@ -1,14 +1,18 @@
 class TreeRenderer {
     constructor(browser) {
         this.browser = browser;
-        this.util = this.browser.util;
-        this.dsHandler = this.browser.dsHandler;
+        this.util = browser.util;
+        this.dsHandler = browser.dsHandler;
+        this.dsRenderer = browser.dsRenderer;
     }
 
     render() {
         const mainContent = '' +
-            this.browser.dsRenderer.createHeader() +
-            '<iframe id="iframe-jsTree" frameborder="0" width="100%" scrolling="no"></iframe>';
+            this.dsRenderer.createHeader() +
+            this.dsRenderer.createViewModeSelectors(this.dsRenderer.MODES.tree) +
+            '<div id="div-iframe">' + // needed for padding
+            '<iframe id="iframe-jsTree" frameborder="0" width="100%" scrolling="no"></iframe>' +
+            '</div>';
         this.browser.elem.innerHTML = this.util.createMainContent('rdfs:Class', mainContent);
 
         this.initIFrameForJSTree();
