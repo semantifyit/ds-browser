@@ -281,25 +281,25 @@ class TreeRenderer {
                 grid: {
                     columns: [
                         {
-                            maxWidth: '20%',
+                            width:  '20%',
                             header: 'Class / Property'
                         },
                         {
                             header: 'Range / Type',
-                            maxWidth: '20%',
+                            width: '20%',
                             value: function (node) {
                                 return (node.data.dsRange);
                             }
                         },
                         {
-                            maxWidth: '39%',
+                            width: '40%',
                             header: 'Description',
                             value: function (node) {
                                 return (node.data.dsDescription);
                             }
                         },
                         {
-                            maxWidth: '20%',
+                            width: '20%',
                             header: 'Cardinality',
                             value: function (node) {
                                 if (node.data.dsRange) {
