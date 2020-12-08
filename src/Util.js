@@ -299,6 +299,7 @@ class Util {
             '<div>' +
             '<style>' +
             '@import url("https://schema.org/docs/schemaorg.css");' +
+            '@import url("https://maxcdn.bootstrapcdn.com/bootstrap/3.4.1/css/bootstrap.min.css"); />' +
             '#mainContent { border-bottom: none; }' +
             'table.definition-table { border: 1px solid #ccc }' +
             '.ds-selector {padding: 0px}' +

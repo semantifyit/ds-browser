@@ -1,7 +1,8 @@
 class DSRenderer {
     MODES = {
         'native' : 'native',
-        'tree' : 'tree'
+        'tree' : 'tree',
+        'table': 'table'
     };
 
     constructor(browser) {
@@ -48,6 +49,8 @@ class DSRenderer {
                 this.util.createJSLink('mode', null, 'Native View')) +
             (selected === this.MODES.tree ? '<a class="selected">Tree View</a>' :
                 this.util.createJSLink('mode', 'tree', 'Tree View')) +
+            (selected === this.MODES.table ? '<a class="selected">Table View</a>' :
+                this.util.createJSLink('mode', 'table', 'Table View')) +
             '</div>' +
             '</div>';
     }
