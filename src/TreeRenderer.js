@@ -148,7 +148,7 @@ class TreeRenderer {
             $button.off('click');
             this.addIframeClickEvent();
 
-            const dsClass = this.generateDsClass(this.browser.ds['@graph'][0], false, showOptional);
+            const dsClass = this.dsHandler.generateDsClass(this.browser.ds['@graph'][0], false, showOptional);
             const jsTree = this.iFrameCW.$('#jsTree').jstree(true);
             jsTree.settings.core.data = dsClass;
             jsTree.refresh();
