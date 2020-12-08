@@ -7,7 +7,7 @@ class TableRenderer {
     }
 
     render() {
-        const rootClass = this.dsHandler.generateDsClass(this.browser.ds['@graph'][0], true);
+        const rootClass = this.dsHandler.generateDsClass(this.browser.ds['@graph'][0], false, false);
         const mainContent = this.dsRenderer.createHeader() +
             this.dsRenderer.createViewModeSelectors(this.dsRenderer.MODES.table) +
             '<table class="firstLevel">' +
