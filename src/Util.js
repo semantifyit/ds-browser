@@ -295,28 +295,60 @@ class Util {
      * @returns {string} The resulting HTML.
      */
     createMainContent(rdfaTypeOf, mainContent) {
-        return '' +
-            '<div>' +
-            '<style>' +
-            '@import url("https://schema.org/docs/schemaorg.css");' +
-            '@import url("https://maxcdn.bootstrapcdn.com/bootstrap/3.4.1/css/bootstrap.min.css"); />' +
-            '#mainContent { border-bottom: none; }' +
-            'table.definition-table { border: 1px solid #ccc }' +
-            '.ds-selector {padding: 0px}' +
-            '.ds-selector-tabs .selectors a:first-child { margin-left: 0px; }' +
-            '#div-iframe { padding-right: 6px; }' +
-            '#iframe-jsTree {' +
-            'padding: 2px;' +
-            'border-left: 1px solid #ccc;' +
-            'border-right: 1px solid #ccc;' +
-            'border-bottom: 1px solid #ccc;' +
-            '}' +
-            '</style>' +
-            '<div id="mainContent" vocab="http://schema.org/" typeof="' + rdfaTypeOf + '" ' +
-            'resource="' + window.location + '">' +
-            mainContent +
-            '</div>' +
-            '</div>';
+        return `
+            <div>
+                ${this.createStyle()}
+                <div id="mainContent" vocab="http://schema.org/" typeof="${rdfaTypeOf}" resource="${window.location}">
+                    ${mainContent}
+                </div>
+            </div>`;
+    }
+
+    createStyle() {
+        return `
+            <style>
+                @import url("https://schema.org/docs/schemaorg.css");
+                .optional-property { color: #ffa517; }
+                .mandatory-property { color: #00ce0c; }
+                #mainContent { border-bottom: none; }
+                table.definition-table { border: 1px solid #ccc }
+                .ds-selector {padding: 0px}
+                .ds-selector-tabs .selectors a:first-child { margin-left: 0px; }
+                #div-iframe { padding-right: 6px; }
+                #iframe-jsTree {
+                    padding: 2px;
+                    border-left: 1px solid #ccc;
+                    border-right: 1px solid #ccc;
+                    border-bottom: 1px solid #ccc;
+                }
+                ${this.createBootstrapGlyphicons()}
+            </style>`;
+    }
+
+    createBootstrapGlyphicons() {
+        const bootstrapUrl = 'https://maxcdn.bootstrapcdn.com/bootstrap/3.4.1/fonts/glyphicons-halflings-regular';
+        return `
+            @font-face {
+            font-family: 'Glyphicons Halflings';
+            src: url('${bootstrapUrl}.eot');
+            src: url('${bootstrapUrl}.eot?#iefix') format('embedded-opentype'),
+                 url('${bootstrapUrl}.woff2') format('woff2'),
+                 url('${bootstrapUrl}.woff') format('woff'),
+                 url('${bootstrapUrl}.ttf') format('truetype'),
+                 url('${bootstrapUrl}.svg#glyphicons_halflingsregular') format('svg');
+            }
+            .glyphicon {
+                    position: relative;
+                    top: 1px;
+                    display: inline-block;
+                    font: normal normal 16px/1 'Glyphicons Halflings';
+                    -moz-osx-font-smoothing: grayscale;
+                    -webkit-font-smoothing: antialiased;
+                    margin-right: 4px;
+                }
+            .glyphicon-tag:before {
+                content: '\\e041';
+            }`;
     }
 
     createExternalLinkLegend() {

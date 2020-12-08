@@ -76,7 +76,7 @@ class TreeRenderer {
         const self = this;
         this.iFrame.addEventListener('load', function() {
             self.iFrameCW.$('#jsTree').jstree({
-                plugins: ['search', 'grid'],
+                plugins: ['grid'],
                 core: {
                     themes: {
                         icons: true,
