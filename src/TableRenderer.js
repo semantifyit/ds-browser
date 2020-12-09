@@ -22,52 +22,40 @@ class TableRenderer {
         this.browser.elem.innerHTML = this.util.createMainContent('rdfs:Class', mainContent);
     }
 
-    processProperties(properties, level, dsID) {
+    processProperties(properties, depth, dsID) {
         return properties.map((property, i) => {
             if (property.children && property.children.length !== 0 && !property.isEnum) {
-                return this.processPropertyWithChildren(property, level, dsID, i);
+                return this.processPropertyWithChildren(property, depth, dsID, i);
             } else {
-                return this.processPropertyWithNoChildren(property, dsID);
+                return this.processPropertyWithNoChildren(property, depth);
             }
         }).join('');
     }
 
-    processPropertyWithChildren(property, level, dsID, propertyNumber) {
+    processPropertyWithChildren(property, depth, dsID, propertyNumber) {
         let csClass, html = '';
-        level++;
-        if (level < 4) {
-            switch (level) {
-                case 1:
-                    csClass = 'secondLevel';
-                    break;
-                case 2:
-                    csClass = 'thirdLevel';
-                    break;
-                case 3:
-                    csClass = 'fourthLevel';
-                    break;
-                default:
-                    csClass = 'firstLevel';
-                    break;
-            }
-            csClass += ' innerTable';
+        depth++;
+        if (depth < 4) {
+            csClass = 'depth' + depth + ' innerTable';
             const terms = (property.data.dsRange).split(' or ');
             const isOnlyClass = this.testIsOnlyClass(terms);
-            const dsRange = this.createDSRange(property, level, dsID, propertyNumber, terms, isOnlyClass);
+            const dsRange = this.createDSRange(property, depth, dsID, propertyNumber, terms, isOnlyClass);
             let properties = property.children;
             html += '' +
                 '<tr>' +
                 this.createTdProperty(property) +
                 '<td colspan="2" class="' + csClass + '">' +
+                '<table>' +
                 this.createOuterTable(dsRange, property) +
-                this.createInnerTable(properties, level, dsID, propertyNumber, isOnlyClass) +
+                this.createInnerTable(properties, depth, dsID, propertyNumber, isOnlyClass) +
+                '</table>' +
                 '</td>' +
                 '<td class="cardinality">' +
                 this.dsHandler.createCardinality(property.data.minCount, property.data.maxCount) +
                 '</td>' +
                 '</tr>';
         } else {
-            console.log('To many levels for table view. Level: ' + level);
+            console.log('To many levels for table view. Level: ' + depth);
         }
         return html;
     }
@@ -115,14 +103,14 @@ class TableRenderer {
         return '' +
             '<td>' +
             '<div class="align-items">' +
-            '<img class="glyphicon glyphicon-tag ' + (property.data.isOptional ? 'optional' : 'mandatory') + '-property" src="" />' + property.text +
+            '<img class="glyphicon glyphicon-tag ' + (property.data.isOptional ? 'optional' : 'mandatory') +
+            '-property" src="" />' + property.text +
             '</div>' +
             '</td>';
     }
 
     createOuterTable(dsRange, property) {
         return '' +
-            '<table>' +
             '<tr>' +
             '<td>' + dsRange + '</td>' +
             '<td colspan="2">' + property.data.dsDescription + '</td>' +
@@ -147,40 +135,48 @@ class TableRenderer {
                         '</tbody>' +
                         '</tr>';
                 }
-            }).join('') +
-            '</table>'
+            }).join('');
     }
 
-    processPropertyWithNoChildren(property) {
+    processPropertyWithNoChildren(property, level) {
+        const cardinality = this.dsHandler.createCardinality(property.data.minCount, property.data.maxCount);
+
         return '' +
             '<tr>' +
             this.createTdProperty(property) +
-            '<td><div class="thContent">' + property.data.dsRange + '</div></td>' +
-            '<td><div class="thContent">' + property.data.dsDescription + '</div> </td>' +
-            `<td class="cardinality">${this.dsHandler.createCardinality(property.data.minCount, property.data.maxCount)}</div> </td>` +
+            (property.isEnum ? this.createEnum(property, level) : this.createSimpleType(property)) +
+            '<td class="cardinality">' + cardinality + '</td>' +
+            '</tr>';
+    }
+
+    createEnum(property, depth) {
+        depth++;
+        return '' +
+            '<td colspan="2" class="depth' + depth + ' innerTable">' +
+            '<table class="enumTable">' +
+            '<tr>' +
+            '<td class="enumTd"><b>' + property.data.dsRange + '</b></td>' +
+            '<td class="enumTd">' + property.data.dsDescription + '</td>' +
             '</tr>' +
-            (property.data.enuMembers ? this.genHTML_enuMembers(property.data.enuMembers) : '');
+            (property.data.enuMembers ? this.genHTML_enuMembers(property.data.enuMembers) : '') +
+            '</table>' +
+            '</td>';
     }
 
     genHTML_enuMembers(enuMemberArray) {
-        let code = '';
-        enuMemberArray.forEach((enuMember) => {
-            code += `<tr class="enuMemberTd">
-          <td class="enuMemberTd"></td>
-          <td>${enuMember.name}</td>
-          <td>${enuMember.description}</td>
-          <td class="enuMemberTd"></td>
-     </tr>`;
-        });
-        return code;
+        return enuMemberArray.map((enuMember) => {
+            return '' +
+                '<tr>' +
+                '<td class="enumTd">' + enuMember.name + '</td>' +
+                '<td class="enumTd">' + enuMember.description + '</td>' +
+                '</tr>';
+        }).join('');
     }
 
-    generateTableHelpContent() {
-        // TODO
+    createSimpleType(property) {
         return '' +
-            '<div class="">' +
-            'Here comes a description to: </br><h4>how to read the Table View of a DomainSpecifciation</h4>' +
-            '</div>';
+            '<td>' + property.data.dsRange + '</td>' +
+            '<td>' + property.data.dsDescription + '</td>';
     }
 }
 

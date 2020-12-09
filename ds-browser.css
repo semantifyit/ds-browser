@@ -73,6 +73,14 @@ table.definition-table { border: 1px solid #98A0A6 }
     border-top: none;
 }
 
+#table-ds .enumTd {
+    border-bottom: 1px solid #98A0A6 !important;
+}
+
+#table-ds .enumTable tr:last-child td {
+    border-bottom: none !important;
+}
+
 #table-ds td.innerTable {
     padding: 0;
 }
@@ -85,19 +93,15 @@ table.definition-table { border: 1px solid #98A0A6 }
     border-right: none;
 }
 
-#table-ds .secondLevel {
+#table-ds .depth1 {
     background-color: #f5f5f5;
 }
 
-#table-ds .secondLevel {
-    background-color: #f5f5f5;
-}
-
-#table-ds .thirdLevel {
+#table-ds .depth2{
     background-color: #e8e8e8;
 }
 
-#table-ds .fourthLevel {
+#table-ds .depth3 {
     background-color: #dadada;
 }
 
