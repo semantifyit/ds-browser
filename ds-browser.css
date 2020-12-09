@@ -109,3 +109,8 @@ table.definition-table { border: 1px solid #98A0A6 }
     background-color: #990000;
     color: white;
 }
+
+#table-ds .first-row-ds a {
+    color: white;
+    text-decoration: underline;
+}
