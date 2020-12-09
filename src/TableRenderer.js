@@ -10,11 +10,11 @@ class TableRenderer {
         const rootClass = this.dsHandler.generateDsClass(this.browser.ds['@graph'][0], false, false);
         const mainContent = this.dsRenderer.createHeader() +
             this.dsRenderer.createViewModeSelectors(this.dsRenderer.MODES.table) +
-            '<table class="firstLevel">' +
-            '<tr class="firstRowTableView sti-red">' +
+            '<table id="table-ds">' +
+            '<tr class="first-row-ds">' +
             '<td><img src="" class="glyphicon glyphicon-list-alt">' + rootClass.text + '</td>' +
             '<td colspan="2">' + rootClass.data.dsDescription + '</td>' +
-            '<td><div class="firstRowCardinality"><b>Cardinality</b></div></td>' +
+            '<td><b>Cardinality</b></td>' +
             '</tr>' +
             this.processProperties(rootClass.children, 0, rootClass._id) +
             '</table>';
@@ -50,6 +50,7 @@ class TableRenderer {
                     csClass = 'firstLevel';
                     break;
             }
+            csClass += ' innerTable';
             const terms = (property.data.dsRange).split(' or ');
             const isOnlyClass = this.testIsOnlyClass(terms);
             const dsRange = this.createDSRange(property, level, dsID, propertyNumber, terms, isOnlyClass);
@@ -61,8 +62,8 @@ class TableRenderer {
                 this.createOuterTable(dsRange, property) +
                 this.createInnerTable(properties, level, dsID, propertyNumber, isOnlyClass) +
                 '</td>' +
-                '<td class="col-md-1 cardinality">' +
-                '<div class="tdcardinality">' + this.dsHandler.createCardinality(property.data.minCount, property.data.maxCount) + '</div>' +
+                '<td class="cardinality">' +
+                this.dsHandler.createCardinality(property.data.minCount, property.data.maxCount) +
                 '</td>' +
                 '</tr>';
         } else {
@@ -91,33 +92,17 @@ class TableRenderer {
     }
 
     createDSRange(property, level, dsID, propertyNumber, terms, isOnlyClass) {
-        if (terms.length > 1) {
-            const dataFirstElement = 'str-' + dsID + '-l' + level + '-p' + propertyNumber + '-c' + 0;
-            const id = 'table-' + dsID + '-l' + level + '-p' + propertyNumber;
-            return '' +
-                '<table id="' + id +'" class="noBorderClass" data-firstElement="' + dataFirstElement +'">' +
-                '<tr>' +
-                terms.map((aTerm, i) => {
-                    const cleanTerm = this.cleanTerm(aTerm);
-                    const isClass = this.isClass(cleanTerm);
+        return '' +
+            terms.map((aTerm, i) => {
+                const cleanTerm = this.cleanTerm(aTerm);
+                const isClass = this.isClass(cleanTerm);
+                const or = (i + 1 < terms.length ? '&nbsp;or  <br>' : '');
 
-                    return '' +
-                        '<td>' +
-                        (i > 0 ? '<div class="classSeperator">or</div>' : '') +
-                        (isClass && i !== 0 && !isOnlyClass ?
-                            `<div id="btn-${dsID}-l${level}-p${propertyNumber}-c${i}" class="dsRangeClassBtn"` +
-                            `onclick="this.toggleTableViewClassProperty('${level}', '${propertyNumber}', '${i}', '${dsID}')">` : '') +
-                        (isClass ? '<strong id="str-' + dsID + '-l' + level + '-p' + propertyNumber + '-c' + i + '">' : '') +
-                        cleanTerm +
-                        (isClass ? '</strong>' : '') +
-                        (isClass && i !== 0 && !isOnlyClass ? '</div>' : '') +
-                        '</td>';
-                }).join('') +
-                '</tr>' +
-                '</table>';
-        } else {
-            return property.data.dsRange;
-        }
+                return '' +
+                    (isClass ? '<span style="display: flex; align-items: center;">' +
+                        '<img src="" class="glyphicon glyphicon-list-alt">' +
+                        '<b>' + cleanTerm + '</b>' + or + '</span>' : cleanTerm + or);
+            }).join('');
     }
 
     cleanTerm(term) {
@@ -129,27 +114,25 @@ class TableRenderer {
     createTdProperty(property) {
         return '' +
             '<td>' +
-            '<div class="thContent">' +
-            '<img class="glyphicon glyphicon-tag ' + (property.data.isOptional ? 'optional' : 'mandatory') + '-property" src="">' + property.text +
+            '<div style="display: flex; align-items: center;">' +
+            '<img class="glyphicon glyphicon-tag ' + (property.data.isOptional ? 'optional' : 'mandatory') + '-property" src="" />' + property.text +
             '</div>' +
             '</td>';
     }
 
     createOuterTable(dsRange, property) {
         return '' +
-            '<table class="noBorder">' +
+            '<table>' +
             '<tr>' +
-            '<td class="propertyRange col-md-3">' + dsRange + '</td>' +
-            '<td class="classDescription col-md-9">' + property.data.dsDescription + '</td>' +
-            '<td class="col-md-1 cardinality"><b>Cardinality</b></td>' +
-            '</tr>' +
-            '</table>';
+            '<td>' + dsRange + '</td>' +
+            '<td colspan="2">' + property.data.dsDescription + '</td>' +
+            '<td><b>Cardinality</b></td>' +
+            '</tr>'
+
     }
 
     createInnerTable(properties, level, dsID, propertyNumber, isOnlyClass) {
         return '' +
-            '<div class="innerTable">' +
-            '<table>' +
             properties.map((property, i) => {
                 if (properties.length === 1) {
                     return this.processProperties(property.children, level, dsID);
@@ -165,17 +148,16 @@ class TableRenderer {
                         '</tr>';
                 }
             }).join('') +
-            '</table>' +
-            '</div>';
+            '</table>'
     }
 
     processPropertyWithNoChildren(property) {
         return '' +
             '<tr>' +
             this.createTdProperty(property) +
-            '<td><div class="thContent">' + property.data.dsRange + '</div> </td>' +
-            '<td style="border-right-style: none"><div class="thContent">' + property.data.dsDescription + '</div> </td>' +
-            `<td class="col-md-1 cardinality"><div class="tdcardinality">${this.dsHandler.createCardinality(property.data.minCount, property.data.maxCount)}</div> </td>` +
+            '<td><div class="thContent">' + property.data.dsRange + '</div></td>' +
+            '<td><div class="thContent">' + property.data.dsDescription + '</div> </td>' +
+            `<td class="cardinality">${this.dsHandler.createCardinality(property.data.minCount, property.data.maxCount)}</div> </td>` +
             '</tr>' +
             (property.data.enuMembers ? this.genHTML_enuMembers(property.data.enuMembers) : '');
     }
