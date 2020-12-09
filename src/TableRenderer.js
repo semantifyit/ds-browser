@@ -12,7 +12,7 @@ class TableRenderer {
             this.dsRenderer.createViewModeSelectors(this.dsRenderer.MODES.table) +
             '<table id="table-ds">' +
             '<tr class="first-row-ds">' +
-            '<td><img src="" class="glyphicon glyphicon-list-alt">' + rootClass.text + '</td>' +
+            '<td><div class="align-items"><img src="" class="glyphicon glyphicon-list-alt">' + rootClass.text + '</div></td>' +
             '<td colspan="2">' + rootClass.data.dsDescription + '</td>' +
             '<td><b>Cardinality</b></td>' +
             '</tr>' +
@@ -99,7 +99,7 @@ class TableRenderer {
                 const or = (i + 1 < terms.length ? '&nbsp;or  <br>' : '');
 
                 return '' +
-                    (isClass ? '<span style="display: flex; align-items: center;">' +
+                    (isClass ? '<span class="align-items">' +
                         '<img src="" class="glyphicon glyphicon-list-alt">' +
                         '<b>' + cleanTerm + '</b>' + or + '</span>' : cleanTerm + or);
             }).join('');
@@ -114,7 +114,7 @@ class TableRenderer {
     createTdProperty(property) {
         return '' +
             '<td>' +
-            '<div style="display: flex; align-items: center;">' +
+            '<div class="align-items">' +
             '<img class="glyphicon glyphicon-tag ' + (property.data.isOptional ? 'optional' : 'mandatory') + '-property" src="" />' + property.text +
             '</div>' +
             '</td>';

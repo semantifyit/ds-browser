@@ -114,3 +114,8 @@ table.definition-table { border: 1px solid #98A0A6 }
     color: white;
     text-decoration: underline;
 }
+
+#table-ds .align-items {
+    display: flex;
+    align-items: center;
+}
