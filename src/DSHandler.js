@@ -235,7 +235,7 @@ class DSHandler {
             // Get description
             enuMembersArray.forEach((eachMember) => {
                 const enuMemberDesc = this.browser.sdoAdapter.getEnumerationMember(eachMember.name);
-                eachMember.description = enuMemberDesc.getDescription();
+                eachMember.description = this.util.repairLinksInHTMLCode(enuMemberDesc.getDescription());
             });
 
             dsProperty.data.enuMembers = enuMembersArray;
@@ -244,7 +244,7 @@ class DSHandler {
                     children: [],
                     data: {
                         dsRange: '',
-                        dsDescription: enuMem.description
+                        dsDescription: this.util.repairLinksInHTMLCode(enuMem.description)
                     },
                     icon: 'glyphicon glyphicon-chevron-right',
                     text: enuMem.name,
@@ -287,7 +287,8 @@ class DSHandler {
             dsProperty.data.rangeJustification = dsRange.rangeJustification;
 
             try {
-                dsProperty.data.dsDescription = this.browser.sdoAdapter.getProperty(dsProperty.text).getDescription();
+                const description = this.browser.sdoAdapter.getProperty(dsProperty.text).getDescription();
+                dsProperty.data.dsDescription = this.util.repairLinksInHTMLCode(description);
             } catch (e) {
                 dsProperty.data.dsDescription = 'No description found.';
             }
