@@ -78,6 +78,7 @@ class DSRenderer {
             this.util.createExternalLinkLegend() +
             breadcrumbs +
             '<div property="schema:description">' + description + '<br><br></div>';
+
     }
 
     createNodeDescription(nodeClass) {

@@ -1,5 +1,9 @@
 /* Schema.org */
 @import url("https://schema.org/docs/schemaorg.css");
+#mainContent {
+    border-bottom: none;
+    max-width: 90%
+}
 
 /* Glyphicon */
 @font-face {
@@ -34,7 +38,7 @@
 /* Common */
 .optional-property { color: #ffa517; }
 .mandatory-property { color: #00ce0c; }
-#mainContent { border-bottom: none; }
+
 table.definition-table { border: 1px solid #98A0A6 }
 
 .ds-selector {

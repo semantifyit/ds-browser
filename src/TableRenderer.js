@@ -12,17 +12,25 @@ class TableRenderer {
             this.dsRenderer.createViewModeSelectors(this.dsRenderer.MODES.table) +
             '<div id="table-view"> ' +
             this.dsRenderer.createVisBtnRow() +
+            '<div id="table-wrapper">' +
             '<table id="table-ds">' +
+            this.createTableContent(rootClass) +
+            '</table>' +
+            '</div>' +
+            '</div>';
+
+        this.browser.elem.innerHTML = this.util.createMainContent('rdfs:Class', mainContent);
+        this.addClickEvent();
+    }
+
+    createTableContent(rootClass) {
+        return '' +
             '<tr class="first-row-ds">' +
             '<td><div class="align-items"><img src="" class="glyphicon glyphicon-list-alt">' + rootClass.text + '</div></td>' +
             '<td colspan="2">' + rootClass.data.dsDescription + '</td>' +
             '<td><b>Cardinality</b></td>' +
             '</tr>' +
-            this.processProperties(rootClass.children, 0, rootClass._id) +
-            '</table>' +
-            '</div>';
-
-        this.browser.elem.innerHTML = this.util.createMainContent('rdfs:Class', mainContent);
+            this.processProperties(rootClass.children, 0, rootClass._id);
     }
 
     processProperties(properties, depth, dsID) {
@@ -180,6 +188,30 @@ class TableRenderer {
         return '' +
             '<td>' + property.data.dsRange + '</td>' +
             '<td>' + property.data.dsDescription + '</td>';
+    }
+
+    addClickEvent() {
+        const divTableView = document.getElementById('table-view');
+        const button = divTableView.getElementsByClassName('btn-vis-shadow')[0];
+        const self = this;
+        button.addEventListener('click', function (event) {
+            event.stopPropagation();
+            button.classList.remove('btn-vis-shadow');
+            let otherButton, showOptional;
+            if (button.id === 'btn-opt') {
+                otherButton = document.getElementById('btn-man');
+                showOptional = true;
+            } else {
+                otherButton = document.getElementById('btn-opt');
+                showOptional = false;
+            }
+
+            otherButton.classList.add('btn-vis-shadow');
+            self.addClickEvent();
+
+            const rootClass = self.dsHandler.generateDsClass(self.browser.ds['@graph'][0], false, showOptional);
+            document.getElementById('table-ds').innerHTML = self.createTableContent(rootClass);
+        }, true);
     }
 }
 
