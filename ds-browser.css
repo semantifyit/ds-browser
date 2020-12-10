@@ -85,11 +85,11 @@ table.definition-table { border: 1px solid #98A0A6 }
     padding: 0;
 }
 
-#table-ds tr:last-child td {
+#table-ds table > tbody > tr:last-child > td {
     border-bottom: none;
 }
 
-#table-ds tr td:last-child {
+#table-ds table > tbody > tr > td:last-child {
     border-right: none;
 }
 
