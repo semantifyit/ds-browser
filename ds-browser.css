@@ -49,9 +49,17 @@ table.definition-table { border: 1px solid #98A0A6 }
     border: 1px solid #98A0A6;
 }
 
+#btn-row { padding: 12px 0px 12px 5px; }
+.btn-vis { padding: 5px; }
+.btn-vis-shadow {
+    cursor: pointer;
+    webkit-box-shadow: 0 4px 5px 0 rgba(0, 0, 0, 0.14), 0 1px 10px 0 rgba(0, 0, 0, 0.12), 0 2px 4px -1px rgba(0, 0, 0, 0.2);
+    box-shadow: 0 4px 5px 0 rgba(0, 0, 0, 0.14), 0 1px 10px 0 rgba(0, 0, 0, 0.12), 0 2px 4px -1px rgba(0, 0, 0, 0.2);
+}
+
 /* Tree view */
 #div-iframe { padding-right: 6px; }
-#table-ds, #iframe-jsTree {
+#table-view, #iframe-jsTree {
      border-left: 1px solid #98A0A6;
      border-right: 1px solid  #98A0A6;
      border-bottom: 1px solid  #98A0A6;
@@ -60,12 +68,12 @@ table.definition-table { border: 1px solid #98A0A6 }
 
 
 /* Table view */
-#table-ds, #table-ds table {
+#table-view table {
     border-collapse: collapse;
     width: 100%;
 }
 
-#table-ds td {
+#table-view td {
     border-bottom: 1px solid #98A0A6;
     border-right: 1px solid #98A0A6;
     padding: 0 5px 0 5px;
@@ -73,53 +81,53 @@ table.definition-table { border: 1px solid #98A0A6 }
     border-top: none;
 }
 
-#table-ds .enumTd {
+#table-view .enumTd {
     border-bottom: 1px solid #98A0A6 !important;
 }
 
-#table-ds .enumTable tr:last-child td {
+#table-view.enumTable tr:last-child td {
     border-bottom: none !important;
 }
 
-#table-ds td.innerTable {
+#table-view td.innerTable {
     padding: 0;
 }
 
-#table-ds table > tbody > tr:last-child > td {
+#table-view table > tbody > tr:last-child > td {
     border-bottom: none;
 }
 
-#table-ds table > tbody > tr > td:last-child {
+#table-view table > tbody > tr > td:last-child {
     border-right: none;
 }
 
-#table-ds .depth1 {
+#table-view .depth1 {
     background-color: #f5f5f5;
 }
 
-#table-ds .depth2{
+#table-view .depth2{
     background-color: #e8e8e8;
 }
 
-#table-ds .depth3 {
+#table-view .depth3 {
     background-color: #dadada;
 }
 
-#table-ds .cardinality {
+#table-view .cardinality {
     text-align: center;
 }
 
-#table-ds .first-row-ds {
+#table-view .first-row-ds {
     background-color: #990000;
     color: white;
 }
 
-#table-ds .first-row-ds a {
+#table-view .first-row-ds a {
     color: white;
     text-decoration: underline;
 }
 
-#table-ds .align-items {
+#table-view .align-items {
     display: flex;
     align-items: center;
 }

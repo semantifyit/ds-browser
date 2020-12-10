@@ -44,15 +44,7 @@ class TreeRenderer {
             this.createTreeStyle() +
             '</head>' +
             '<body>' +
-            '<div id="btn-row">' +
-            'Show: ' +
-            '<span id="btn-opt" class="btn-vis btn-vis-shadow" style="margin-left: 10px;">' +
-            '<img src="" class="glyphicon glyphicon-tag optional-property"> optional' +
-            '</span>' +
-            '<span id="btn-man" class="btn-vis" style="margin-left: 10px;">' +
-            '<img src="" class="glyphicon glyphicon-tag mandatory-property"> mandatory' +
-            '</span>' +
-            '</div>' +
+            this.dsRenderer.createVisBtnRow() +
             '<div id="jsTree"></div>' +
             '</body>';
     }

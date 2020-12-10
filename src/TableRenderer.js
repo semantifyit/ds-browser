@@ -10,6 +10,8 @@ class TableRenderer {
         const rootClass = this.dsHandler.generateDsClass(this.browser.ds['@graph'][0], false, false);
         const mainContent = this.dsRenderer.createHeader() +
             this.dsRenderer.createViewModeSelectors(this.dsRenderer.MODES.table) +
+            '<div id="table-view"> ' +
+            this.dsRenderer.createVisBtnRow() +
             '<table id="table-ds">' +
             '<tr class="first-row-ds">' +
             '<td><div class="align-items"><img src="" class="glyphicon glyphicon-list-alt">' + rootClass.text + '</div></td>' +
@@ -17,7 +19,8 @@ class TableRenderer {
             '<td><b>Cardinality</b></td>' +
             '</tr>' +
             this.processProperties(rootClass.children, 0, rootClass._id) +
-            '</table>';
+            '</table>' +
+            '</div>';
 
         this.browser.elem.innerHTML = this.util.createMainContent('rdfs:Class', mainContent);
     }
