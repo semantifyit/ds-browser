@@ -31,26 +31,26 @@ class TableRenderer {
             '<td colspan="2">' + rootClass.data.dsDescription + '</td>' +
             '<td><b>Cardinality</b></td>' +
             '</tr>' +
-            this.processProperties(rootClass.children, 0, rootClass._id);
+            this.processProperties(rootClass.children, 0);
     }
 
-    processProperties(properties, depth, dsID) {
+    processProperties(properties, depth) {
         return properties.map((property, i) => {
             if (property.children && property.children.length !== 0 && !property.isEnum) {
-                return this.processPropertyWithChildren(property, depth, dsID, i);
+                return this.processPropertyWithChildren(property, depth, i);
             } else {
                 return this.processPropertyWithNoChildren(property, depth);
             }
         }).join('');
     }
 
-    processPropertyWithChildren(property, depth, dsID, propertyNumber) {
+    processPropertyWithChildren(property, depth, propertyNumber) {
         let csClass, html = '';
         depth++;
         if (depth < 4) {
             csClass = 'depth' + depth + ' innerTable';
             const terms = (property.data.dsRange).split(' or ');
-            const dsRange = this.createDSRange(property, depth, dsID, propertyNumber, terms);
+            const dsRange = this.createDSRange(property, depth, propertyNumber, terms);
             let properties = property.children;
             html += '' +
                 '<tr>' +
@@ -58,7 +58,7 @@ class TableRenderer {
                 '<td colspan="2" class="' + csClass + '">' +
                 '<table>' +
                 this.createInnerTableHeader(dsRange, property) +
-                this.processProperties(properties[0].children, depth, null) + // show first class defaultly, can be changed via click
+                this.processProperties(properties[0].children, depth) + // show first class defaultly, can be changed via click
                 '</table>' +
                 '</td>' +
                 '<td class="cardinality">' +
@@ -76,7 +76,7 @@ class TableRenderer {
         return !['Text', 'Number', 'URL', 'Boolean'].includes(cleanTerm);
     }
 
-    createDSRange(property, level, dsID, propertyNumber, terms) {
+    createDSRange(property, level, propertyNumber, terms) {
         return '' +
             terms.map((aTerm, i) => {
                 const cleanTerm = this.cleanTerm(aTerm);
