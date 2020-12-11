@@ -35,23 +35,23 @@ class TableRenderer {
     }
 
     processProperties(properties, depth) {
-        return properties.map((property, i) => {
+        return properties.map((property) => {
             if (property.children && property.children.length !== 0 && !property.isEnum) {
-                return this.processPropertyWithChildren(property, depth, i);
+                return this.processPropertyWithChildren(property, depth);
             } else {
                 return this.processPropertyWithNoChildren(property, depth);
             }
         }).join('');
     }
 
-    processPropertyWithChildren(property, depth, propertyNumber) {
+    processPropertyWithChildren(property, depth) {
         let csClass, html = '';
         depth++;
         if (depth < 4) {
             csClass = 'depth' + depth + ' innerTable';
             const terms = (property.data.dsRange).split(' or ');
-            const dsRange = this.createDSRange(property, depth, propertyNumber, terms);
-            let properties = property.children;
+            const dsRange = this.createDSRange(property, depth, terms);
+            const properties = property.children;
             html += '' +
                 '<tr>' +
                 this.createTdProperty(property) +
@@ -76,7 +76,7 @@ class TableRenderer {
         return !['Text', 'Number', 'URL', 'Boolean'].includes(cleanTerm);
     }
 
-    createDSRange(property, level, propertyNumber, terms) {
+    createDSRange(property, level, terms) {
         return '' +
             terms.map((aTerm, i) => {
                 const cleanTerm = this.cleanTerm(aTerm);
