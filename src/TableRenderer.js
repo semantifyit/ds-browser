@@ -50,8 +50,7 @@ class TableRenderer {
         if (depth < 4) {
             csClass = 'depth' + depth + ' innerTable';
             const terms = (property.data.dsRange).split(' or ');
-            const isOnlyClass = this.testIsOnlyClass(terms);
-            const dsRange = this.createDSRange(property, depth, dsID, propertyNumber, terms, isOnlyClass);
+            const dsRange = this.createDSRange(property, depth, dsID, propertyNumber, terms);
             let properties = property.children;
             html += '' +
                 '<tr>' +
@@ -59,7 +58,7 @@ class TableRenderer {
                 '<td colspan="2" class="' + csClass + '">' +
                 '<table>' +
                 this.createInnerTableHeader(dsRange, property) +
-                this.createInnerTableTbody(properties, depth, dsID, propertyNumber, isOnlyClass) +
+                this.processProperties(properties[0].children, depth, null) + // show first class defaultly, can be changed via click
                 '</table>' +
                 '</td>' +
                 '<td class="cardinality">' +
@@ -72,30 +71,16 @@ class TableRenderer {
         return html;
     }
 
-    testIsOnlyClass(potentialClasses) {
-        let isOnlyClass = true;
-        let countOfClasses = 0;
-        potentialClasses.forEach((potentialClass) => {
-            const cleanClass = potentialClass.replace(/ /g, '');
-            if (this.isClass(cleanClass)) {
-                countOfClasses++;
-            }
-        });
-        if (countOfClasses > 1) {
-            isOnlyClass = false;
-        }
-        return isOnlyClass;
-    }
-
     isClass(term) {
-        return !['Text', 'Number', 'URL', 'Boolean'].includes(term);
+        const cleanTerm = this.cleanTerm(term);
+        return !['Text', 'Number', 'URL', 'Boolean'].includes(cleanTerm);
     }
 
-    createDSRange(property, level, dsID, propertyNumber, terms, isOnlyClass) {
+    createDSRange(property, level, dsID, propertyNumber, terms) {
         return '' +
             terms.map((aTerm, i) => {
                 const cleanTerm = this.cleanTerm(aTerm);
-                const isClass = this.isClass(cleanTerm);
+                const isClass = this.isClass(aTerm);
                 const or = (i + 1 < terms.length ? '&nbsp;or  <br>' : '');
 
                 return '' +
@@ -129,25 +114,6 @@ class TableRenderer {
             '<td><b>Cardinality</b></td>' +
             '</tr>'
 
-    }
-
-    createInnerTableTbody(properties, level, dsID, propertyNumber, isOnlyClass) {
-        return '' +
-            properties.map((property, i) => {
-                if (properties.length === 1) {
-                    return this.processProperties(property.children, level, dsID);
-                } else {
-                    const id = `${dsID}-l${level}-p${propertyNumber}-c${i}`;
-                    return '' +
-                        '<tr>' +
-                        (isOnlyClass || i === 0 ?
-                            '<tbody class="testDs" id="' + id + '>' :
-                            '<tbody style="display: none;" class="testDs" id="' + id + '">') +
-                        this.processProperties(property.children, level, dsID) +
-                        '</tbody>' +
-                        '</tr>';
-                }
-            }).join('');
     }
 
     processPropertyWithNoChildren(property, level) {
