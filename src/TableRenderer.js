@@ -4,6 +4,7 @@ class TableRenderer {
         this.util = browser.util;
         this.dsHandler = browser.dsHandler;
         this.dsRenderer = browser.dsRenderer;
+        this.clickHandler = null; // see: https://stackoverflow.com/questions/33859113/javascript-removeeventlistener-not-working-inside-a-class
     }
 
     render() {
@@ -57,8 +58,8 @@ class TableRenderer {
                 this.createTdProperty(property) +
                 '<td colspan="2" class="' + csClass + '">' +
                 '<table>' +
-                this.createOuterTable(dsRange, property) +
-                this.createInnerTable(properties, depth, dsID, propertyNumber, isOnlyClass) +
+                this.createInnerTableHeader(dsRange, property) +
+                this.createInnerTableTbody(properties, depth, dsID, propertyNumber, isOnlyClass) +
                 '</table>' +
                 '</td>' +
                 '<td class="cardinality">' +
@@ -120,7 +121,7 @@ class TableRenderer {
             '</td>';
     }
 
-    createOuterTable(dsRange, property) {
+    createInnerTableHeader(dsRange, property) {
         return '' +
             '<tr>' +
             '<td>' + dsRange + '</td>' +
@@ -130,7 +131,7 @@ class TableRenderer {
 
     }
 
-    createInnerTable(properties, level, dsID, propertyNumber, isOnlyClass) {
+    createInnerTableTbody(properties, level, dsID, propertyNumber, isOnlyClass) {
         return '' +
             properties.map((property, i) => {
                 if (properties.length === 1) {
@@ -140,8 +141,8 @@ class TableRenderer {
                     return '' +
                         '<tr>' +
                         (isOnlyClass || i === 0 ?
-                            `<tbody class="testDs" id="${id}">` :
-                            `<tbody style="display: none;" class="testDs" id="${id}">`) +
+                            '<tbody class="testDs" id="' + id + '>' :
+                            '<tbody style="display: none;" class="testDs" id="' + id + '">') +
                         this.processProperties(property.children, level, dsID) +
                         '</tbody>' +
                         '</tr>';
@@ -193,25 +194,29 @@ class TableRenderer {
     addClickEvent() {
         const divTableView = document.getElementById('table-view');
         const button = divTableView.getElementsByClassName('btn-vis-shadow')[0];
-        const self = this;
-        button.addEventListener('click', function (event) {
-            event.stopPropagation();
-            button.classList.remove('btn-vis-shadow');
-            let otherButton, showOptional;
-            if (button.id === 'btn-opt') {
-                otherButton = document.getElementById('btn-man');
-                showOptional = true;
-            } else {
-                otherButton = document.getElementById('btn-opt');
-                showOptional = false;
-            }
+        this.clickHandler = this.clickEvent.bind(this);
+        button.addEventListener('click', this.clickHandler, true);
+    }
 
-            otherButton.classList.add('btn-vis-shadow');
-            self.addClickEvent();
+    clickEvent(event) {
+        const button = event.target;
+        button.removeEventListener('click', this.clickHandler, true);
 
-            const rootClass = self.dsHandler.generateDsClass(self.browser.ds['@graph'][0], false, showOptional);
-            document.getElementById('table-ds').innerHTML = self.createTableContent(rootClass);
-        }, true);
+        button.classList.remove('btn-vis-shadow');
+        let otherButton, showOptional;
+        if (button.id === 'btn-opt') {
+            otherButton = document.getElementById('btn-man');
+            showOptional = true;
+        } else {
+            otherButton = document.getElementById('btn-opt');
+            showOptional = false;
+        }
+
+        otherButton.classList.add('btn-vis-shadow');
+        const rootClass = this.dsHandler.generateDsClass(this.browser.ds['@graph'][0], false, showOptional);
+        document.getElementById('table-ds').innerHTML = this.createTableContent(rootClass);
+
+        this.addClickEvent();
     }
 }
 
