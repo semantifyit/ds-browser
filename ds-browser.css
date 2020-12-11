@@ -72,6 +72,10 @@ table.definition-table { border: 1px solid #98A0A6 }
 
 
 /* Table view */
+#table-wrapper {
+    overflow-x: auto;
+}
+
 #table-view table {
     border-collapse: collapse;
     width: 100%;
