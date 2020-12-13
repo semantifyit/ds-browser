@@ -20557,6 +20557,8 @@ var _NativeRenderer = _interopRequireDefault(require("./NativeRenderer"));
 
 var _TreeRenderer = _interopRequireDefault(require("./TreeRenderer"));
 
+var _TableRenderer = _interopRequireDefault(require("./TableRenderer"));
+
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
 function asyncGeneratorStep(gen, resolve, reject, _next, _throw, key, arg) { try { var info = gen[key](arg); var value = info.value; } catch (error) { reject(error); return; } if (info.done) { resolve(value); } else { Promise.resolve(value).then(_next, _throw); } }
@@ -20583,6 +20585,7 @@ class DSBrowser {
     this.dsRenderer = new _DSRenderer.default(this);
     this.nativeRenderer = new _NativeRenderer.default(this);
     this.treeRenderer = new _TreeRenderer.default(this);
+    this.tableRenderer = new _TableRenderer.default(this);
     window.addEventListener('popstate', /*#__PURE__*/_asyncToGenerator(function* () {
       yield _this.render();
     }));
@@ -20601,6 +20604,8 @@ class DSBrowser {
         _this2.nativeRenderer.render();
       } else if (_this2.isTreeRendering()) {
         _this2.treeRenderer.render();
+      } else if (_this2.isTableRendering()) {
+        _this2.tableRenderer.render();
       } else if (_this2.isListRendering()) {
         _this2.listRenderer.render();
       }
@@ -20737,6 +20742,13 @@ class DSBrowser {
     var treeMode = searchParams.get('mode') === 'tree';
     return treeMode && (this.type === BROWSER_TYPES.LIST && ds || this.type === BROWSER_TYPES.DS);
   }
+
+  isTableRendering() {
+    var searchParams = new URLSearchParams(window.location.search);
+    var ds = searchParams.get('ds');
+    var tableMode = searchParams.get('mode') === 'table';
+    return tableMode && (this.type === BROWSER_TYPES.LIST && ds || this.type === BROWSER_TYPES.DS);
+  }
   /**
    * Check if the list should be rendered.
    *
@@ -20786,7 +20798,7 @@ class DSBrowser {
 
 module.exports = DSBrowser;
 
-},{"./DSHandler":85,"./DSRenderer":86,"./ListRenderer":87,"./NativeRenderer":88,"./TreeRenderer":89,"./Util":90,"schema-org-adapter":78}],85:[function(require,module,exports){
+},{"./DSHandler":85,"./DSRenderer":86,"./ListRenderer":87,"./NativeRenderer":88,"./TableRenderer":89,"./TreeRenderer":90,"./Util":91,"schema-org-adapter":78}],85:[function(require,module,exports){
 "use strict";
 
 class DSHandler {
@@ -20952,6 +20964,221 @@ class DSHandler {
     return '<span title="' + title + '">' + cardinality + '</span>';
   }
 
+  generateDsClass(dsvClass, closed, showOptional) {
+    var dsClass = {};
+    var targetClass = dsvClass['sh:targetClass'];
+    dsClass.text = targetClass ? this.util.prettyPrintClassDefinition(targetClass) : this.util.prettyPrintClassDefinition(dsvClass['sh:class']);
+    dsClass.icon = 'glyphicon glyphicon-list-alt';
+
+    if (!closed) {
+      dsClass.state = {
+        'opened': true
+      };
+    }
+
+    var description;
+
+    try {
+      if (dsClass.text.indexOf(',') === -1) {
+        description = this.browser.sdoAdapter.getClass(dsClass.text).getDescription();
+      } else {
+        description = 'No description found.';
+      }
+    } catch (e) {
+      description = 'No description found.';
+    }
+
+    dsClass.data = {};
+    dsClass.data.dsDescription = description;
+
+    if (dsvClass['rdfs:comment']) {
+      // Was dsv:justification
+      dsClass.justification = dsvClass['rdfs:comment'];
+    }
+
+    dsClass.children = this.processChildren(dsvClass, showOptional);
+    return dsClass;
+  }
+
+  processChildren(dsvClass, showOptional) {
+    var children = [];
+    var dsvProperties;
+    var shProperty = dsvClass['sh:property'];
+    var shNode = dsvClass['sh:node'];
+
+    if (shProperty) {
+      dsvProperties = shProperty;
+    } else if (shNode && shNode['sh:property']) {
+      dsvProperties = shNode['sh:property'];
+    }
+
+    if (dsvProperties !== undefined) {
+      dsvProperties.forEach(dsvProperty => {
+        var dsProperty = this.generateDsProperty(dsvProperty, showOptional);
+
+        if (dsProperty) {
+          children.push(dsProperty);
+        }
+      });
+    }
+
+    return children;
+  }
+
+  generateDsProperty(propertyObj, showOptional) {
+    var dsProperty = {};
+    dsProperty.justification = propertyObj['rdfs:comment'];
+    dsProperty.text = this.util.prettyPrintIri(propertyObj['sh:path']);
+    dsProperty.data = {};
+    dsProperty.data.minCount = propertyObj['sh:minCount'];
+    dsProperty.data.maxCount = propertyObj['sh:maxCount'];
+    dsProperty.children = [];
+    this.processEnum(dsProperty, propertyObj['sh:or'][0]);
+    this.processVisibility(dsProperty, propertyObj['sh:minCount']);
+    this.processExpectedTypes(dsProperty, propertyObj['sh:or'], showOptional);
+
+    if (showOptional) {
+      return dsProperty;
+    } else if (!dsProperty.data.isOptional) {
+      return dsProperty;
+    } // TODO: Probably a mistake: What happens when if / else if is not entered?
+
+  }
+
+  processEnum(dsProperty, shOr) {
+    dsProperty.isEnum = false;
+    var enuWithSdo;
+
+    try {
+      var rangeOfProp = shOr['sh:class'];
+      enuWithSdo = this.browser.sdoAdapter.getEnumeration(rangeOfProp);
+      dsProperty.isEnum = true;
+    } catch (e) {
+      /* Ignore */
+    }
+
+    if (dsProperty.isEnum) {
+      var enuMembersArray = this.getEnumMemberArray(shOr['sh:in'], enuWithSdo); // Get description
+
+      enuMembersArray.forEach(eachMember => {
+        var enuMemberDesc = this.browser.sdoAdapter.getEnumerationMember(eachMember.name);
+        eachMember.description = this.util.repairLinksInHTMLCode(enuMemberDesc.getDescription());
+      });
+      dsProperty.data.enuMembers = enuMembersArray;
+      dsProperty.children = enuMembersArray.map(enuMem => {
+        return {
+          children: [],
+          data: {
+            dsRange: '',
+            dsDescription: this.util.repairLinksInHTMLCode(enuMem.description)
+          },
+          icon: 'glyphicon glyphicon-chevron-right',
+          text: enuMem.name
+        };
+      });
+    }
+  }
+
+  getEnumMemberArray(shIn, enuWithSdo) {
+    if (shIn) {
+      // Objects
+      return shIn.map(enuMember => {
+        var enuMemberName = enuMember['@id'];
+        enuMemberName = enuMemberName.replace('schema:', '');
+        return {
+          name: enuMemberName
+        };
+      });
+    } else {
+      // Strings
+      var enuMembersArrayString = enuWithSdo.getEnumerationMembers();
+      return enuMembersArrayString.map(enuMemName => {
+        return {
+          name: enuMemName
+        };
+      });
+    }
+  }
+
+  processVisibility(dsProperty, minCount) {
+    dsProperty.icon = 'glyphicon glyphicon-tag';
+
+    if (!minCount > 0) {
+      dsProperty.icon += ' optional-property';
+      dsProperty.data.isOptional = true;
+    } else {
+      dsProperty.icon += ' mandatory-property';
+      dsProperty.data.isOptional = false;
+    }
+  }
+
+  processExpectedTypes(dsProperty, dsvExpectedTypes, showOptional) {
+    var isOpened = false;
+
+    if (dsvExpectedTypes) {
+      var dsRange = this.generateDsRange(dsvExpectedTypes);
+      dsProperty.data.dsRange = dsRange.rangeAsString;
+      dsProperty.data.rangeJustification = dsRange.rangeJustification;
+
+      try {
+        var description = this.browser.sdoAdapter.getProperty(dsProperty.text).getDescription();
+        dsProperty.data.dsDescription = this.util.repairLinksInHTMLCode(description);
+      } catch (e) {
+        dsProperty.data.dsDescription = 'No description found.';
+      }
+
+      dsvExpectedTypes.forEach(dsvExpectedType => {
+        if (dsvExpectedType['sh:node']) {
+          // Was dsv:restrictedClass
+          isOpened = true;
+          var dsClass = this.generateDsClass(dsvExpectedType, true, showOptional);
+          dsProperty.children.push(dsClass);
+        }
+      });
+    }
+
+    if (isOpened) {
+      dsProperty.state = {
+        'opened': true
+      };
+    }
+  }
+
+  generateDsRange(dsvExpectedTypes) {
+    var returnObj = {
+      rangeAsString: '',
+      rangeJustification: []
+    };
+    returnObj.rangeAsString = dsvExpectedTypes.map((dsvExpectedType, i) => {
+      var justification = {};
+      var name, rangePart;
+      var datatype = dsvExpectedType['sh:datatype'];
+      var shClass = dsvExpectedType['sh:class'];
+
+      if (datatype) {
+        // Datatype
+        name = this.util.prettyPrintIri(this.dataTypeMapperFromSHACL(datatype));
+        rangePart = name;
+      } else if (dsvExpectedType['sh:node']) {
+        // Restricted class
+        name = this.util.prettyPrintClassDefinition(shClass);
+        rangePart = '<strong>' + name + '</strong>';
+      } else {
+        // Enumeration
+        // Standard class
+        name = this.util.prettyPrintClassDefinition(shClass);
+        rangePart = name;
+      }
+
+      justification.name = name;
+      justification.justification = dsvExpectedType['rdfs:comment']; // Was dsv:justification
+
+      returnObj.rangeJustification.push(justification);
+      return rangePart;
+    }).join(' or ');
+    return returnObj;
+  }
+
 }
 
 module.exports = DSHandler;
@@ -20965,7 +21192,8 @@ class DSRenderer {
   constructor(browser) {
     _defineProperty(this, "MODES", {
       'native': 'native',
-      'tree': 'tree'
+      'tree': 'tree',
+      'table': 'table'
     });
 
     this.browser = browser;
@@ -20987,7 +21215,7 @@ class DSRenderer {
 
   createViewModeSelectors() {
     var selected = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : this.MODES.native;
-    return '' + '<div class="ds-selector-tabs ds-selector">' + '<div class="selectors">' + (selected === this.MODES.native ? '<a class="selected">Native View</a>' : this.util.createJSLink('mode', null, 'Native View')) + (selected === this.MODES.tree ? '<a class="selected">Tree View</a>' : this.util.createJSLink('mode', 'tree', 'Tree View')) + '</div>' + '</div>';
+    return '' + '<div class="ds-selector-tabs ds-selector">' + '<div class="selectors">' + (selected === this.MODES.native ? '<a class="selected">Native View</a>' : this.util.createJSLink('mode', null, 'Native View')) + (selected === this.MODES.tree ? '<a class="selected">Tree View</a>' : this.util.createJSLink('mode', 'tree', 'Tree View')) + (selected === this.MODES.table ? '<a class="selected">Table View</a>' : this.util.createJSLink('mode', 'table', 'Table View')) + '</div>' + '</div>';
   }
 
   createHeader() {
@@ -21035,6 +21263,10 @@ class DSRenderer {
 
   createNavigation() {
     return '' + '<span style="float: right;">' + '(' + this.util.createJSLink('format', 'shacl', 'SHACL serialization') + (this.browser.list ? ' | from List: ' + this.util.createJSLink('ds', null, this.browser.list['schema:name']) : '') + ')' + '</span>';
+  }
+
+  createVisBtnRow() {
+    return '' + '<div id="btn-row">' + 'Show: ' + '<span id="btn-opt" class="btn-vis btn-vis-shadow" style="margin-left: 10px;">' + '<img src="" class="glyphicon glyphicon-tag optional-property"> optional' + '</span>' + '<span id="btn-man" class="btn-vis" style="margin-left: 10px;">' + '<img src="" class="glyphicon glyphicon-tag mandatory-property"> mandatory' + '</span>' + '</div>';
   }
 
 }
@@ -21246,6 +21478,202 @@ module.exports = NativeRenderer;
 },{}],89:[function(require,module,exports){
 "use strict";
 
+class TableRenderer {
+  constructor(browser) {
+    this.browser = browser;
+    this.util = browser.util;
+    this.dsHandler = browser.dsHandler;
+    this.dsRenderer = browser.dsRenderer;
+    this.clickHandler = null; // see: https://stackoverflow.com/questions/33859113/javascript-removeeventlistener-not-working-inside-a-class
+
+    this.changeInnerDSHandler = null;
+  }
+
+  render() {
+    var rootClass = this.dsHandler.generateDsClass(this.browser.ds['@graph'][0], false, false);
+    var mainContent = this.dsRenderer.createHeader() + this.dsRenderer.createViewModeSelectors(this.dsRenderer.MODES.table) + '<div id="table-view"> ' + this.dsRenderer.createVisBtnRow() + '<div id="table-wrapper">' + '<table id="table-ds">' + this.createTableContent(rootClass) + '</table>' + '</div>' + '</div>';
+    this.browser.elem.innerHTML = this.util.createMainContent('rdfs:Class', mainContent);
+    this.addClickEvent();
+    this.addChangeInnerDSEventListener();
+  }
+
+  createTableContent(rootClass) {
+    return '' + '<tr class="first-row-ds">' + '<td><div class="align-items"><img src="" class="glyphicon glyphicon-list-alt">' + rootClass.text + '</div></td>' + '<td colspan="2">' + rootClass.data.dsDescription + '</td>' + '<td><b>Cardinality</b></td>' + '</tr>' + this.processProperties(rootClass.children, 0);
+  }
+
+  processProperties(properties, depth, innerDSIndex, hasMultipleClasses) {
+    return properties.map((property, i) => {
+      if (property.children && property.children.length !== 0 && !property.isEnum) {
+        return this.processPropertyWithChildren(property, depth, innerDSIndex);
+      } else {
+        return this.processPropertyWithNoChildren(property, depth, innerDSIndex, hasMultipleClasses, properties.length === i + 1);
+      }
+    }).join('');
+  }
+
+  processPropertyWithChildren(property, depth) {
+    var csClass,
+        html = '';
+    depth++;
+
+    if (depth < 4) {
+      csClass = 'depth' + depth + ' innerTable';
+      var terms = property.data.dsRange.split(' or ');
+      var hasMultipleClasses = this.hasMultipleClasses(terms);
+      var dsRange = this.createDSRange(property, depth, terms, hasMultipleClasses);
+      var properties = property.children;
+      html += '' + '<tr>' + this.createTdProperty(property) + '<td colspan="2" class="' + csClass + '">' + '<table>' + this.createInnerTableHeader(dsRange, property) + properties.map((p, i) => this.processProperties(p.children, depth, i, hasMultipleClasses)).join('') + // show first class defaultly, can be changed via click
+      '</table>' + '</td>' + '<td class="cardinality">' + this.dsHandler.createCardinality(property.data.minCount, property.data.maxCount) + '</td>' + '</tr>';
+    } else {
+      console.log('To many levels for table view. Level: ' + depth);
+    }
+
+    return html;
+  }
+
+  hasMultipleClasses(terms) {
+    var classCount = 0;
+
+    for (var term of terms) {
+      if (this.isClass(term)) {
+        classCount++;
+
+        if (classCount === 2) {
+          return true;
+        }
+      }
+    }
+
+    return false;
+  }
+
+  isClass(term) {
+    var cleanTerm = this.cleanTerm(term);
+    return !['Text', 'Number', 'URL', 'Boolean'].includes(cleanTerm);
+  }
+
+  createDSRange(property, level, terms) {
+    var otherClassExists = false;
+    return '' + terms.map((aTerm, i) => {
+      var cleanTerm = this.cleanTerm(aTerm);
+      var isClass = this.isClass(cleanTerm);
+      var or = i + 1 < terms.length ? '&nbsp;or  <br>' : '';
+      var classes = otherClassExists && isClass ? ' class="change-to-class"' : '';
+
+      if (isClass) {
+        otherClassExists = true;
+        return '' + '<span class="align-items">' + '<img src="" class="glyphicon glyphicon-list-alt">' + '<b' + classes + ' data-innerdsindex="' + i + '">' + cleanTerm + '</b>' + or + '</span>';
+      } else {
+        return cleanTerm + or;
+      }
+    }).join('');
+  }
+
+  cleanTerm(term) {
+    return term.replace('<strong>', '').replace('</strong>', '').replace(/ /g, '');
+  }
+
+  createTdProperty(property) {
+    var rmBorderBottom = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : '';
+    return '' + '<td' + rmBorderBottom + '>' + '<div class="align-items">' + '<img class="glyphicon glyphicon-tag ' + (property.data.isOptional ? 'optional' : 'mandatory') + '-property" src="" />' + property.text + '</div>' + '</td>';
+  }
+
+  createInnerTableHeader(dsRange, property) {
+    return '' + '<tr>' + '<td data-innerdsindex="0">' + dsRange + '</td>' + '<td colspan="2">' + property.data.dsDescription + '</td>' + '<td><b>Cardinality</b></td>' + '</tr>';
+  }
+
+  processPropertyWithNoChildren(property, level, innerDSIndex, hasMultipleClasses, isLastProperty) {
+    var cardinality = this.dsHandler.createCardinality(property.data.minCount, property.data.maxCount);
+    var displayNone = innerDSIndex !== 0 && hasMultipleClasses ? ' style="display: none;"' : '';
+    var rmBorderBottom = isLastProperty ? ' style="border-bottom: none !important;"' : '';
+    return '' + '<tr data-innerdsindex="' + innerDSIndex + '"' + displayNone + '>' + this.createTdProperty(property, rmBorderBottom) + (property.isEnum ? this.createEnum(property, level, rmBorderBottom) : this.createSimpleType(property, rmBorderBottom)) + '<td class="cardinality"' + rmBorderBottom + '>' + cardinality + '</td>' + '</tr>';
+  }
+
+  createEnum(property, depth, rmBorderBottom) {
+    depth++;
+    return '' + '<td colspan="2" class="depth' + depth + ' innerTable"' + rmBorderBottom + '>' + '<table class="enumTable">' + '<tr>' + '<td class="enumTd"><b>' + property.data.dsRange + '</b></td>' + '<td class="enumTd">' + property.data.dsDescription + '</td>' + '</tr>' + (property.data.enuMembers ? this.genHTML_enuMembers(property.data.enuMembers) : '') + '</table>' + '</td>';
+  }
+
+  genHTML_enuMembers(enuMemberArray) {
+    return enuMemberArray.map(enuMember => {
+      return '' + '<tr>' + '<td class="enumTd">' + enuMember.name + '</td>' + '<td class="enumTd">' + enuMember.description + '</td>' + '</tr>';
+    }).join('');
+  }
+
+  createSimpleType(property, rmBorderBottom) {
+    return '' + '<td' + rmBorderBottom + '>' + property.data.dsRange + '</td>' + '<td' + rmBorderBottom + '>' + property.data.dsDescription + '</td>';
+  }
+
+  addClickEvent() {
+    var divTableView = document.getElementById('table-view');
+    var button = divTableView.getElementsByClassName('btn-vis-shadow')[0];
+    this.clickHandler = this.clickEvent.bind(this);
+    button.addEventListener('click', this.clickHandler, true);
+  }
+
+  clickEvent(event) {
+    var button = event.target;
+    button.removeEventListener('click', this.clickHandler, true);
+    button.classList.remove('btn-vis-shadow');
+    var otherButton, showOptional;
+
+    if (button.id === 'btn-opt') {
+      otherButton = document.getElementById('btn-man');
+      showOptional = true;
+    } else {
+      otherButton = document.getElementById('btn-opt');
+      showOptional = false;
+    }
+
+    otherButton.classList.add('btn-vis-shadow');
+    var rootClass = this.dsHandler.generateDsClass(this.browser.ds['@graph'][0], false, showOptional);
+    var table = document.getElementById('table-ds');
+    table.innerHTML = this.createTableContent(rootClass);
+    this.util.fade(table);
+    this.addClickEvent();
+    this.addChangeInnerDSEventListener();
+  }
+
+  addChangeInnerDSEventListener() {
+    var divTableView = document.getElementById('table-view');
+    var buttons = divTableView.getElementsByClassName('change-to-class');
+    this.changeInnerDSHandler = this.changeInnerDSEvent.bind(this);
+
+    for (var button of buttons) {
+      button.addEventListener('click', this.changeInnerDSHandler, true);
+    }
+  }
+
+  changeInnerDSEvent(event) {
+    var button = event.target;
+    var tr = button.closest('tr');
+    var newIndex = button.dataset.innerdsindex;
+
+    while (tr.nextSibling) {
+      tr = tr.nextSibling;
+
+      if (tr.dataset.innerdsindex === newIndex) {
+        tr.style.display = 'table-row';
+        this.util.fade(tr);
+      } else {
+        tr.style.display = 'none';
+      }
+    }
+
+    var otherButton = button.closest('td').querySelector('b:not(.change-to-class)');
+    otherButton.classList.add('change-to-class');
+    otherButton.addEventListener('click', this.changeInnerDSHandler, true);
+    button.classList.remove('change-to-class');
+    button.removeEventListener('click', this.changeInnerDSHandler, true);
+  }
+
+}
+
+module.exports = TableRenderer;
+
+},{}],90:[function(require,module,exports){
+"use strict";
+
 class TreeRenderer {
   constructor(browser) {
     this.browser = browser;
@@ -21269,237 +21697,23 @@ class TreeRenderer {
     doc.open();
     doc.write(jsTreeHtml);
     doc.close();
-    var dsClass = this.generateDsClass(this.browser.ds['@graph'][0], false, false);
+    var dsClass = this.dsHandler.generateDsClass(this.browser.ds['@graph'][0], false, false);
     this.mapNodeForJSTree([dsClass]);
   }
 
   createJSTreeHTML() {
-    return '' + '<head>' + '<script src="https://code.jquery.com/jquery-3.5.1.min.js" ' + '  integrity="sha256-9/aliU8dGd2tb6OSsuzixeV4y/faTqgFtohetphbbj0=" crossorigin="anonymous"></script>' + '<script src="https://cdnjs.cloudflare.com/ajax/libs/jstree/3.3.10/jstree.min.js"></script>' + '<script src="https://cdnjs.cloudflare.com/ajax/libs/jstreegrid/3.10.2/jstreegrid.min.js"></script>' + '<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.1/css/bootstrap.min.css" />' + '<link rel="stylesheet" ' + '  href="https://cdnjs.cloudflare.com/ajax/libs/jstree/3.3.10/themes/default/style.min.css" />' + this.createTreeStyle() + '</head>' + '<body>' + '<div id="btn-row">' + 'Show: ' + '<span id="btn-opt" class="btn-vis btn-vis-shadow" style="margin-left: 10px;">' + '<img src="" class="glyphicon glyphicon-tag optional-property"> optional' + '</span>' + '<span id="btn-man" class="btn-vis" style="margin-left: 10px;">' + '<img src="" class="glyphicon glyphicon-tag mandatory-property"> mandatory' + '</span>' + '</div>' + '<div id="jsTree"></div>' + '</body>';
+    return '' + '<head>' + '<script src="https://code.jquery.com/jquery-3.5.1.min.js" ' + '  integrity="sha256-9/aliU8dGd2tb6OSsuzixeV4y/faTqgFtohetphbbj0=" crossorigin="anonymous"></script>' + '<script src="https://cdnjs.cloudflare.com/ajax/libs/jstree/3.3.10/jstree.min.js"></script>' + '<script src="https://cdnjs.cloudflare.com/ajax/libs/jstreegrid/3.10.2/jstreegrid.min.js"></script>' + '<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.1/css/bootstrap.min.css" />' + '<link rel="stylesheet" ' + '  href="https://cdnjs.cloudflare.com/ajax/libs/jstree/3.3.10/themes/default/style.min.css" />' + this.createTreeStyle() + '</head>' + '<body>' + this.dsRenderer.createVisBtnRow() + '<div id="jsTree"></div>' + '</body>';
   }
 
   createTreeStyle() {
     return '' + '<style>' + '.optional-property { color: #ffa517; }' + '.mandatory-property { color: #00ce0c; }' + '#btn-row { padding: 12px 0px 12px 5px; }' + '.btn-vis { padding: 5px; }' + '.btn-vis-shadow {' + '    cursor: pointer;' + '    webkit-box-shadow: 0 4px 5px 0 rgba(0, 0, 0, 0.14), 0 1px 10px 0 rgba(0, 0, 0, 0.12), 0 2px 4px -1px rgba(0, 0, 0, 0.2);' + '    box-shadow: 0 4px 5px 0 rgba(0, 0, 0, 0.14), 0 1px 10px 0 rgba(0, 0, 0, 0.12), 0 2px 4px -1px rgba(0, 0, 0, 0.2);' + '}' + '</style>';
   }
 
-  generateDsClass(dsvClass, closed, showOptional) {
-    var dsClass = {};
-    var targetClass = dsvClass['sh:targetClass'];
-    dsClass.text = targetClass ? this.util.prettyPrintClassDefinition(targetClass) : this.util.prettyPrintClassDefinition(dsvClass['sh:class']);
-    dsClass.icon = 'glyphicon glyphicon-list-alt';
-
-    if (!closed) {
-      dsClass.state = {
-        'opened': true
-      };
-    }
-
-    var description;
-
-    try {
-      if (dsClass.text.indexOf(',') === -1) {
-        description = this.browser.sdoAdapter.getClass(dsClass.text).getDescription();
-      } else {
-        description = 'No description found.';
-      }
-    } catch (e) {
-      description = 'No description found.';
-    }
-
-    dsClass.data = {};
-    dsClass.data.dsDescription = description;
-
-    if (dsvClass['rdfs:comment']) {
-      // Was dsv:justification
-      dsClass.justification = dsvClass['rdfs:comment'];
-    }
-
-    dsClass.children = this.processChildren(dsvClass, showOptional);
-    return dsClass;
-  }
-
-  processChildren(dsvClass, showOptional) {
-    var children = [];
-    var dsvProperties;
-    var shProperty = dsvClass['sh:property'];
-    var shNode = dsvClass['sh:node'];
-
-    if (shProperty) {
-      dsvProperties = shProperty;
-    } else if (shNode && shNode['sh:property']) {
-      dsvProperties = shNode['sh:property'];
-    }
-
-    if (dsvProperties !== undefined) {
-      dsvProperties.forEach(dsvProperty => {
-        var dsProperty = this.generateDsProperty(dsvProperty, showOptional);
-
-        if (dsProperty) {
-          children.push(dsProperty);
-        }
-      });
-    }
-
-    return children;
-  }
-
-  generateDsProperty(propertyObj, showOptional) {
-    var dsProperty = {};
-    dsProperty.justification = propertyObj['rdfs:comment'];
-    dsProperty.text = this.util.prettyPrintIri(propertyObj['sh:path']);
-    dsProperty.data = {};
-    dsProperty.data.minCount = propertyObj['sh:minCount'];
-    dsProperty.data.maxCount = propertyObj['sh:maxCount'];
-    dsProperty.children = [];
-    this.processEnum(dsProperty, propertyObj['sh:or'][0]);
-    this.processVisibility(dsProperty, propertyObj['sh:minCount']);
-    this.processExpectedTypes(dsProperty, propertyObj['sh:or'], showOptional);
-
-    if (showOptional) {
-      return dsProperty;
-    } else if (!dsProperty.data.isOptional) {
-      return dsProperty;
-    } // TODO: Probably a mistake: What happens when if / else if is not entered?
-
-  }
-
-  processEnum(dsProperty, shOr) {
-    dsProperty.isEnum = false;
-    var enuWithSdo;
-
-    try {
-      var rangeOfProp = shOr['sh:class'];
-      enuWithSdo = this.browser.sdoAdapter.getEnumeration(rangeOfProp);
-      dsProperty.isEnum = true;
-    } catch (e) {
-      /* Ignore */
-    }
-
-    if (dsProperty.isEnum) {
-      var enuMembersArray = this.getEnumMemberArray(shOr['sh:in'], enuWithSdo); // Get description
-
-      enuMembersArray.forEach(eachMember => {
-        var enuMemberDesc = this.browser.sdoAdapter.getEnumerationMember(eachMember.name);
-        eachMember.description = enuMemberDesc.getDescription();
-      });
-      dsProperty.data.enuMembers = enuMembersArray;
-      dsProperty.children = enuMembersArray.map(enuMem => {
-        return {
-          children: [],
-          data: {
-            dsRange: '',
-            dsDescription: enuMem.description
-          },
-          icon: 'glyphicon glyphicon-chevron-right',
-          text: enuMem.name
-        };
-      });
-    }
-  }
-
-  getEnumMemberArray(shIn, enuWithSdo) {
-    if (shIn) {
-      // Objects
-      return shIn.map(enuMember => {
-        var enuMemberName = enuMember['@id'];
-        enuMemberName = enuMemberName.replace('schema:', '');
-        return {
-          name: enuMemberName
-        };
-      });
-    } else {
-      // Strings
-      var enuMembersArrayString = enuWithSdo.getEnumerationMembers();
-      return enuMembersArrayString.map(enuMemName => {
-        return {
-          name: enuMemName
-        };
-      });
-    }
-  }
-
-  processVisibility(dsProperty, minCount) {
-    dsProperty.icon = 'glyphicon glyphicon-tag';
-
-    if (!minCount > 0) {
-      dsProperty.icon += ' optional-property';
-      dsProperty.data.isOptional = true;
-    } else {
-      dsProperty.icon += ' mandatory-property';
-      dsProperty.data.isOptional = false;
-    }
-  }
-
-  processExpectedTypes(dsProperty, dsvExpectedTypes, showOptional) {
-    var isOpened = false;
-
-    if (dsvExpectedTypes) {
-      var dsRange = this.generateDsRange(dsvExpectedTypes);
-      dsProperty.data.dsRange = dsRange.rangeAsString;
-      dsProperty.data.rangeJustification = dsRange.rangeJustification;
-
-      try {
-        dsProperty.data.dsDescription = this.browser.sdoAdapter.getProperty(dsProperty.text).getDescription();
-      } catch (e) {
-        dsProperty.data.dsDescription = 'No description found.';
-      }
-
-      dsvExpectedTypes.forEach(dsvExpectedType => {
-        if (dsvExpectedType['sh:node']) {
-          // Was dsv:restrictedClass
-          isOpened = true;
-          var dsClass = this.generateDsClass(dsvExpectedType, true, showOptional);
-          dsProperty.children.push(dsClass);
-        }
-      });
-    }
-
-    if (isOpened) {
-      dsProperty.state = {
-        'opened': true
-      };
-    }
-  }
-
-  generateDsRange(dsvExpectedTypes) {
-    var returnObj = {
-      rangeAsString: '',
-      rangeJustification: []
-    };
-    returnObj.rangeAsString = dsvExpectedTypes.map((dsvExpectedType, i) => {
-      var justification = {};
-      var name, rangePart;
-      var datatype = dsvExpectedType['sh:datatype'];
-      var shClass = dsvExpectedType['sh:class'];
-
-      if (datatype) {
-        // Datatype
-        name = this.util.prettyPrintIri(this.dsHandler.dataTypeMapperFromSHACL(datatype));
-        rangePart = name;
-      } else if (dsvExpectedType['sh:node']) {
-        // Restricted class
-        name = this.util.prettyPrintClassDefinition(shClass);
-        rangePart = '<strong>' + name + '</strong>';
-      } else {
-        // Enumeration
-        // Standard class
-        name = this.util.prettyPrintClassDefinition(shClass);
-        rangePart = name;
-      }
-
-      justification.name = name;
-      justification.justification = dsvExpectedType['rdfs:comment']; // Was dsv:justification
-
-      returnObj.rangeJustification.push(justification);
-      return rangePart;
-    }).join(' or ');
-    return returnObj;
-  }
-
   mapNodeForJSTree(data) {
     var self = this;
     this.iFrame.addEventListener('load', function () {
       self.iFrameCW.$('#jsTree').jstree({
-        plugins: ['search', 'grid'],
+        plugins: ['grid'],
         core: {
           themes: {
             icons: true,
@@ -21566,7 +21780,7 @@ class TreeRenderer {
       $otherButton.addClass('btn-vis-shadow');
       $button.off('click');
       this.addIframeClickEvent();
-      var dsClass = this.generateDsClass(this.browser.ds['@graph'][0], false, showOptional);
+      var dsClass = this.dsHandler.generateDsClass(this.browser.ds['@graph'][0], false, showOptional);
       var jsTree = this.iFrameCW.$('#jsTree').jstree(true);
       jsTree.settings.core.data = dsClass;
       jsTree.refresh();
@@ -21577,7 +21791,7 @@ class TreeRenderer {
 
 module.exports = TreeRenderer;
 
-},{}],90:[function(require,module,exports){
+},{}],91:[function(require,module,exports){
 "use strict";
 
 function asyncGeneratorStep(gen, resolve, reject, _next, _throw, key, arg) { try { var info = gen[key](arg); var value = info.value; } catch (error) { reject(error); return; } if (info.done) { resolve(value); } else { Promise.resolve(value).then(_next, _throw); } }
@@ -21891,7 +22105,7 @@ class Util {
 
 
   createMainContent(rdfaTypeOf, mainContent) {
-    return '' + '<div>' + '<style>' + '@import url("https://schema.org/docs/schemaorg.css");' + '#mainContent { border-bottom: none; }' + 'table.definition-table { border: 1px solid #ccc }' + '.ds-selector {padding: 0px}' + '.ds-selector-tabs .selectors a:first-child { margin-left: 0px; }' + '#div-iframe { padding-right: 6px; }' + '#iframe-jsTree {' + 'padding: 2px;' + 'border-left: 1px solid #ccc;' + 'border-right: 1px solid #ccc;' + 'border-bottom: 1px solid #ccc;' + '}' + '</style>' + '<div id="mainContent" vocab="http://schema.org/" typeof="' + rdfaTypeOf + '" ' + 'resource="' + window.location + '">' + mainContent + '</div>' + '</div>';
+    return "\n            <div>\n                <div id=\"mainContent\" vocab=\"http://schema.org/\" typeof=\"".concat(rdfaTypeOf, "\" resource=\"").concat(window.location, "\">\n                    ").concat(mainContent, "\n                </div>\n            </div>");
   }
 
   createExternalLinkLegend() {
@@ -21931,6 +22145,20 @@ class Util {
     } else {
       return this.prettyPrintIri(classDef);
     }
+  }
+
+  fade(element) {
+    var op = 0.05; // initial opacity
+
+    var timer = setInterval(() => {
+      if (op >= 1) {
+        clearInterval(timer);
+      }
+
+      element.style.opacity = op;
+      element.style.filter = 'alpha(opacity=' + op * 100 + ")";
+      op += op * 0.05;
+    }, 10);
   }
 
 }
