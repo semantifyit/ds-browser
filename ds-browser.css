@@ -139,3 +139,13 @@ table.definition-table { border: 1px solid #98A0A6 }
     display: flex;
     align-items: center;
 }
+
+#table-view .change-to-class {
+    text-decoration: underline;
+    cursor: pointer;
+    color: #660000;
+}
+
+#table-view .rmBorderBottom {
+    border-bottom: none !important;
+}

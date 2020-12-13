@@ -345,6 +345,18 @@ class Util {
             return this.prettyPrintIri(classDef);
         }
     }
+
+    fade(element) {
+        let op = 0.05;  // initial opacity
+        const timer = setInterval(() => {
+            if (op >= 1){
+                clearInterval(timer);
+            }
+            element.style.opacity = op;
+            element.style.filter = 'alpha(opacity=' + op * 100 + ")";
+            op += op * 0.05;
+        }, 10);
+    }
 }
 
 module.exports = Util;

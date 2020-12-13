@@ -5,6 +5,7 @@ class TableRenderer {
         this.dsHandler = browser.dsHandler;
         this.dsRenderer = browser.dsRenderer;
         this.clickHandler = null; // see: https://stackoverflow.com/questions/33859113/javascript-removeeventlistener-not-working-inside-a-class
+        this.changeInnerDSHandler = null;
     }
 
     render() {
@@ -22,6 +23,7 @@ class TableRenderer {
 
         this.browser.elem.innerHTML = this.util.createMainContent('rdfs:Class', mainContent);
         this.addClickEvent();
+        this.addChangeInnerDSEventListener();
     }
 
     createTableContent(rootClass) {
@@ -34,12 +36,13 @@ class TableRenderer {
             this.processProperties(rootClass.children, 0);
     }
 
-    processProperties(properties, depth) {
-        return properties.map((property) => {
+    processProperties(properties, depth, innerDSIndex, hasMultipleClasses) {
+        return properties.map((property, i) => {
             if (property.children && property.children.length !== 0 && !property.isEnum) {
-                return this.processPropertyWithChildren(property, depth);
+                return this.processPropertyWithChildren(property, depth, innerDSIndex);
             } else {
-                return this.processPropertyWithNoChildren(property, depth);
+                return this.processPropertyWithNoChildren(
+                    property, depth, innerDSIndex, hasMultipleClasses, (properties.length === (i + 1)));
             }
         }).join('');
     }
@@ -50,7 +53,8 @@ class TableRenderer {
         if (depth < 4) {
             csClass = 'depth' + depth + ' innerTable';
             const terms = (property.data.dsRange).split(' or ');
-            const dsRange = this.createDSRange(property, depth, terms);
+            const hasMultipleClasses = this.hasMultipleClasses(terms);
+            const dsRange = this.createDSRange(property, depth, terms, hasMultipleClasses);
             const properties = property.children;
             html += '' +
                 '<tr>' +
@@ -58,7 +62,7 @@ class TableRenderer {
                 '<td colspan="2" class="' + csClass + '">' +
                 '<table>' +
                 this.createInnerTableHeader(dsRange, property) +
-                this.processProperties(properties[0].children, depth) + // show first class defaultly, can be changed via click
+                properties.map((p, i) => this.processProperties(p.children, depth, i, hasMultipleClasses)).join('') + // show first class defaultly, can be changed via click
                 '</table>' +
                 '</td>' +
                 '<td class="cardinality">' +
@@ -71,22 +75,43 @@ class TableRenderer {
         return html;
     }
 
+    hasMultipleClasses(terms) {
+        let classCount = 0;
+
+        for (const term of terms) {
+            if (this.isClass(term)) {
+                classCount++;
+                if (classCount === 2) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
     isClass(term) {
         const cleanTerm = this.cleanTerm(term);
         return !['Text', 'Number', 'URL', 'Boolean'].includes(cleanTerm);
     }
 
     createDSRange(property, level, terms) {
+        let otherClassExists = false;
         return '' +
             terms.map((aTerm, i) => {
                 const cleanTerm = this.cleanTerm(aTerm);
-                const isClass = this.isClass(aTerm);
+                const isClass = this.isClass(cleanTerm);
                 const or = (i + 1 < terms.length ? '&nbsp;or  <br>' : '');
+                const classes = ((otherClassExists && isClass) ? ' class="change-to-class"' : '');
 
-                return '' +
-                    (isClass ? '<span class="align-items">' +
+                if (isClass) {
+                    otherClassExists = true;
+                    return '' +
+                        '<span class="align-items">' +
                         '<img src="" class="glyphicon glyphicon-list-alt">' +
-                        '<b>' + cleanTerm + '</b>' + or + '</span>' : cleanTerm + or);
+                        '<b' + classes + ' data-innerdsindex="' + i + '">' + cleanTerm + '</b>' + or + '</span>';
+                } else {
+                    return cleanTerm + or;
+                }
             }).join('');
     }
 
@@ -96,9 +121,9 @@ class TableRenderer {
             .replace(/ /g, '');
     }
 
-    createTdProperty(property) {
+    createTdProperty(property, rmBorderBottom='') {
         return '' +
-            '<td>' +
+            '<td' + rmBorderBottom  + '>' +
             '<div class="align-items">' +
             '<img class="glyphicon glyphicon-tag ' + (property.data.isOptional ? 'optional' : 'mandatory') +
             '-property" src="" />' + property.text +
@@ -109,28 +134,31 @@ class TableRenderer {
     createInnerTableHeader(dsRange, property) {
         return '' +
             '<tr>' +
-            '<td>' + dsRange + '</td>' +
+            '<td data-innerdsindex="0">' + dsRange + '</td>' +
             '<td colspan="2">' + property.data.dsDescription + '</td>' +
             '<td><b>Cardinality</b></td>' +
             '</tr>'
 
     }
 
-    processPropertyWithNoChildren(property, level) {
+    processPropertyWithNoChildren(property, level, innerDSIndex, hasMultipleClasses, isLastProperty) {
         const cardinality = this.dsHandler.createCardinality(property.data.minCount, property.data.maxCount);
+        const displayNone = (innerDSIndex !== 0 && hasMultipleClasses ? ' style="display: none;"' : '');
+        const rmBorderBottom = (isLastProperty ? ' style="border-bottom: none !important;"' : '');
 
         return '' +
-            '<tr>' +
-            this.createTdProperty(property) +
-            (property.isEnum ? this.createEnum(property, level) : this.createSimpleType(property)) +
-            '<td class="cardinality">' + cardinality + '</td>' +
+            '<tr data-innerdsindex="' + innerDSIndex + '"' + displayNone + '>' +
+            this.createTdProperty(property, rmBorderBottom) +
+            (property.isEnum ? this.createEnum(property, level, rmBorderBottom) :
+                this.createSimpleType(property, rmBorderBottom)) +
+            '<td class="cardinality"' + rmBorderBottom + '>' + cardinality + '</td>' +
             '</tr>';
     }
 
-    createEnum(property, depth) {
+    createEnum(property, depth, rmBorderBottom) {
         depth++;
         return '' +
-            '<td colspan="2" class="depth' + depth + ' innerTable">' +
+            '<td colspan="2" class="depth' + depth + ' innerTable"' + rmBorderBottom + '>' +
             '<table class="enumTable">' +
             '<tr>' +
             '<td class="enumTd"><b>' + property.data.dsRange + '</b></td>' +
@@ -151,10 +179,10 @@ class TableRenderer {
         }).join('');
     }
 
-    createSimpleType(property) {
+    createSimpleType(property, rmBorderBottom) {
         return '' +
-            '<td>' + property.data.dsRange + '</td>' +
-            '<td>' + property.data.dsDescription + '</td>';
+            '<td' + rmBorderBottom +'>' + property.data.dsRange + '</td>' +
+            '<td' + rmBorderBottom + '>' + property.data.dsDescription + '</td>';
     }
 
     addClickEvent() {
@@ -180,9 +208,46 @@ class TableRenderer {
 
         otherButton.classList.add('btn-vis-shadow');
         const rootClass = this.dsHandler.generateDsClass(this.browser.ds['@graph'][0], false, showOptional);
-        document.getElementById('table-ds').innerHTML = this.createTableContent(rootClass);
+        const table = document.getElementById('table-ds');
+        table.innerHTML = this.createTableContent(rootClass);
+        this.util.fade(table);
 
         this.addClickEvent();
+        this.addChangeInnerDSEventListener();
+    }
+
+
+    addChangeInnerDSEventListener() {
+        const divTableView = document.getElementById('table-view');
+        const buttons = divTableView.getElementsByClassName('change-to-class');
+        this.changeInnerDSHandler = this.changeInnerDSEvent.bind(this);
+
+        for (const button of buttons) {
+            button.addEventListener('click', this.changeInnerDSHandler, true);
+        }
+    }
+
+    changeInnerDSEvent(event) {
+        const button = event.target;
+        let tr = button.closest('tr');
+        const newIndex = button.dataset.innerdsindex;
+        while(tr.nextSibling) {
+            tr = tr.nextSibling;
+            if (tr.dataset.innerdsindex === newIndex) {
+                tr.style.display = 'table-row';
+                this.util.fade(tr);
+            } else {
+                tr.style.display = 'none';
+            }
+        }
+
+        const otherButton = button.closest('td').querySelector('b:not(.change-to-class)');
+        otherButton.classList.add('change-to-class');
+
+        otherButton.addEventListener('click', this.changeInnerDSHandler, true);
+
+        button.classList.remove('change-to-class');
+        button.removeEventListener('click', this.changeInnerDSHandler, true);
     }
 }
 
