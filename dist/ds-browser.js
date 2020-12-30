@@ -20595,7 +20595,7 @@ class DSBrowser {
     var _this2 = this;
 
     return _asyncToGenerator(function* () {
-      _this2.elem.innerHTML = '<div style="text-align: center">' + '<img src="https://raw.githubusercontent.com/YarnSeemannsgarn/ds-browser/main/images/loading.gif"' + ' alt="Loading Animation" style="margin-top: 6px;">' + '</div>';
+      _this2.elem.innerHTML = '<div style="text-align: center">' + '<img src="https://raw.githubusercontent.com/semantifyit/ds-browser/main/images/loading.gif"' + ' alt="Loading Animation" style="margin-top: 6px;">' + '</div>';
       yield _this2.init();
 
       if (_this2.isShaclRendering()) {
@@ -22013,9 +22013,9 @@ class Util {
     var style = '' + 'background-position: center right; ' + 'background-repeat: no-repeat; ' + 'background-size: 10px 10px; ' + 'padding-right: 13px; ';
 
     if (/^https?:\/\/schema.org/.test(iri)) {
-      style += 'background-image: url(https://raw.githubusercontent.com/YarnSeemannsgarn/ds-browser/main/images/external-link-icon-red.png);';
+      style += 'background-image: url(https://raw.githubusercontent.com/semantifyit/ds-browser/main/images/external-link-icon-red.png);';
     } else {
-      style += 'background-image: url(https://raw.githubusercontent.com/YarnSeemannsgarn/ds-browser/main/images/external-link-icon-blue.png);';
+      style += 'background-image: url(https://raw.githubusercontent.com/semantifyit/ds-browser/main/images/external-link-icon-blue.png);';
     }
 
     return style;
