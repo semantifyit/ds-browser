@@ -199,9 +199,9 @@ class Util {
             'background-size: 10px 10px; ' +
             'padding-right: 13px; ';
         if ((/^https?:\/\/schema.org/).test(iri)) {
-            style += 'background-image: url(https://raw.githubusercontent.com/YarnSeemannsgarn/ds-browser/main/images/external-link-icon-red.png);';
+            style += 'background-image: url(https://raw.githubusercontent.com/semantifyit/ds-browser/main/images/external-link-icon-red.png);';
         } else {
-            style += 'background-image: url(https://raw.githubusercontent.com/YarnSeemannsgarn/ds-browser/main/images/external-link-icon-blue.png);'
+            style += 'background-image: url(https://raw.githubusercontent.com/semantifyit/ds-browser/main/images/external-link-icon-blue.png);'
         }
         return style;
     }

@@ -39,7 +39,7 @@ class DSBrowser {
     async render() {
         this.elem.innerHTML =
             '<div style="text-align: center">' +
-            '<img src="https://raw.githubusercontent.com/YarnSeemannsgarn/ds-browser/main/images/loading.gif"' +
+            '<img src="https://raw.githubusercontent.com/semantifyit/ds-browser/main/images/loading.gif"' +
             ' alt="Loading Animation" style="margin-top: 6px;">' +
             '</div>';
 
