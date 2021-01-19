@@ -18,11 +18,11 @@ Use the function `DSBrowser()` to render a Domain Specification Browser in a tar
 You can use the Domain Specification directly as object or pass a URL to its location.
 
 ``` html
-<div id="ds"></div>
+<div id="ds-container"></div>
 <script>
     (async function() {
         const dsURL = 'https://semantify.it/ds/rQHgkTdOr';
-        const dsBrowser = new DSBrowser(document.getElementById('test'), dsURL);
+        const dsBrowser = new DSBrowser(document.getElementById('ds-container'), dsURL);
         await dsBrowser.render();
     })();
 </script>
@@ -31,11 +31,11 @@ You can use the Domain Specification directly as object or pass a URL to its loc
 It is also possible to render a List of Domain Specifications. In order to do that, you need to pass the `type` argument to the function `DSBrowser()`. The `type` argument is `'DS'` by default, but must be `'LIST'` to render a List of Domain Specifications.
 
 ``` html
-<div id="ds"></div>
+<div id="ds-container"></div>
 <script>
     (async function() {
         const listURL = 'https://semantify.it/list/wS4r3c9hQ';
-        const dsBrowser = new DSBrowser(document.getElementById('test'), listURL, 'LIST');
+        const dsBrowser = new DSBrowser(document.getElementById('ds-container'), listURL, 'LIST');
         await dsBrowser.render();
     })();
 </script>
