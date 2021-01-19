@@ -13,14 +13,29 @@ Add the CSS and the bundled CDN file to your website:
 
 ## Usage
 
-Import your Domain Specification and render the corresponding HTML:
+Use the function `DSBrowser()` to render a Domain Specification Browser in a target HTML element.
+
+You can use the Domain Specification directly as object or pass a URL to its location.
 
 ``` html
 <div id="ds"></div>
 <script>
     (async function() {
-        const dsURL = 'https://semantify.it/list/wS4r3c9hQ?representation=lean';
-        const dsBrowser = new DSBrowser(document.getElementById('test'),'https://semantify.it/ds/rQHgkTdOr');
+        const dsURL = 'https://semantify.it/ds/rQHgkTdOr';
+        const dsBrowser = new DSBrowser(document.getElementById('test'), dsURL);
+        await dsBrowser.render();
+    })();
+</script>
+```
+
+It is also possible to render a List of Domain Specifications. In order to do that, you need to pass the `type` argument to the function `DSBrowser()`. The `type` argument is `'DS'` by default, but must be `'LIST'` to render a List of Domain Specifications.
+
+``` html
+<div id="ds"></div>
+<script>
+    (async function() {
+        const listURL = 'https://semantify.it/list/wS4r3c9hQ';
+        const dsBrowser = new DSBrowser(document.getElementById('test'), listURL, 'LIST');
         await dsBrowser.render();
     })();
 </script>
