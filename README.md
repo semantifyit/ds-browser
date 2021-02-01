@@ -30,11 +30,13 @@ You can use the Domain Specification directly as object or pass a URL to its loc
 
 It is also possible to render a List of Domain Specifications. In order to do that, you need to pass the `type` argument to the function `DSBrowser()`. The `type` argument is `'DS'` by default, but must be `'LIST'` to render a List of Domain Specifications.
 
+In order to show the name and the description of list items that information must be included in the List (for DS-Lists of semantify.it this can be achieved by appending `?representation=lean` to the List URL).
+
 ``` html
 <div id="ds-container"></div>
 <script>
     (async function() {
-        const listURL = 'https://semantify.it/list/wS4r3c9hQ';
+        const listURL = 'https://semantify.it/list/wS4r3c9hQ?representation=lean';
         const dsBrowser = new DSBrowser(document.getElementById('ds-container'), listURL, 'LIST');
         await dsBrowser.render();
     })();
