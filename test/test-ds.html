@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Test file for a single DS</title>
+    <link rel="stylesheet" type="text/css" href="../ds-browser.css"/>
+</head>
+<body>
+<div id="ds-container"></div>
+</body>
+<script src="../dist/ds-browser.js"></script>
+<script>
+    (async function () {
+        const dsURL = 'https://semantify.it/ds/rQHgkTdOr';
+        const dsBrowser = new DSBrowser(document.getElementById('ds-container'), dsURL);
+        await dsBrowser.render();
+    })();
+</script>
+</html>

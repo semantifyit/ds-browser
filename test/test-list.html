@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Test file for a List of DS</title>
+    <link rel="stylesheet" type="text/css" href="../ds-browser.css"/>
+</head>
+<body>
+<div id="ds-container"></div>
+</body>
+<script src="../dist/ds-browser.js"></script>
+<script>
+    (async function () {
+        const listURL = 'https://semantify.it/list/wS4r3c9hQ?representation=lean';
+        const dsBrowser = new DSBrowser(document.getElementById('ds-container'), listURL, 'LIST');
+        await dsBrowser.render();
+    })();
+</script>
+</html>
