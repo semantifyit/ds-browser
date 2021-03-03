@@ -5,7 +5,7 @@
   "main": "src/DSBrowser.js",
   "repository": {
     "type": "git",
-    "url": "https://github.com/YarnSeemannsgarn/ds-browser.git"
+    "url": "https://github.com/semantifyit/ds-browser.git"
   },
   "keywords": [
     "schema.org",
@@ -16,9 +16,9 @@
   "author": "Jan Schlenker for STI Innsbruck",
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/YarnSeemannsgarn/ds-browser/issues"
+    "url": "https://github.com/semantifyit/ds-browser/issues"
   },
-  "homepage": "https://github.com/YarnSeemannsgarn/ds-browser#readme",
+  "homepage": "https://github.com/semantifyit/ds-browser#readme",
   "scripts": {
     "buildAll": "npm run-script build && npm run-script buildMinified",
     "build": "browserify src/DSBrowser.js -s DSBrowser > dist/ds-browser.js",
