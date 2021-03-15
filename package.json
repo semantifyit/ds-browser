@@ -22,7 +22,9 @@
   "scripts": {
     "buildAll": "npm run-script build && npm run-script buildMinified",
     "build": "browserify src/DSBrowser.js -s DSBrowser > dist/ds-browser.js",
-    "buildMinified": "browserify src/DSBrowser.js -s DSBrowser -g [uglifyify] > dist/ds-browser.min.js"
+    "buildMinified": "browserify src/DSBrowser.js -s DSBrowser -g [uglifyify] > dist/ds-browser.min.js",
+    "eslint:check": "eslint src/*",
+    "test-localhost": "node test/test-app.js"
   },
   "dependencies": {
     "schema-org-adapter": "^3.3.0"
@@ -30,8 +32,11 @@
   "devDependencies": {
     "@babel/core": "^7.12.3",
     "@babel/preset-env": "^7.12.1",
+    "babel-eslint": "^10.1.0",
     "babelify": "^10.0.0",
     "browserify": "^17.0.0",
+    "eslint": "^7.21.0",
+    "express": "^4.17.1",
     "uglifyify": "^5.0.2"
   },
   "browserify": {

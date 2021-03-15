@@ -34,11 +34,11 @@ class Util {
     }
 
     getJson(url) {
-        return new Promise(function (resolve, reject) {
+        return new Promise(function(resolve, reject) {
             let xhr = new XMLHttpRequest();
             xhr.open('GET', url);
             xhr.setRequestHeader('Accept', 'application/json');
-            xhr.onload = function () {
+            xhr.onload = function() {
                 if (this.status >= 200 && this.status < 300) {
                     resolve(xhr.response);
                 } else {
@@ -48,7 +48,7 @@ class Util {
                     });
                 }
             };
-            xhr.onerror = function () {
+            xhr.onerror = function() {
                 reject({
                     status: this.status,
                     statusText: xhr.statusText
@@ -79,53 +79,77 @@ class Util {
         });
     }
 
-    /**
-     * Create an IRI with the current browser IRI and the given query parameter.
-     * The query parameter can be either set, overwritten, deleted or enhanced.
-     *
-     * @param {string} key - The query parameter key.
-     * @param {string} val - The query parameter values.
-     * @param {string|null} enhanceSymbol - TODO
-     * @returns {string} The resulting IRI.
-     */
-    createIriWithQueryParam(key, val, enhanceSymbol = null) {
-        const searchParams = new URLSearchParams(window.location.search);
-        if (val && val !== '') {
-            const prevVal = searchParams.get(key);
-            if (prevVal !== null && enhanceSymbol) {
-                searchParams.set(key, prevVal + enhanceSymbol + val);
-            } else {
-                searchParams.set(key, val);
-            }
-        } else {
-            searchParams.delete(key);
-        }
-        const queryString = searchParams.toString();
-        const origin = window.location.protocol + '//' + (window.location.host ? window.location.host : '');
-        return origin + window.location.pathname + (queryString !== '' ? '?' + queryString : '');
+    createInternalLink(navigationChanges, text) {
+        text = this.escHtml(text);
+        const hrefLink = this.browser.locationControl ? this.createInternalHref(navigationChanges) : 'javascript:void(0)';
+        const htmlOnClick = this.browser.locationControl ? 'onclick="return false;"' : '';
+        const htmlState = 'data-state-changes="' + encodeURIComponent(JSON.stringify(navigationChanges)) + '"';
+        return `<a class="a-js-link" href="${hrefLink}" ${htmlOnClick} ${htmlState}>
+        ${text}</a>`;
     }
 
-    /**
-     * Create a HTML JavaScript link that imitates a standard link with the current browser IRI and the given query
-     * parameter.
-     *
-     * @param {string} queryKey - The query parameter key.
-     * @param {string|null} queryVal - The query parameter value.
-     * @param {string|null} enhanceSymbol - TODO
-     * @param {string|null} text - The text of the link.
-     * @param {object|null} attr - The HTML attributes of the link.
-     * @returns {string} The resulting HTML.
-     */
-    createJSLink(queryKey, queryVal, text = null, attr = null, enhanceSymbol = null) {
-        const iri = this.createIriWithQueryParam(queryKey, queryVal, enhanceSymbol);
-        return '' +
-            '<a ' +
-            'class="a-js-link" ' +
-            'href="' + this.escHtml(iri) + '" ' +
-            'onclick="return false;"' +
-            this.createHtmlAttr(attr) + '>' +
-            (text ? this.escHtml(text) : this.escHtml(queryVal)) +
-            '</a>';
+    createInternalHref(navigationChanges, htmlEscaped = true) {
+        let navigationState = this.createNavigationState(navigationChanges);
+        let domain = window.location.protocol + '//' + (window.location.host ? window.location.host : '');
+        let url;
+        let urlParameterArray = [];
+        if (navigationState.listId) {
+            // is list
+            url = domain + '/list/' + navigationState.listId;
+            if (navigationState.dsId) {
+                urlParameterArray.push(['ds', navigationState.dsId]);
+            }
+        } else {
+            // must be ds
+            url = domain + '/ds/' + navigationState.dsId;
+        }
+        if (navigationState.path) {
+            urlParameterArray.push(['path', navigationState.path]);
+        }
+        if (navigationState.viewMode) {
+            urlParameterArray.push(['mode', navigationState.viewMode]);
+        }
+        if (navigationState.format) {
+            urlParameterArray.push(['format', navigationState.format]);
+        }
+        for (let i = 0; i < urlParameterArray.length; i++) {
+            let prefix = '&';
+            if (i === 0) {
+                prefix = '?';
+            }
+            url += prefix + urlParameterArray[i][0] + '=' + urlParameterArray[i][1];
+        }
+        return htmlEscaped ? this.escHtml(url) : url;
+    }
+
+    createNavigationState(navigationChanges) {
+        let newState = {};
+        if (navigationChanges.listId !== undefined) {
+            newState.listId = navigationChanges.listId;
+        } else {
+            newState.listId = this.browser.listId;
+        }
+        if (navigationChanges.dsId !== undefined) {
+            newState.dsId = navigationChanges.dsId;
+        } else {
+            newState.dsId = this.browser.dsId;
+        }
+        if (navigationChanges.path !== undefined) {
+            newState.path = navigationChanges.path;
+        } else {
+            newState.path = this.browser.path;
+        }
+        if (navigationChanges.viewMode !== undefined) {
+            newState.viewMode = navigationChanges.viewMode;
+        } else {
+            newState.viewMode = this.browser.viewMode;
+        }
+        if (navigationChanges.format !== undefined) {
+            newState.format = navigationChanges.format;
+        } else {
+            newState.format = this.browser.format;
+        }
+        return newState;
     }
 
     /**
@@ -174,6 +198,7 @@ class Util {
 
             if (!attr) {
                 attr = {style: additionalStyles};
+                // eslint-disable-next-line no-prototype-builtins
             } else if (!attr.hasOwnProperty('style')) {
                 attr['style'] = additionalStyles;
             } else {
@@ -182,7 +207,7 @@ class Util {
             attr['target'] = '_blank';
         }
 
-        return '<a href="' + this.escHtml(href) + '"' +  this.createHtmlAttr(attr) + '>' +
+        return '<a href="' + this.escHtml(href) + '"' + this.createHtmlAttr(attr) + '>' +
             (text ? this.prettyPrintIri(text) : this.prettyPrintIri(href)) + '</a>';
     }
 
@@ -193,17 +218,23 @@ class Util {
      * @return {string} The resulting style attribute.
      */
     createExternalLinkStyle(iri) {
-        let style = '' +
-            'background-position: center right; ' +
-            'background-repeat: no-repeat; ' +
-            'background-size: 10px 10px; ' +
-            'padding-right: 13px; ';
+        let style = `background-position: center right; 
+            background-repeat: no-repeat;
+            background-size: 10px 10px; 
+            padding-right: 13px; `;
         if ((/^https?:\/\/schema.org/).test(iri)) {
             style += 'background-image: url(https://raw.githubusercontent.com/semantifyit/ds-browser/main/images/external-link-icon-red.png);';
         } else {
-            style += 'background-image: url(https://raw.githubusercontent.com/semantifyit/ds-browser/main/images/external-link-icon-blue.png);'
+            style += 'background-image: url(https://raw.githubusercontent.com/semantifyit/ds-browser/main/images/external-link-icon-blue.png);';
         }
         return style;
+    }
+
+    createHtmlLoading() {
+        return `<div style="text-align: center">
+            <img src="https://raw.githubusercontent.com/semantifyit/ds-browser/main/images/loading.gif"
+             alt="Loading Animation" style="margin-top: 100px;">
+            </div>`;
     }
 
     /**
@@ -217,12 +248,11 @@ class Util {
      * @param {string|null} mainColClass - The CSS class of the main column.
      * @returns {string} The resulting HTML.
      */
-    createTableRow(rdfaTypeOf, rdfaResource, mainColRdfaProp, mainColLink, sideCols, mainColClass = null) {
-        return '' +
-            '<tr typeof="' + rdfaTypeOf + '" resource="' + rdfaResource + '">' +
-            this.createMainCol(mainColRdfaProp, mainColLink, mainColClass) +
-            sideCols +
-            '</tr>';
+    createHtmlTableRow(rdfaTypeOf, rdfaResource, mainColRdfaProp, mainColLink, sideCols, mainColClass = null) {
+        const trContent = this.createMainCol(mainColRdfaProp, mainColLink, mainColClass) + sideCols;
+        return `<tr typeof="${rdfaTypeOf}" resource="${rdfaResource}">
+            ${trContent}
+            </tr>`;
     }
 
     /**
@@ -263,28 +293,26 @@ class Util {
      * @param {object|null} tbodyAttr - The HTML attributes of the table body.
      * @returns {string} The resulting HTML.
      */
-    createDefinitionTable(ths, trs, tableAttr=null, tbodyAttr=null) {
+    createHtmlDefinitionTable(ths, trs, tableAttr = null, tbodyAttr = null) {
         if (!Array.isArray(ths)) {
             ths = [ths];
         }
         if (!Array.isArray(trs)) {
             trs = [trs];
         }
-        return '' +
-            '<table class="definition-table"' + this.createHtmlAttr(tableAttr) + '>' +
-            '<thead>' +
-            '<tr>' +
-            ths.map((th) => {
-                return '<th>' + th + '</th>';
-            }).join('') +
-            '</tr>' +
-            '</thead>' +
-            '<tbody' + this.createHtmlAttr(tbodyAttr) + '>' +
-            (trs[0].startsWith('<tr') ? trs.join('') : trs.map((tr) => {
-                return '<tr>' + tr + '</tr>';
-            }).join('')) +
-            '</tbody>' +
-            '</table>';
+        const htmlTableAttr = this.createHtmlAttr(tableAttr);
+        const htmlTbodyAttr = this.createHtmlAttr(tbodyAttr);
+        const htmlTheadContent = ths.map((th) => {
+            return '<th>' + th + '</th>';
+        }).join('');
+        const htmlTbodyContent = (trs[0].startsWith('<tr') ? trs.join('') : trs.map((tr) => {
+            return '<tr>' + tr + '</tr>';
+        }).join(''));
+        return `<table class="definition-table" ${htmlTableAttr}>
+            <thead><tr>${htmlTheadContent}</tr></thead>
+            <tbody ${htmlTbodyAttr}>
+            ${htmlTbodyContent}
+            </tbody></table>`;
     }
 
     /**
@@ -294,7 +322,7 @@ class Util {
      * @param {string} mainContent - The HTML of the main content.
      * @returns {string} The resulting HTML.
      */
-    createMainContent(rdfaTypeOf, mainContent) {
+    createHtmlMainContent(rdfaTypeOf, mainContent) {
         return `
             <div>
                 <div id="mainContent" vocab="http://schema.org/" typeof="${rdfaTypeOf}" resource="${window.location}">
@@ -303,14 +331,13 @@ class Util {
             </div>`;
     }
 
-    createExternalLinkLegend() {
+    createHtmlExternalLinkLegend() {
         const commonExtLinkStyle = 'margin-right: 3px; ';
         const extLinkStyleBlue = commonExtLinkStyle + this.createExternalLinkStyle('');
         const extLinkStyleRed = commonExtLinkStyle + this.createExternalLinkStyle('http://schema.org') +
             ' margin-left: 6px;';
 
-        return '' +
-            '<p style="font-size: 12px; margin-top: 0">' +
+        return '<p style="font-size: 12px; margin-top: 0">' +
             '(<span style="' + extLinkStyleBlue + '"></span>External link' +
             '<span style="' + extLinkStyleRed + '"></span>External link to schema.org )' +
             '</p>';
@@ -349,13 +376,24 @@ class Util {
     fade(element) {
         let op = 0.05;  // initial opacity
         const timer = setInterval(() => {
-            if (op >= 1){
+            if (op >= 1) {
                 clearInterval(timer);
             }
             element.style.opacity = op;
             element.style.filter = 'alpha(opacity=' + op * 100 + ")";
             op += op * 0.05;
         }, 10);
+    }
+
+    // Returns the rootnode of a DS
+    discoverDsRootNode(dsGraph) {
+        // Root node is the only with "@type": ["sh:NodeShape", "schema:CreativeWork"]
+        return dsGraph.find(
+            (e) =>
+                Array.isArray(e['@type']) &&
+                e['@type'].includes('sh:NodeShape') &&
+                e['@type'].includes('schema:CreativeWork'),
+        );
     }
 }
 

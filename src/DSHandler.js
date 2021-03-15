@@ -6,13 +6,13 @@ class DSHandler {
 
     getDSNodeForPath() {
         // DSNode is then the corresponding node from the domain specification
-        let ds = this.browser.ds['@graph'][0];
+        let currentNode = this.browser.dsRootNode;
         let result = {
             'type': '',
             'node': {}
         };
         // Check if DS provided
-        if (this.browser.ds) {
+        if (currentNode) {
             if (this.browser.path) {
                 let pathSteps = this.browser.path.split('-');
                 for (let i = 0; i < pathSteps.length; i++) {
@@ -21,26 +21,26 @@ class DSHandler {
                     }
                     if (pathSteps[i].charAt(0).toUpperCase() === pathSteps[i].charAt(0)) {
                         // Is uppercase -> class or Enum
-                        if (ds !== null) {
-                            ds = this.getClass(ds['sh:or'], pathSteps[i]);
+                        if (currentNode !== null) {
+                            currentNode = this.getClass(currentNode['sh:or'], pathSteps[i]);
                         }
                     } else {
                         // Property should not be the last part of an URL, skip to show containing class!
                         // Although the redirectCheck() would fire before this function
-                        if (ds !== null && i !== pathSteps.length - 1) {
-                            if (ds["sh:targetClass"] !== undefined) {
+                        if (currentNode !== null && i !== pathSteps.length - 1) {
+                            if (currentNode["sh:targetClass"] !== undefined) {
                                 // Root node
-                                ds = this.getProperty(ds['sh:property'], pathSteps[i]);
+                                currentNode = this.getProperty(currentNode['sh:property'], pathSteps[i]);
                             } else {
                                 // Nested nodes
-                                ds = this.getProperty(ds["sh:node"]['sh:property'], pathSteps[i]);
+                                currentNode = this.getProperty(currentNode["sh:node"]['sh:property'], pathSteps[i]);
                             }
                         }
                     }
                 }
-                if (ds && ds["sh:class"] && !Array.isArray(ds["sh:class"])) {
+                if (currentNode && currentNode["sh:class"] && !Array.isArray(currentNode["sh:class"])) {
                     try {
-                        this.browser.sdoAdapter.getEnumeration(ds["sh:class"]);
+                        this.browser.sdoAdapter.getEnumeration(currentNode["sh:class"]);
                         result.type = "Enumeration";
                     } catch (e) {
                         result.type = "Class";
@@ -56,28 +56,18 @@ class DSHandler {
             // No DS
             result.type = "error";
         }
-        result.node = ds;
+        result.node = currentNode;
         return result;
     }
 
     // Get the class or enumeration with that name
     getClass(DSNode, name) {
-        for (let i = 0; i < DSNode.length; i++) {
-            if (DSNode[i]["sh:class"] !== undefined && this.rangesToString(DSNode[i]["sh:class"]) === name) {
-                return DSNode[i];
-            }
-        }
-        return null;
+        return DSNode.find(el => (el["sh:class"] && this.rangesToString(el["sh:class"]) === name)) || null;
     }
 
     // Get the property with that name
     getProperty(propertyArray, name) {
-        for (let i = 0; i < propertyArray.length; i++) {
-            if (this.rangesToString(propertyArray[i]["sh:path"]) === name) {
-                return propertyArray[i];
-            }
-        }
-        return null;
+        return propertyArray.find(el => this.rangesToString(el["sh:path"]) === name) || null;
     }
 
     // Get the corresponding SDO datatype from a given SHACL XSD datatype
@@ -116,9 +106,8 @@ class DSHandler {
         }
     }
 
-    createCardinality(minCount, maxCount) {
+    createHtmlCardinality(minCount, maxCount) {
         let title, cardinality = '';
-
         if (minCount && minCount !== 0) {
             if (maxCount && maxCount !== 0) {
                 if (minCount !== maxCount) {
@@ -142,8 +131,7 @@ class DSHandler {
                 cardinality = '0..N';
             }
         }
-
-        return '<span title="' + title + '">' + cardinality + '</span>';
+        return `<span title="${title}">${cardinality}</span>`;
     }
 
     generateDsClass(dsvClass, closed, showOptional) {
@@ -212,13 +200,16 @@ class DSHandler {
         this.processExpectedTypes(dsProperty, propertyObj['sh:or'], showOptional);
 
         if (showOptional) {
+            // return -> show property anyway (mandatory and optional)
             return dsProperty;
         } else if (!dsProperty.data.isOptional) {
+            // return -> show property only if it is mandatory (not optional)
             return dsProperty;
+        } else {
+            // dont show
+            return null;
         }
-        // TODO: Probably a mistake: What happens when if / else if is not entered?
     }
-
 
     processEnum(dsProperty, shOr,) {
         dsProperty.isEnum = false;
@@ -227,7 +218,8 @@ class DSHandler {
             const rangeOfProp = shOr['sh:class'];
             enuWithSdo = this.browser.sdoAdapter.getEnumeration(rangeOfProp);
             dsProperty.isEnum = true;
-        } catch (e) { /* Ignore */ }
+        } catch (e) { /* Ignore */
+        }
 
         if (dsProperty.isEnum) {
             const enuMembersArray = this.getEnumMemberArray(shOr['sh:in'], enuWithSdo);
@@ -311,7 +303,7 @@ class DSHandler {
             rangeAsString: '',
             rangeJustification: []
         };
-        returnObj.rangeAsString = dsvExpectedTypes.map((dsvExpectedType, i) => {
+        returnObj.rangeAsString = dsvExpectedTypes.map((dsvExpectedType) => {
             let justification = {};
             let name, rangePart;
             const datatype = dsvExpectedType['sh:datatype'];

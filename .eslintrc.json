@@ -1,0 +1,60 @@
+{
+  "extends": [
+    "eslint:recommended"
+  ],
+  "env": {
+    "browser": true,
+    "es6": true,
+    "node": true
+  },
+  "parser": "babel-eslint",
+  "parserOptions": {
+    "ecmaVersion": 6,
+    "sourceType": "module"
+  },
+  "rules": {
+    "semi": "error",
+    "spaced-comment": [
+      "warn",
+      "always"
+    ],
+    "no-trailing-spaces": [
+      "warn",
+      {
+        "ignoreComments": true
+      }
+    ],
+    "space-before-function-paren": [
+      "warn",
+      "never"
+    ],
+    "no-multiple-empty-lines": [
+      "warn",
+      {
+        "max": 1,
+        "maxEOF": 0,
+        "maxBOF": 0
+      }
+    ],
+    "indent": [
+      "warn",
+      4,
+      {
+        "SwitchCase": 1
+      }
+    ],
+    "linebreak-style": [
+      "off"
+    ],
+    "no-unused-vars": [
+      "warn",
+      {
+        "varsIgnorePattern": "^modal_.*"
+      }
+    ]
+  },
+  "globals": {
+    "window": true,
+    "module": true
+  }
+}

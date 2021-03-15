@@ -2,17 +2,29 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Test file for a single DS</title>
-    <link rel="stylesheet" type="text/css" href="../ds-browser.css"/>
+    <title>DS-Browser Test</title>
+    <link rel="stylesheet" type="text/css" href="/css.css"/>
 </head>
 <body>
 <div id="ds-container"></div>
 </body>
-<script src="../dist/ds-browser.js"></script>
+<script src="/ds-browser.js"></script>
 <script>
-    (async function () {
-        const dsURL = 'https://semantify.it/ds/rQHgkTdOr';
-        const dsBrowser = new DSBrowser(document.getElementById('ds-container'), dsURL);
+    (async function() {
+        // If locationControl: true, the DS browser will take input parameters from the URL address
+        // e.g. http://localhost:8080/ds/rQHgkTdOr?path=aggregateRating-AggregateRating
+        // or http://localhost:8080/list/wS4r3c9hQ?ds=K6TKc85az&path=logo-ImageObject
+        // That means that invalid URLs will result in an error
+        // If locationControl: false, at least a dsId or a listId must be given, e.g. listId: "u0KYwqHQC" or dsId: "rQHgkTdOr"
+        const dsBrowser = new DSBrowser({
+            targetElement: document.getElementById("ds-container"),
+            locationControl: false,
+            listId: "u0KYwqHQC",
+            //dsId: "rQHgkTdOr",
+            //path: "openingHoursSpecification-OpeningHoursSpecification",
+            //viewMode: "table",
+            //format: "shacl"
+        });
         await dsBrowser.render();
     })();
 </script>

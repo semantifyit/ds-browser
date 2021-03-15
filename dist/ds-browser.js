@@ -21,19 +21,12 @@ module.exports = function xhrAdapter(config) {
       delete requestHeaders['Content-Type']; // Let the browser set it
     }
 
-    if (
-      (utils.isBlob(requestData) || utils.isFile(requestData)) &&
-      requestData.type
-    ) {
-      delete requestHeaders['Content-Type']; // Let the browser set it
-    }
-
     var request = new XMLHttpRequest();
 
     // HTTP basic authentication
     if (config.auth) {
       var username = config.auth.username || '';
-      var password = unescape(encodeURIComponent(config.auth.password)) || '';
+      var password = config.auth.password ? unescape(encodeURIComponent(config.auth.password)) : '';
       requestHeaders.Authorization = 'Basic ' + btoa(username + ':' + password);
     }
 
@@ -188,7 +181,7 @@ module.exports = function xhrAdapter(config) {
   });
 };
 
-},{"../core/buildFullPath":9,"../core/createError":10,"./../core/settle":14,"./../helpers/buildURL":18,"./../helpers/cookies":20,"./../helpers/isURLSameOrigin":22,"./../helpers/parseHeaders":24,"./../utils":26}],3:[function(require,module,exports){
+},{"../core/buildFullPath":9,"../core/createError":10,"./../core/settle":14,"./../helpers/buildURL":18,"./../helpers/cookies":20,"./../helpers/isURLSameOrigin":23,"./../helpers/parseHeaders":25,"./../utils":27}],3:[function(require,module,exports){
 'use strict';
 
 var utils = require('./utils');
@@ -238,12 +231,15 @@ axios.all = function all(promises) {
 };
 axios.spread = require('./helpers/spread');
 
+// Expose isAxiosError
+axios.isAxiosError = require('./helpers/isAxiosError');
+
 module.exports = axios;
 
 // Allow use of default import syntax in TypeScript
 module.exports.default = axios;
 
-},{"./cancel/Cancel":4,"./cancel/CancelToken":5,"./cancel/isCancel":6,"./core/Axios":7,"./core/mergeConfig":13,"./defaults":16,"./helpers/bind":17,"./helpers/spread":25,"./utils":26}],4:[function(require,module,exports){
+},{"./cancel/Cancel":4,"./cancel/CancelToken":5,"./cancel/isCancel":6,"./core/Axios":7,"./core/mergeConfig":13,"./defaults":16,"./helpers/bind":17,"./helpers/isAxiosError":22,"./helpers/spread":26,"./utils":27}],4:[function(require,module,exports){
 'use strict';
 
 /**
@@ -408,7 +404,8 @@ utils.forEach(['delete', 'get', 'head', 'options'], function forEachMethodNoData
   Axios.prototype[method] = function(url, config) {
     return this.request(mergeConfig(config || {}, {
       method: method,
-      url: url
+      url: url,
+      data: (config || {}).data
     }));
   };
 });
@@ -426,7 +423,7 @@ utils.forEach(['post', 'put', 'patch'], function forEachMethodWithData(method) {
 
 module.exports = Axios;
 
-},{"../helpers/buildURL":18,"./../utils":26,"./InterceptorManager":8,"./dispatchRequest":11,"./mergeConfig":13}],8:[function(require,module,exports){
+},{"../helpers/buildURL":18,"./../utils":27,"./InterceptorManager":8,"./dispatchRequest":11,"./mergeConfig":13}],8:[function(require,module,exports){
 'use strict';
 
 var utils = require('./../utils');
@@ -480,7 +477,7 @@ InterceptorManager.prototype.forEach = function forEach(fn) {
 
 module.exports = InterceptorManager;
 
-},{"./../utils":26}],9:[function(require,module,exports){
+},{"./../utils":27}],9:[function(require,module,exports){
 'use strict';
 
 var isAbsoluteURL = require('../helpers/isAbsoluteURL');
@@ -603,7 +600,7 @@ module.exports = function dispatchRequest(config) {
   });
 };
 
-},{"../cancel/isCancel":6,"../defaults":16,"./../utils":26,"./transformData":15}],12:[function(require,module,exports){
+},{"../cancel/isCancel":6,"../defaults":16,"./../utils":27,"./transformData":15}],12:[function(require,module,exports){
 'use strict';
 
 /**
@@ -736,7 +733,7 @@ module.exports = function mergeConfig(config1, config2) {
   return config;
 };
 
-},{"../utils":26}],14:[function(require,module,exports){
+},{"../utils":27}],14:[function(require,module,exports){
 'use strict';
 
 var createError = require('./createError');
@@ -785,7 +782,7 @@ module.exports = function transformData(data, headers, fns) {
   return data;
 };
 
-},{"./../utils":26}],16:[function(require,module,exports){
+},{"./../utils":27}],16:[function(require,module,exports){
 (function (process){(function (){
 'use strict';
 
@@ -887,7 +884,7 @@ utils.forEach(['post', 'put', 'patch'], function forEachMethodWithData(method) {
 module.exports = defaults;
 
 }).call(this)}).call(this,require('_process'))
-},{"./adapters/http":2,"./adapters/xhr":2,"./helpers/normalizeHeaderName":23,"./utils":26,"_process":59}],17:[function(require,module,exports){
+},{"./adapters/http":2,"./adapters/xhr":2,"./helpers/normalizeHeaderName":24,"./utils":27,"_process":54}],17:[function(require,module,exports){
 'use strict';
 
 module.exports = function bind(fn, thisArg) {
@@ -972,7 +969,7 @@ module.exports = function buildURL(url, params, paramsSerializer) {
   return url;
 };
 
-},{"./../utils":26}],19:[function(require,module,exports){
+},{"./../utils":27}],19:[function(require,module,exports){
 'use strict';
 
 /**
@@ -1043,7 +1040,7 @@ module.exports = (
     })()
 );
 
-},{"./../utils":26}],21:[function(require,module,exports){
+},{"./../utils":27}],21:[function(require,module,exports){
 'use strict';
 
 /**
@@ -1060,6 +1057,19 @@ module.exports = function isAbsoluteURL(url) {
 };
 
 },{}],22:[function(require,module,exports){
+'use strict';
+
+/**
+ * Determines whether the payload is an error thrown by Axios
+ *
+ * @param {*} payload The value to test
+ * @returns {boolean} True if the payload is an error thrown by Axios, otherwise false
+ */
+module.exports = function isAxiosError(payload) {
+  return (typeof payload === 'object') && (payload.isAxiosError === true);
+};
+
+},{}],23:[function(require,module,exports){
 'use strict';
 
 var utils = require('./../utils');
@@ -1129,7 +1139,7 @@ module.exports = (
     })()
 );
 
-},{"./../utils":26}],23:[function(require,module,exports){
+},{"./../utils":27}],24:[function(require,module,exports){
 'use strict';
 
 var utils = require('../utils');
@@ -1143,7 +1153,7 @@ module.exports = function normalizeHeaderName(headers, normalizedName) {
   });
 };
 
-},{"../utils":26}],24:[function(require,module,exports){
+},{"../utils":27}],25:[function(require,module,exports){
 'use strict';
 
 var utils = require('./../utils');
@@ -1198,7 +1208,7 @@ module.exports = function parseHeaders(headers) {
   return parsed;
 };
 
-},{"./../utils":26}],25:[function(require,module,exports){
+},{"./../utils":27}],26:[function(require,module,exports){
 'use strict';
 
 /**
@@ -1227,7 +1237,7 @@ module.exports = function spread(callback) {
   };
 };
 
-},{}],26:[function(require,module,exports){
+},{}],27:[function(require,module,exports){
 'use strict';
 
 var bind = require('./helpers/bind');
@@ -1580,9 +1590,9 @@ module.exports = {
   stripBOM: stripBOM
 };
 
-},{"./helpers/bind":17}],27:[function(require,module,exports){
+},{"./helpers/bind":17}],28:[function(require,module,exports){
 
-},{}],28:[function(require,module,exports){
+},{}],29:[function(require,module,exports){
 /* jshint esversion: 6 */
 /* jslint node: true */
 'use strict';
@@ -1620,7 +1630,7 @@ module.exports = function (object) {
   }
 };
 
-},{}],29:[function(require,module,exports){
+},{}],30:[function(require,module,exports){
 /*
  * Copyright (c) 2019 Digital Bazaar, Inc. All rights reserved.
  */
@@ -1883,7 +1893,7 @@ function _resolveContextUrls({context, base}) {
   }
 }
 
-},{"./JsonLdError":30,"./ResolvedContext":35,"./types":49,"./url":50,"./util":51}],30:[function(require,module,exports){
+},{"./JsonLdError":31,"./ResolvedContext":36,"./types":50,"./url":51,"./util":52}],31:[function(require,module,exports){
 /*
  * Copyright (c) 2017 Digital Bazaar, Inc. All rights reserved.
  */
@@ -1908,7 +1918,7 @@ module.exports = class JsonLdError extends Error {
   }
 };
 
-},{}],31:[function(require,module,exports){
+},{}],32:[function(require,module,exports){
 /*
  * Copyright (c) 2017 Digital Bazaar, Inc. All rights reserved.
  */
@@ -1962,7 +1972,7 @@ module.exports = jsonld => {
   return JsonLdProcessor;
 };
 
-},{}],32:[function(require,module,exports){
+},{}],33:[function(require,module,exports){
 /*
  * Copyright (c) 2017 Digital Bazaar, Inc. All rights reserved.
  */
@@ -1971,7 +1981,7 @@ module.exports = jsonld => {
 // TODO: move `NQuads` to its own package
 module.exports = require('rdf-canonize').NQuads;
 
-},{"rdf-canonize":69}],33:[function(require,module,exports){
+},{"rdf-canonize":63}],34:[function(require,module,exports){
 /*
  * Copyright (c) 2017 Digital Bazaar, Inc. All rights reserved.
  */
@@ -2113,7 +2123,7 @@ function getXMLSerializerClass() {
   return XMLSerializer;
 }
 
-},{"./constants":37,"xmldom":27}],34:[function(require,module,exports){
+},{"./constants":38,"xmldom":28}],35:[function(require,module,exports){
 /*
  * Copyright (c) 2017-2019 Digital Bazaar, Inc. All rights reserved.
  */
@@ -2153,7 +2163,7 @@ module.exports = class RequestQueue {
   }
 };
 
-},{}],35:[function(require,module,exports){
+},{}],36:[function(require,module,exports){
 /*
  * Copyright (c) 2019 Digital Bazaar, Inc. All rights reserved.
  */
@@ -2185,7 +2195,7 @@ module.exports = class ResolvedContext {
   }
 };
 
-},{"lru-cache":52}],36:[function(require,module,exports){
+},{"lru-cache":53}],37:[function(require,module,exports){
 /*
  * Copyright (c) 2017 Digital Bazaar, Inc. All rights reserved.
  */
@@ -3365,7 +3375,7 @@ function _checkNestProperty(activeCtx, nestProperty, options) {
   }
 }
 
-},{"./JsonLdError":30,"./context":38,"./graphTypes":45,"./types":49,"./url":50,"./util":51}],37:[function(require,module,exports){
+},{"./JsonLdError":31,"./context":39,"./graphTypes":46,"./types":50,"./url":51,"./util":52}],38:[function(require,module,exports){
 /*
  * Copyright (c) 2017 Digital Bazaar, Inc. All rights reserved.
  */
@@ -3399,7 +3409,7 @@ module.exports = {
   XSD_STRING: XSD + 'string',
 };
 
-},{}],38:[function(require,module,exports){
+},{}],39:[function(require,module,exports){
 /*
  * Copyright (c) 2017-2019 Digital Bazaar, Inc. All rights reserved.
  */
@@ -3418,8 +3428,7 @@ const {
 const {
   isAbsolute: _isAbsoluteIri,
   isRelative: _isRelativeIri,
-  prependBase,
-  parse: parseUrl
+  prependBase
 } = require('./url');
 
 const {
@@ -4871,7 +4880,7 @@ function _deepCompare(x1, x2) {
   return true;
 }
 
-},{"./JsonLdError":30,"./types":49,"./url":50,"./util":51}],39:[function(require,module,exports){
+},{"./JsonLdError":31,"./types":50,"./url":51,"./util":52}],40:[function(require,module,exports){
 /*
  * Copyright (c) 2017 Digital Bazaar, Inc. All rights reserved.
  */
@@ -5048,7 +5057,7 @@ function _request(request, options) {
   });
 }
 
-},{"../JsonLdError":30,"../RequestQueue":34,"../constants":37,"../url":50,"../util":51,"http":27,"request":27}],40:[function(require,module,exports){
+},{"../JsonLdError":31,"../RequestQueue":35,"../constants":38,"../url":51,"../util":52,"http":28,"request":28}],41:[function(require,module,exports){
 /*
  * Copyright (c) 2017 Digital Bazaar, Inc. All rights reserved.
  */
@@ -5167,7 +5176,7 @@ function _get(xhr, url, headers) {
   });
 }
 
-},{"../JsonLdError":30,"../RequestQueue":34,"../constants":37,"../url":50,"../util":51}],41:[function(require,module,exports){
+},{"../JsonLdError":31,"../RequestQueue":35,"../constants":38,"../url":51,"../util":52}],42:[function(require,module,exports){
 /*
  * Copyright (c) 2017 Digital Bazaar, Inc. All rights reserved.
  */
@@ -6284,7 +6293,7 @@ async function _expandIndexMap(
   return rval;
 }
 
-},{"./JsonLdError":30,"./context":38,"./graphTypes":45,"./types":49,"./url":50,"./util":51}],42:[function(require,module,exports){
+},{"./JsonLdError":31,"./context":39,"./graphTypes":46,"./types":50,"./url":51,"./util":52}],43:[function(require,module,exports){
 /*
  * Copyright (c) 2017 Digital Bazaar, Inc. All rights reserved.
  */
@@ -6324,7 +6333,7 @@ api.flatten = input => {
   return flattened;
 };
 
-},{"./graphTypes":45,"./nodeMap":47}],43:[function(require,module,exports){
+},{"./graphTypes":46,"./nodeMap":48}],44:[function(require,module,exports){
 /*
  * Copyright (c) 2017 Digital Bazaar, Inc. All rights reserved.
  */
@@ -7151,7 +7160,7 @@ function _valueMatch(pattern, value) {
   return true;
 }
 
-},{"./JsonLdError":30,"./context":38,"./graphTypes":45,"./nodeMap":47,"./types":49,"./url":50,"./util":51}],44:[function(require,module,exports){
+},{"./JsonLdError":31,"./context":39,"./graphTypes":46,"./nodeMap":48,"./types":50,"./url":51,"./util":52}],45:[function(require,module,exports){
 /*
  * Copyright (c) 2017 Digital Bazaar, Inc. All rights reserved.
  */
@@ -7500,7 +7509,7 @@ function _RDFToObject(o, useNativeTypes, rdfDirection) {
   return rval;
 }
 
-},{"./JsonLdError":30,"./constants":37,"./graphTypes":45,"./types":49,"./util":51}],45:[function(require,module,exports){
+},{"./JsonLdError":31,"./constants":38,"./graphTypes":46,"./types":50,"./util":52}],46:[function(require,module,exports){
 /*
  * Copyright (c) 2017 Digital Bazaar, Inc. All rights reserved.
  */
@@ -7621,7 +7630,7 @@ api.isBlankNode = v => {
   return false;
 };
 
-},{"./types":49}],46:[function(require,module,exports){
+},{"./types":50}],47:[function(require,module,exports){
 (function (process,global){(function (){
 /**
  * A JavaScript implementation of the JSON-LD API.
@@ -8679,7 +8688,7 @@ wrapper(factory);
 module.exports = factory;
 
 }).call(this)}).call(this,require('_process'),typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{"./ContextResolver":29,"./JsonLdError":30,"./JsonLdProcessor":31,"./NQuads":32,"./Rdfa":33,"./RequestQueue":34,"./compact":36,"./context":38,"./documentLoaders/node":39,"./documentLoaders/xhr":40,"./expand":41,"./flatten":42,"./frame":43,"./fromRdf":44,"./graphTypes":45,"./nodeMap":47,"./toRdf":48,"./types":49,"./url":50,"./util":51,"_process":59,"lru-cache":52,"rdf-canonize":69}],47:[function(require,module,exports){
+},{"./ContextResolver":30,"./JsonLdError":31,"./JsonLdProcessor":32,"./NQuads":33,"./Rdfa":34,"./RequestQueue":35,"./compact":37,"./context":39,"./documentLoaders/node":40,"./documentLoaders/xhr":41,"./expand":42,"./flatten":43,"./frame":44,"./fromRdf":45,"./graphTypes":46,"./nodeMap":48,"./toRdf":49,"./types":50,"./url":51,"./util":52,"_process":54,"lru-cache":53,"rdf-canonize":63}],48:[function(require,module,exports){
 /*
  * Copyright (c) 2017 Digital Bazaar, Inc. All rights reserved.
  */
@@ -8971,7 +8980,7 @@ api.mergeNodeMaps = graphs => {
   return defaultGraph;
 };
 
-},{"./JsonLdError":30,"./context":38,"./graphTypes":45,"./types":49,"./util":51}],48:[function(require,module,exports){
+},{"./JsonLdError":31,"./context":39,"./graphTypes":46,"./types":50,"./util":52}],49:[function(require,module,exports){
 /*
  * Copyright (c) 2017 Digital Bazaar, Inc. All rights reserved.
  */
@@ -9253,7 +9262,7 @@ function _objectToRDF(item, issuer, dataset, graphTerm, rdfDirection) {
   return object;
 }
 
-},{"./constants":37,"./context":38,"./graphTypes":45,"./nodeMap":47,"./types":49,"./url":50,"./util":51,"canonicalize":28}],49:[function(require,module,exports){
+},{"./constants":38,"./context":39,"./graphTypes":46,"./nodeMap":48,"./types":50,"./url":51,"./util":52,"canonicalize":29}],50:[function(require,module,exports){
 /*
  * Copyright (c) 2017 Digital Bazaar, Inc. All rights reserved.
  */
@@ -9347,7 +9356,7 @@ api.isString = v => (typeof v === 'string' ||
  */
 api.isUndefined = v => typeof v === 'undefined';
 
-},{}],50:[function(require,module,exports){
+},{}],51:[function(require,module,exports){
 /*
  * Copyright (c) 2017 Digital Bazaar, Inc. All rights reserved.
  */
@@ -9650,7 +9659,7 @@ api.isAbsolute = v => types.isString(v) && isAbsoluteRegex.test(v);
  */
 api.isRelative = v => types.isString(v);
 
-},{"./types":49}],51:[function(require,module,exports){
+},{"./types":50}],52:[function(require,module,exports){
 /*
  * Copyright (c) 2017-2019 Digital Bazaar, Inc. All rights reserved.
  */
@@ -10103,7 +10112,7 @@ function _labelBlankNodes(issuer, element) {
   return element;
 }
 
-},{"./JsonLdError":30,"./graphTypes":45,"./types":49,"rdf-canonize":69}],52:[function(require,module,exports){
+},{"./JsonLdError":31,"./graphTypes":46,"./types":50,"rdf-canonize":63}],53:[function(require,module,exports){
 'use strict'
 
 // A linked list to keep track of recently-used-ness
@@ -10439,3786 +10448,7 @@ const forEachStep = (self, fn, node, thisp) => {
 
 module.exports = LRUCache
 
-},{"yallist":83}],53:[function(require,module,exports){
-(function (Buffer){(function (){
-/**
- * Base-N/Base-X encoding/decoding functions.
- *
- * Original implementation from base-x:
- * https://github.com/cryptocoinjs/base-x
- *
- * Which is MIT licensed:
- *
- * The MIT License (MIT)
- *
- * Copyright base-x contributors (c) 2016
- *
- * Permission is hereby granted, free of charge, to any person obtaining a copy
- * of this software and associated documentation files (the "Software"), to deal
- * in the Software without restriction, including without limitation the rights
- * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
- * copies of the Software, and to permit persons to whom the Software is
- * furnished to do so, subject to the following conditions:
- *
- * The above copyright notice and this permission notice shall be included in
- * all copies or substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
- * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
- * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
- * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
- * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
- * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
- * DEALINGS IN THE SOFTWARE.
- */
-var api = {};
-module.exports = api;
-
-// baseN alphabet indexes
-var _reverseAlphabets = {};
-
-/**
- * BaseN-encodes a Uint8Array using the given alphabet.
- *
- * @param input the Uint8Array to encode.
- * @param maxline the maximum number of encoded characters per line to use,
- *          defaults to none.
- *
- * @return the baseN-encoded output string.
- */
-api.encode = function(input, alphabet, maxline) {
-  if(typeof alphabet !== 'string') {
-    throw new TypeError('"alphabet" must be a string.');
-  }
-  if(maxline !== undefined && typeof maxline !== 'number') {
-    throw new TypeError('"maxline" must be a number.');
-  }
-
-  var output = '';
-
-  if(!(input instanceof Uint8Array)) {
-    // assume forge byte buffer
-    output = _encodeWithByteBuffer(input, alphabet);
-  } else {
-    var i = 0;
-    var base = alphabet.length;
-    var first = alphabet.charAt(0);
-    var digits = [0];
-    for(i = 0; i < input.length; ++i) {
-      for(var j = 0, carry = input[i]; j < digits.length; ++j) {
-        carry += digits[j] << 8;
-        digits[j] = carry % base;
-        carry = (carry / base) | 0;
-      }
-
-      while(carry > 0) {
-        digits.push(carry % base);
-        carry = (carry / base) | 0;
-      }
-    }
-
-    // deal with leading zeros
-    for(i = 0; input[i] === 0 && i < input.length - 1; ++i) {
-      output += first;
-    }
-    // convert digits to a string
-    for(i = digits.length - 1; i >= 0; --i) {
-      output += alphabet[digits[i]];
-    }
-  }
-
-  if(maxline) {
-    var regex = new RegExp('.{1,' + maxline + '}', 'g');
-    output = output.match(regex).join('\r\n');
-  }
-
-  return output;
-};
-
-/**
- * Decodes a baseN-encoded (using the given alphabet) string to a
- * Uint8Array.
- *
- * @param input the baseN-encoded input string.
- *
- * @return the Uint8Array.
- */
-api.decode = function(input, alphabet) {
-  if(typeof input !== 'string') {
-    throw new TypeError('"input" must be a string.');
-  }
-  if(typeof alphabet !== 'string') {
-    throw new TypeError('"alphabet" must be a string.');
-  }
-
-  var table = _reverseAlphabets[alphabet];
-  if(!table) {
-    // compute reverse alphabet
-    table = _reverseAlphabets[alphabet] = [];
-    for(var i = 0; i < alphabet.length; ++i) {
-      table[alphabet.charCodeAt(i)] = i;
-    }
-  }
-
-  // remove whitespace characters
-  input = input.replace(/\s/g, '');
-
-  var base = alphabet.length;
-  var first = alphabet.charAt(0);
-  var bytes = [0];
-  for(var i = 0; i < input.length; i++) {
-    var value = table[input.charCodeAt(i)];
-    if(value === undefined) {
-      return;
-    }
-
-    for(var j = 0, carry = value; j < bytes.length; ++j) {
-      carry += bytes[j] * base;
-      bytes[j] = carry & 0xff;
-      carry >>= 8;
-    }
-
-    while(carry > 0) {
-      bytes.push(carry & 0xff);
-      carry >>= 8;
-    }
-  }
-
-  // deal with leading zeros
-  for(var k = 0; input[k] === first && k < input.length - 1; ++k) {
-    bytes.push(0);
-  }
-
-  if(typeof Buffer !== 'undefined') {
-    return Buffer.from(bytes.reverse());
-  }
-
-  return new Uint8Array(bytes.reverse());
-};
-
-function _encodeWithByteBuffer(input, alphabet) {
-  var i = 0;
-  var base = alphabet.length;
-  var first = alphabet.charAt(0);
-  var digits = [0];
-  for(i = 0; i < input.length(); ++i) {
-    for(var j = 0, carry = input.at(i); j < digits.length; ++j) {
-      carry += digits[j] << 8;
-      digits[j] = carry % base;
-      carry = (carry / base) | 0;
-    }
-
-    while(carry > 0) {
-      digits.push(carry % base);
-      carry = (carry / base) | 0;
-    }
-  }
-
-  var output = '';
-
-  // deal with leading zeros
-  for(i = 0; input.at(i) === 0 && i < input.length() - 1; ++i) {
-    output += first;
-  }
-  // convert digits to a string
-  for(i = digits.length - 1; i >= 0; --i) {
-    output += alphabet[digits[i]];
-  }
-
-  return output;
-}
-
-}).call(this)}).call(this,require("buffer").Buffer)
-},{"buffer":27}],54:[function(require,module,exports){
-/**
- * Node.js module for Forge.
- *
- * @author Dave Longley
- *
- * Copyright 2011-2016 Digital Bazaar, Inc.
- */
-module.exports = {
-  // default options
-  options: {
-    usePureJavaScript: false
-  }
-};
-
-},{}],55:[function(require,module,exports){
-/**
- * Node.js module for Forge message digests.
- *
- * @author Dave Longley
- *
- * Copyright 2011-2017 Digital Bazaar, Inc.
- */
-var forge = require('./forge');
-
-module.exports = forge.md = forge.md || {};
-forge.md.algorithms = forge.md.algorithms || {};
-
-},{"./forge":54}],56:[function(require,module,exports){
-/**
- * Secure Hash Algorithm with 160-bit digest (SHA-1) implementation.
- *
- * @author Dave Longley
- *
- * Copyright (c) 2010-2015 Digital Bazaar, Inc.
- */
-var forge = require('./forge');
-require('./md');
-require('./util');
-
-var sha1 = module.exports = forge.sha1 = forge.sha1 || {};
-forge.md.sha1 = forge.md.algorithms.sha1 = sha1;
-
-/**
- * Creates a SHA-1 message digest object.
- *
- * @return a message digest object.
- */
-sha1.create = function() {
-  // do initialization as necessary
-  if(!_initialized) {
-    _init();
-  }
-
-  // SHA-1 state contains five 32-bit integers
-  var _state = null;
-
-  // input buffer
-  var _input = forge.util.createBuffer();
-
-  // used for word storage
-  var _w = new Array(80);
-
-  // message digest object
-  var md = {
-    algorithm: 'sha1',
-    blockLength: 64,
-    digestLength: 20,
-    // 56-bit length of message so far (does not including padding)
-    messageLength: 0,
-    // true message length
-    fullMessageLength: null,
-    // size of message length in bytes
-    messageLengthSize: 8
-  };
-
-  /**
-   * Starts the digest.
-   *
-   * @return this digest object.
-   */
-  md.start = function() {
-    // up to 56-bit message length for convenience
-    md.messageLength = 0;
-
-    // full message length (set md.messageLength64 for backwards-compatibility)
-    md.fullMessageLength = md.messageLength64 = [];
-    var int32s = md.messageLengthSize / 4;
-    for(var i = 0; i < int32s; ++i) {
-      md.fullMessageLength.push(0);
-    }
-    _input = forge.util.createBuffer();
-    _state = {
-      h0: 0x67452301,
-      h1: 0xEFCDAB89,
-      h2: 0x98BADCFE,
-      h3: 0x10325476,
-      h4: 0xC3D2E1F0
-    };
-    return md;
-  };
-  // start digest automatically for first time
-  md.start();
-
-  /**
-   * Updates the digest with the given message input. The given input can
-   * treated as raw input (no encoding will be applied) or an encoding of
-   * 'utf8' maybe given to encode the input using UTF-8.
-   *
-   * @param msg the message input to update with.
-   * @param encoding the encoding to use (default: 'raw', other: 'utf8').
-   *
-   * @return this digest object.
-   */
-  md.update = function(msg, encoding) {
-    if(encoding === 'utf8') {
-      msg = forge.util.encodeUtf8(msg);
-    }
-
-    // update message length
-    var len = msg.length;
-    md.messageLength += len;
-    len = [(len / 0x100000000) >>> 0, len >>> 0];
-    for(var i = md.fullMessageLength.length - 1; i >= 0; --i) {
-      md.fullMessageLength[i] += len[1];
-      len[1] = len[0] + ((md.fullMessageLength[i] / 0x100000000) >>> 0);
-      md.fullMessageLength[i] = md.fullMessageLength[i] >>> 0;
-      len[0] = ((len[1] / 0x100000000) >>> 0);
-    }
-
-    // add bytes to input buffer
-    _input.putBytes(msg);
-
-    // process bytes
-    _update(_state, _w, _input);
-
-    // compact input buffer every 2K or if empty
-    if(_input.read > 2048 || _input.length() === 0) {
-      _input.compact();
-    }
-
-    return md;
-  };
-
-  /**
-   * Produces the digest.
-   *
-   * @return a byte buffer containing the digest value.
-   */
-  md.digest = function() {
-    /* Note: Here we copy the remaining bytes in the input buffer and
-    add the appropriate SHA-1 padding. Then we do the final update
-    on a copy of the state so that if the user wants to get
-    intermediate digests they can do so. */
-
-    /* Determine the number of bytes that must be added to the message
-    to ensure its length is congruent to 448 mod 512. In other words,
-    the data to be digested must be a multiple of 512 bits (or 128 bytes).
-    This data includes the message, some padding, and the length of the
-    message. Since the length of the message will be encoded as 8 bytes (64
-    bits), that means that the last segment of the data must have 56 bytes
-    (448 bits) of message and padding. Therefore, the length of the message
-    plus the padding must be congruent to 448 mod 512 because
-    512 - 128 = 448.
-
-    In order to fill up the message length it must be filled with
-    padding that begins with 1 bit followed by all 0 bits. Padding
-    must *always* be present, so if the message length is already
-    congruent to 448 mod 512, then 512 padding bits must be added. */
-
-    var finalBlock = forge.util.createBuffer();
-    finalBlock.putBytes(_input.bytes());
-
-    // compute remaining size to be digested (include message length size)
-    var remaining = (
-      md.fullMessageLength[md.fullMessageLength.length - 1] +
-      md.messageLengthSize);
-
-    // add padding for overflow blockSize - overflow
-    // _padding starts with 1 byte with first bit is set (byte value 128), then
-    // there may be up to (blockSize - 1) other pad bytes
-    var overflow = remaining & (md.blockLength - 1);
-    finalBlock.putBytes(_padding.substr(0, md.blockLength - overflow));
-
-    // serialize message length in bits in big-endian order; since length
-    // is stored in bytes we multiply by 8 and add carry from next int
-    var next, carry;
-    var bits = md.fullMessageLength[0] * 8;
-    for(var i = 0; i < md.fullMessageLength.length - 1; ++i) {
-      next = md.fullMessageLength[i + 1] * 8;
-      carry = (next / 0x100000000) >>> 0;
-      bits += carry;
-      finalBlock.putInt32(bits >>> 0);
-      bits = next >>> 0;
-    }
-    finalBlock.putInt32(bits);
-
-    var s2 = {
-      h0: _state.h0,
-      h1: _state.h1,
-      h2: _state.h2,
-      h3: _state.h3,
-      h4: _state.h4
-    };
-    _update(s2, _w, finalBlock);
-    var rval = forge.util.createBuffer();
-    rval.putInt32(s2.h0);
-    rval.putInt32(s2.h1);
-    rval.putInt32(s2.h2);
-    rval.putInt32(s2.h3);
-    rval.putInt32(s2.h4);
-    return rval;
-  };
-
-  return md;
-};
-
-// sha-1 padding bytes not initialized yet
-var _padding = null;
-var _initialized = false;
-
-/**
- * Initializes the constant tables.
- */
-function _init() {
-  // create padding
-  _padding = String.fromCharCode(128);
-  _padding += forge.util.fillString(String.fromCharCode(0x00), 64);
-
-  // now initialized
-  _initialized = true;
-}
-
-/**
- * Updates a SHA-1 state with the given byte buffer.
- *
- * @param s the SHA-1 state to update.
- * @param w the array to use to store words.
- * @param bytes the byte buffer to update with.
- */
-function _update(s, w, bytes) {
-  // consume 512 bit (64 byte) chunks
-  var t, a, b, c, d, e, f, i;
-  var len = bytes.length();
-  while(len >= 64) {
-    // the w array will be populated with sixteen 32-bit big-endian words
-    // and then extended into 80 32-bit words according to SHA-1 algorithm
-    // and for 32-79 using Max Locktyukhin's optimization
-
-    // initialize hash value for this chunk
-    a = s.h0;
-    b = s.h1;
-    c = s.h2;
-    d = s.h3;
-    e = s.h4;
-
-    // round 1
-    for(i = 0; i < 16; ++i) {
-      t = bytes.getInt32();
-      w[i] = t;
-      f = d ^ (b & (c ^ d));
-      t = ((a << 5) | (a >>> 27)) + f + e + 0x5A827999 + t;
-      e = d;
-      d = c;
-      // `>>> 0` necessary to avoid iOS/Safari 10 optimization bug
-      c = ((b << 30) | (b >>> 2)) >>> 0;
-      b = a;
-      a = t;
-    }
-    for(; i < 20; ++i) {
-      t = (w[i - 3] ^ w[i - 8] ^ w[i - 14] ^ w[i - 16]);
-      t = (t << 1) | (t >>> 31);
-      w[i] = t;
-      f = d ^ (b & (c ^ d));
-      t = ((a << 5) | (a >>> 27)) + f + e + 0x5A827999 + t;
-      e = d;
-      d = c;
-      // `>>> 0` necessary to avoid iOS/Safari 10 optimization bug
-      c = ((b << 30) | (b >>> 2)) >>> 0;
-      b = a;
-      a = t;
-    }
-    // round 2
-    for(; i < 32; ++i) {
-      t = (w[i - 3] ^ w[i - 8] ^ w[i - 14] ^ w[i - 16]);
-      t = (t << 1) | (t >>> 31);
-      w[i] = t;
-      f = b ^ c ^ d;
-      t = ((a << 5) | (a >>> 27)) + f + e + 0x6ED9EBA1 + t;
-      e = d;
-      d = c;
-      // `>>> 0` necessary to avoid iOS/Safari 10 optimization bug
-      c = ((b << 30) | (b >>> 2)) >>> 0;
-      b = a;
-      a = t;
-    }
-    for(; i < 40; ++i) {
-      t = (w[i - 6] ^ w[i - 16] ^ w[i - 28] ^ w[i - 32]);
-      t = (t << 2) | (t >>> 30);
-      w[i] = t;
-      f = b ^ c ^ d;
-      t = ((a << 5) | (a >>> 27)) + f + e + 0x6ED9EBA1 + t;
-      e = d;
-      d = c;
-      // `>>> 0` necessary to avoid iOS/Safari 10 optimization bug
-      c = ((b << 30) | (b >>> 2)) >>> 0;
-      b = a;
-      a = t;
-    }
-    // round 3
-    for(; i < 60; ++i) {
-      t = (w[i - 6] ^ w[i - 16] ^ w[i - 28] ^ w[i - 32]);
-      t = (t << 2) | (t >>> 30);
-      w[i] = t;
-      f = (b & c) | (d & (b ^ c));
-      t = ((a << 5) | (a >>> 27)) + f + e + 0x8F1BBCDC + t;
-      e = d;
-      d = c;
-      // `>>> 0` necessary to avoid iOS/Safari 10 optimization bug
-      c = ((b << 30) | (b >>> 2)) >>> 0;
-      b = a;
-      a = t;
-    }
-    // round 4
-    for(; i < 80; ++i) {
-      t = (w[i - 6] ^ w[i - 16] ^ w[i - 28] ^ w[i - 32]);
-      t = (t << 2) | (t >>> 30);
-      w[i] = t;
-      f = b ^ c ^ d;
-      t = ((a << 5) | (a >>> 27)) + f + e + 0xCA62C1D6 + t;
-      e = d;
-      d = c;
-      // `>>> 0` necessary to avoid iOS/Safari 10 optimization bug
-      c = ((b << 30) | (b >>> 2)) >>> 0;
-      b = a;
-      a = t;
-    }
-
-    // update hash state
-    s.h0 = (s.h0 + a) | 0;
-    s.h1 = (s.h1 + b) | 0;
-    s.h2 = (s.h2 + c) | 0;
-    s.h3 = (s.h3 + d) | 0;
-    s.h4 = (s.h4 + e) | 0;
-
-    len -= 64;
-  }
-}
-
-},{"./forge":54,"./md":55,"./util":58}],57:[function(require,module,exports){
-/**
- * Secure Hash Algorithm with 256-bit digest (SHA-256) implementation.
- *
- * See FIPS 180-2 for details.
- *
- * @author Dave Longley
- *
- * Copyright (c) 2010-2015 Digital Bazaar, Inc.
- */
-var forge = require('./forge');
-require('./md');
-require('./util');
-
-var sha256 = module.exports = forge.sha256 = forge.sha256 || {};
-forge.md.sha256 = forge.md.algorithms.sha256 = sha256;
-
-/**
- * Creates a SHA-256 message digest object.
- *
- * @return a message digest object.
- */
-sha256.create = function() {
-  // do initialization as necessary
-  if(!_initialized) {
-    _init();
-  }
-
-  // SHA-256 state contains eight 32-bit integers
-  var _state = null;
-
-  // input buffer
-  var _input = forge.util.createBuffer();
-
-  // used for word storage
-  var _w = new Array(64);
-
-  // message digest object
-  var md = {
-    algorithm: 'sha256',
-    blockLength: 64,
-    digestLength: 32,
-    // 56-bit length of message so far (does not including padding)
-    messageLength: 0,
-    // true message length
-    fullMessageLength: null,
-    // size of message length in bytes
-    messageLengthSize: 8
-  };
-
-  /**
-   * Starts the digest.
-   *
-   * @return this digest object.
-   */
-  md.start = function() {
-    // up to 56-bit message length for convenience
-    md.messageLength = 0;
-
-    // full message length (set md.messageLength64 for backwards-compatibility)
-    md.fullMessageLength = md.messageLength64 = [];
-    var int32s = md.messageLengthSize / 4;
-    for(var i = 0; i < int32s; ++i) {
-      md.fullMessageLength.push(0);
-    }
-    _input = forge.util.createBuffer();
-    _state = {
-      h0: 0x6A09E667,
-      h1: 0xBB67AE85,
-      h2: 0x3C6EF372,
-      h3: 0xA54FF53A,
-      h4: 0x510E527F,
-      h5: 0x9B05688C,
-      h6: 0x1F83D9AB,
-      h7: 0x5BE0CD19
-    };
-    return md;
-  };
-  // start digest automatically for first time
-  md.start();
-
-  /**
-   * Updates the digest with the given message input. The given input can
-   * treated as raw input (no encoding will be applied) or an encoding of
-   * 'utf8' maybe given to encode the input using UTF-8.
-   *
-   * @param msg the message input to update with.
-   * @param encoding the encoding to use (default: 'raw', other: 'utf8').
-   *
-   * @return this digest object.
-   */
-  md.update = function(msg, encoding) {
-    if(encoding === 'utf8') {
-      msg = forge.util.encodeUtf8(msg);
-    }
-
-    // update message length
-    var len = msg.length;
-    md.messageLength += len;
-    len = [(len / 0x100000000) >>> 0, len >>> 0];
-    for(var i = md.fullMessageLength.length - 1; i >= 0; --i) {
-      md.fullMessageLength[i] += len[1];
-      len[1] = len[0] + ((md.fullMessageLength[i] / 0x100000000) >>> 0);
-      md.fullMessageLength[i] = md.fullMessageLength[i] >>> 0;
-      len[0] = ((len[1] / 0x100000000) >>> 0);
-    }
-
-    // add bytes to input buffer
-    _input.putBytes(msg);
-
-    // process bytes
-    _update(_state, _w, _input);
-
-    // compact input buffer every 2K or if empty
-    if(_input.read > 2048 || _input.length() === 0) {
-      _input.compact();
-    }
-
-    return md;
-  };
-
-  /**
-   * Produces the digest.
-   *
-   * @return a byte buffer containing the digest value.
-   */
-  md.digest = function() {
-    /* Note: Here we copy the remaining bytes in the input buffer and
-    add the appropriate SHA-256 padding. Then we do the final update
-    on a copy of the state so that if the user wants to get
-    intermediate digests they can do so. */
-
-    /* Determine the number of bytes that must be added to the message
-    to ensure its length is congruent to 448 mod 512. In other words,
-    the data to be digested must be a multiple of 512 bits (or 128 bytes).
-    This data includes the message, some padding, and the length of the
-    message. Since the length of the message will be encoded as 8 bytes (64
-    bits), that means that the last segment of the data must have 56 bytes
-    (448 bits) of message and padding. Therefore, the length of the message
-    plus the padding must be congruent to 448 mod 512 because
-    512 - 128 = 448.
-
-    In order to fill up the message length it must be filled with
-    padding that begins with 1 bit followed by all 0 bits. Padding
-    must *always* be present, so if the message length is already
-    congruent to 448 mod 512, then 512 padding bits must be added. */
-
-    var finalBlock = forge.util.createBuffer();
-    finalBlock.putBytes(_input.bytes());
-
-    // compute remaining size to be digested (include message length size)
-    var remaining = (
-      md.fullMessageLength[md.fullMessageLength.length - 1] +
-      md.messageLengthSize);
-
-    // add padding for overflow blockSize - overflow
-    // _padding starts with 1 byte with first bit is set (byte value 128), then
-    // there may be up to (blockSize - 1) other pad bytes
-    var overflow = remaining & (md.blockLength - 1);
-    finalBlock.putBytes(_padding.substr(0, md.blockLength - overflow));
-
-    // serialize message length in bits in big-endian order; since length
-    // is stored in bytes we multiply by 8 and add carry from next int
-    var next, carry;
-    var bits = md.fullMessageLength[0] * 8;
-    for(var i = 0; i < md.fullMessageLength.length - 1; ++i) {
-      next = md.fullMessageLength[i + 1] * 8;
-      carry = (next / 0x100000000) >>> 0;
-      bits += carry;
-      finalBlock.putInt32(bits >>> 0);
-      bits = next >>> 0;
-    }
-    finalBlock.putInt32(bits);
-
-    var s2 = {
-      h0: _state.h0,
-      h1: _state.h1,
-      h2: _state.h2,
-      h3: _state.h3,
-      h4: _state.h4,
-      h5: _state.h5,
-      h6: _state.h6,
-      h7: _state.h7
-    };
-    _update(s2, _w, finalBlock);
-    var rval = forge.util.createBuffer();
-    rval.putInt32(s2.h0);
-    rval.putInt32(s2.h1);
-    rval.putInt32(s2.h2);
-    rval.putInt32(s2.h3);
-    rval.putInt32(s2.h4);
-    rval.putInt32(s2.h5);
-    rval.putInt32(s2.h6);
-    rval.putInt32(s2.h7);
-    return rval;
-  };
-
-  return md;
-};
-
-// sha-256 padding bytes not initialized yet
-var _padding = null;
-var _initialized = false;
-
-// table of constants
-var _k = null;
-
-/**
- * Initializes the constant tables.
- */
-function _init() {
-  // create padding
-  _padding = String.fromCharCode(128);
-  _padding += forge.util.fillString(String.fromCharCode(0x00), 64);
-
-  // create K table for SHA-256
-  _k = [
-    0x428a2f98, 0x71374491, 0xb5c0fbcf, 0xe9b5dba5,
-    0x3956c25b, 0x59f111f1, 0x923f82a4, 0xab1c5ed5,
-    0xd807aa98, 0x12835b01, 0x243185be, 0x550c7dc3,
-    0x72be5d74, 0x80deb1fe, 0x9bdc06a7, 0xc19bf174,
-    0xe49b69c1, 0xefbe4786, 0x0fc19dc6, 0x240ca1cc,
-    0x2de92c6f, 0x4a7484aa, 0x5cb0a9dc, 0x76f988da,
-    0x983e5152, 0xa831c66d, 0xb00327c8, 0xbf597fc7,
-    0xc6e00bf3, 0xd5a79147, 0x06ca6351, 0x14292967,
-    0x27b70a85, 0x2e1b2138, 0x4d2c6dfc, 0x53380d13,
-    0x650a7354, 0x766a0abb, 0x81c2c92e, 0x92722c85,
-    0xa2bfe8a1, 0xa81a664b, 0xc24b8b70, 0xc76c51a3,
-    0xd192e819, 0xd6990624, 0xf40e3585, 0x106aa070,
-    0x19a4c116, 0x1e376c08, 0x2748774c, 0x34b0bcb5,
-    0x391c0cb3, 0x4ed8aa4a, 0x5b9cca4f, 0x682e6ff3,
-    0x748f82ee, 0x78a5636f, 0x84c87814, 0x8cc70208,
-    0x90befffa, 0xa4506ceb, 0xbef9a3f7, 0xc67178f2];
-
-  // now initialized
-  _initialized = true;
-}
-
-/**
- * Updates a SHA-256 state with the given byte buffer.
- *
- * @param s the SHA-256 state to update.
- * @param w the array to use to store words.
- * @param bytes the byte buffer to update with.
- */
-function _update(s, w, bytes) {
-  // consume 512 bit (64 byte) chunks
-  var t1, t2, s0, s1, ch, maj, i, a, b, c, d, e, f, g, h;
-  var len = bytes.length();
-  while(len >= 64) {
-    // the w array will be populated with sixteen 32-bit big-endian words
-    // and then extended into 64 32-bit words according to SHA-256
-    for(i = 0; i < 16; ++i) {
-      w[i] = bytes.getInt32();
-    }
-    for(; i < 64; ++i) {
-      // XOR word 2 words ago rot right 17, rot right 19, shft right 10
-      t1 = w[i - 2];
-      t1 =
-        ((t1 >>> 17) | (t1 << 15)) ^
-        ((t1 >>> 19) | (t1 << 13)) ^
-        (t1 >>> 10);
-      // XOR word 15 words ago rot right 7, rot right 18, shft right 3
-      t2 = w[i - 15];
-      t2 =
-        ((t2 >>> 7) | (t2 << 25)) ^
-        ((t2 >>> 18) | (t2 << 14)) ^
-        (t2 >>> 3);
-      // sum(t1, word 7 ago, t2, word 16 ago) modulo 2^32
-      w[i] = (t1 + w[i - 7] + t2 + w[i - 16]) | 0;
-    }
-
-    // initialize hash value for this chunk
-    a = s.h0;
-    b = s.h1;
-    c = s.h2;
-    d = s.h3;
-    e = s.h4;
-    f = s.h5;
-    g = s.h6;
-    h = s.h7;
-
-    // round function
-    for(i = 0; i < 64; ++i) {
-      // Sum1(e)
-      s1 =
-        ((e >>> 6) | (e << 26)) ^
-        ((e >>> 11) | (e << 21)) ^
-        ((e >>> 25) | (e << 7));
-      // Ch(e, f, g) (optimized the same way as SHA-1)
-      ch = g ^ (e & (f ^ g));
-      // Sum0(a)
-      s0 =
-        ((a >>> 2) | (a << 30)) ^
-        ((a >>> 13) | (a << 19)) ^
-        ((a >>> 22) | (a << 10));
-      // Maj(a, b, c) (optimized the same way as SHA-1)
-      maj = (a & b) | (c & (a ^ b));
-
-      // main algorithm
-      t1 = h + s1 + ch + _k[i] + w[i];
-      t2 = s0 + maj;
-      h = g;
-      g = f;
-      f = e;
-      // `>>> 0` necessary to avoid iOS/Safari 10 optimization bug
-      // can't truncate with `| 0`
-      e = (d + t1) >>> 0;
-      d = c;
-      c = b;
-      b = a;
-      // `>>> 0` necessary to avoid iOS/Safari 10 optimization bug
-      // can't truncate with `| 0`
-      a = (t1 + t2) >>> 0;
-    }
-
-    // update hash state
-    s.h0 = (s.h0 + a) | 0;
-    s.h1 = (s.h1 + b) | 0;
-    s.h2 = (s.h2 + c) | 0;
-    s.h3 = (s.h3 + d) | 0;
-    s.h4 = (s.h4 + e) | 0;
-    s.h5 = (s.h5 + f) | 0;
-    s.h6 = (s.h6 + g) | 0;
-    s.h7 = (s.h7 + h) | 0;
-    len -= 64;
-  }
-}
-
-},{"./forge":54,"./md":55,"./util":58}],58:[function(require,module,exports){
-(function (process,global,Buffer,__argument0,__argument1,__argument2,__argument3,setImmediate){(function (){
-/**
- * Utility functions for web applications.
- *
- * @author Dave Longley
- *
- * Copyright (c) 2010-2018 Digital Bazaar, Inc.
- */
-var forge = require('./forge');
-var baseN = require('./baseN');
-
-/* Utilities API */
-var util = module.exports = forge.util = forge.util || {};
-
-// define setImmediate and nextTick
-(function() {
-  // use native nextTick (unless we're in webpack)
-  // webpack (or better node-libs-browser polyfill) sets process.browser.
-  // this way we can detect webpack properly
-  if(typeof process !== 'undefined' && process.nextTick && !process.browser) {
-    util.nextTick = process.nextTick;
-    if(typeof setImmediate === 'function') {
-      util.setImmediate = setImmediate;
-    } else {
-      // polyfill setImmediate with nextTick, older versions of node
-      // (those w/o setImmediate) won't totally starve IO
-      util.setImmediate = util.nextTick;
-    }
-    return;
-  }
-
-  // polyfill nextTick with native setImmediate
-  if(typeof setImmediate === 'function') {
-    util.setImmediate = function() { return setImmediate.apply(undefined, arguments); };
-    util.nextTick = function(callback) {
-      return setImmediate(callback);
-    };
-    return;
-  }
-
-  /* Note: A polyfill upgrade pattern is used here to allow combining
-  polyfills. For example, MutationObserver is fast, but blocks UI updates,
-  so it needs to allow UI updates periodically, so it falls back on
-  postMessage or setTimeout. */
-
-  // polyfill with setTimeout
-  util.setImmediate = function(callback) {
-    setTimeout(callback, 0);
-  };
-
-  // upgrade polyfill to use postMessage
-  if(typeof window !== 'undefined' &&
-    typeof window.postMessage === 'function') {
-    var msg = 'forge.setImmediate';
-    var callbacks = [];
-    util.setImmediate = function(callback) {
-      callbacks.push(callback);
-      // only send message when one hasn't been sent in
-      // the current turn of the event loop
-      if(callbacks.length === 1) {
-        window.postMessage(msg, '*');
-      }
-    };
-    function handler(event) {
-      if(event.source === window && event.data === msg) {
-        event.stopPropagation();
-        var copy = callbacks.slice();
-        callbacks.length = 0;
-        copy.forEach(function(callback) {
-          callback();
-        });
-      }
-    }
-    window.addEventListener('message', handler, true);
-  }
-
-  // upgrade polyfill to use MutationObserver
-  if(typeof MutationObserver !== 'undefined') {
-    // polyfill with MutationObserver
-    var now = Date.now();
-    var attr = true;
-    var div = document.createElement('div');
-    var callbacks = [];
-    new MutationObserver(function() {
-      var copy = callbacks.slice();
-      callbacks.length = 0;
-      copy.forEach(function(callback) {
-        callback();
-      });
-    }).observe(div, {attributes: true});
-    var oldSetImmediate = util.setImmediate;
-    util.setImmediate = function(callback) {
-      if(Date.now() - now > 15) {
-        now = Date.now();
-        oldSetImmediate(callback);
-      } else {
-        callbacks.push(callback);
-        // only trigger observer when it hasn't been triggered in
-        // the current turn of the event loop
-        if(callbacks.length === 1) {
-          div.setAttribute('a', attr = !attr);
-        }
-      }
-    };
-  }
-
-  util.nextTick = util.setImmediate;
-})();
-
-// check if running under Node.js
-util.isNodejs =
-  typeof process !== 'undefined' && process.versions && process.versions.node;
-
-
-// 'self' will also work in Web Workers (instance of WorkerGlobalScope) while
-// it will point to `window` in the main thread.
-// To remain compatible with older browsers, we fall back to 'window' if 'self'
-// is not available.
-util.globalScope = (function() {
-  if(util.isNodejs) {
-    return global;
-  }
-
-  return typeof self === 'undefined' ? window : self;
-})();
-
-// define isArray
-util.isArray = Array.isArray || function(x) {
-  return Object.prototype.toString.call(x) === '[object Array]';
-};
-
-// define isArrayBuffer
-util.isArrayBuffer = function(x) {
-  return typeof ArrayBuffer !== 'undefined' && x instanceof ArrayBuffer;
-};
-
-// define isArrayBufferView
-util.isArrayBufferView = function(x) {
-  return x && util.isArrayBuffer(x.buffer) && x.byteLength !== undefined;
-};
-
-/**
- * Ensure a bits param is 8, 16, 24, or 32. Used to validate input for
- * algorithms where bit manipulation, JavaScript limitations, and/or algorithm
- * design only allow for byte operations of a limited size.
- *
- * @param n number of bits.
- *
- * Throw Error if n invalid.
- */
-function _checkBitsParam(n) {
-  if(!(n === 8 || n === 16 || n === 24 || n === 32)) {
-    throw new Error('Only 8, 16, 24, or 32 bits supported: ' + n);
-  }
-}
-
-// TODO: set ByteBuffer to best available backing
-util.ByteBuffer = ByteStringBuffer;
-
-/** Buffer w/BinaryString backing */
-
-/**
- * Constructor for a binary string backed byte buffer.
- *
- * @param [b] the bytes to wrap (either encoded as string, one byte per
- *          character, or as an ArrayBuffer or Typed Array).
- */
-function ByteStringBuffer(b) {
-  // TODO: update to match DataBuffer API
-
-  // the data in this buffer
-  this.data = '';
-  // the pointer for reading from this buffer
-  this.read = 0;
-
-  if(typeof b === 'string') {
-    this.data = b;
-  } else if(util.isArrayBuffer(b) || util.isArrayBufferView(b)) {
-    if(typeof Buffer !== 'undefined' && b instanceof Buffer) {
-      this.data = b.toString('binary');
-    } else {
-      // convert native buffer to forge buffer
-      // FIXME: support native buffers internally instead
-      var arr = new Uint8Array(b);
-      try {
-        this.data = String.fromCharCode.apply(null, arr);
-      } catch(e) {
-        for(var i = 0; i < arr.length; ++i) {
-          this.putByte(arr[i]);
-        }
-      }
-    }
-  } else if(b instanceof ByteStringBuffer ||
-    (typeof b === 'object' && typeof b.data === 'string' &&
-    typeof b.read === 'number')) {
-    // copy existing buffer
-    this.data = b.data;
-    this.read = b.read;
-  }
-
-  // used for v8 optimization
-  this._constructedStringLength = 0;
-}
-util.ByteStringBuffer = ByteStringBuffer;
-
-/* Note: This is an optimization for V8-based browsers. When V8 concatenates
-  a string, the strings are only joined logically using a "cons string" or
-  "constructed/concatenated string". These containers keep references to one
-  another and can result in very large memory usage. For example, if a 2MB
-  string is constructed by concatenating 4 bytes together at a time, the
-  memory usage will be ~44MB; so ~22x increase. The strings are only joined
-  together when an operation requiring their joining takes place, such as
-  substr(). This function is called when adding data to this buffer to ensure
-  these types of strings are periodically joined to reduce the memory
-  footprint. */
-var _MAX_CONSTRUCTED_STRING_LENGTH = 4096;
-util.ByteStringBuffer.prototype._optimizeConstructedString = function(x) {
-  this._constructedStringLength += x;
-  if(this._constructedStringLength > _MAX_CONSTRUCTED_STRING_LENGTH) {
-    // this substr() should cause the constructed string to join
-    this.data.substr(0, 1);
-    this._constructedStringLength = 0;
-  }
-};
-
-/**
- * Gets the number of bytes in this buffer.
- *
- * @return the number of bytes in this buffer.
- */
-util.ByteStringBuffer.prototype.length = function() {
-  return this.data.length - this.read;
-};
-
-/**
- * Gets whether or not this buffer is empty.
- *
- * @return true if this buffer is empty, false if not.
- */
-util.ByteStringBuffer.prototype.isEmpty = function() {
-  return this.length() <= 0;
-};
-
-/**
- * Puts a byte in this buffer.
- *
- * @param b the byte to put.
- *
- * @return this buffer.
- */
-util.ByteStringBuffer.prototype.putByte = function(b) {
-  return this.putBytes(String.fromCharCode(b));
-};
-
-/**
- * Puts a byte in this buffer N times.
- *
- * @param b the byte to put.
- * @param n the number of bytes of value b to put.
- *
- * @return this buffer.
- */
-util.ByteStringBuffer.prototype.fillWithByte = function(b, n) {
-  b = String.fromCharCode(b);
-  var d = this.data;
-  while(n > 0) {
-    if(n & 1) {
-      d += b;
-    }
-    n >>>= 1;
-    if(n > 0) {
-      b += b;
-    }
-  }
-  this.data = d;
-  this._optimizeConstructedString(n);
-  return this;
-};
-
-/**
- * Puts bytes in this buffer.
- *
- * @param bytes the bytes (as a binary encoded string) to put.
- *
- * @return this buffer.
- */
-util.ByteStringBuffer.prototype.putBytes = function(bytes) {
-  this.data += bytes;
-  this._optimizeConstructedString(bytes.length);
-  return this;
-};
-
-/**
- * Puts a UTF-16 encoded string into this buffer.
- *
- * @param str the string to put.
- *
- * @return this buffer.
- */
-util.ByteStringBuffer.prototype.putString = function(str) {
-  return this.putBytes(util.encodeUtf8(str));
-};
-
-/**
- * Puts a 16-bit integer in this buffer in big-endian order.
- *
- * @param i the 16-bit integer.
- *
- * @return this buffer.
- */
-util.ByteStringBuffer.prototype.putInt16 = function(i) {
-  return this.putBytes(
-    String.fromCharCode(i >> 8 & 0xFF) +
-    String.fromCharCode(i & 0xFF));
-};
-
-/**
- * Puts a 24-bit integer in this buffer in big-endian order.
- *
- * @param i the 24-bit integer.
- *
- * @return this buffer.
- */
-util.ByteStringBuffer.prototype.putInt24 = function(i) {
-  return this.putBytes(
-    String.fromCharCode(i >> 16 & 0xFF) +
-    String.fromCharCode(i >> 8 & 0xFF) +
-    String.fromCharCode(i & 0xFF));
-};
-
-/**
- * Puts a 32-bit integer in this buffer in big-endian order.
- *
- * @param i the 32-bit integer.
- *
- * @return this buffer.
- */
-util.ByteStringBuffer.prototype.putInt32 = function(i) {
-  return this.putBytes(
-    String.fromCharCode(i >> 24 & 0xFF) +
-    String.fromCharCode(i >> 16 & 0xFF) +
-    String.fromCharCode(i >> 8 & 0xFF) +
-    String.fromCharCode(i & 0xFF));
-};
-
-/**
- * Puts a 16-bit integer in this buffer in little-endian order.
- *
- * @param i the 16-bit integer.
- *
- * @return this buffer.
- */
-util.ByteStringBuffer.prototype.putInt16Le = function(i) {
-  return this.putBytes(
-    String.fromCharCode(i & 0xFF) +
-    String.fromCharCode(i >> 8 & 0xFF));
-};
-
-/**
- * Puts a 24-bit integer in this buffer in little-endian order.
- *
- * @param i the 24-bit integer.
- *
- * @return this buffer.
- */
-util.ByteStringBuffer.prototype.putInt24Le = function(i) {
-  return this.putBytes(
-    String.fromCharCode(i & 0xFF) +
-    String.fromCharCode(i >> 8 & 0xFF) +
-    String.fromCharCode(i >> 16 & 0xFF));
-};
-
-/**
- * Puts a 32-bit integer in this buffer in little-endian order.
- *
- * @param i the 32-bit integer.
- *
- * @return this buffer.
- */
-util.ByteStringBuffer.prototype.putInt32Le = function(i) {
-  return this.putBytes(
-    String.fromCharCode(i & 0xFF) +
-    String.fromCharCode(i >> 8 & 0xFF) +
-    String.fromCharCode(i >> 16 & 0xFF) +
-    String.fromCharCode(i >> 24 & 0xFF));
-};
-
-/**
- * Puts an n-bit integer in this buffer in big-endian order.
- *
- * @param i the n-bit integer.
- * @param n the number of bits in the integer (8, 16, 24, or 32).
- *
- * @return this buffer.
- */
-util.ByteStringBuffer.prototype.putInt = function(i, n) {
-  _checkBitsParam(n);
-  var bytes = '';
-  do {
-    n -= 8;
-    bytes += String.fromCharCode((i >> n) & 0xFF);
-  } while(n > 0);
-  return this.putBytes(bytes);
-};
-
-/**
- * Puts a signed n-bit integer in this buffer in big-endian order. Two's
- * complement representation is used.
- *
- * @param i the n-bit integer.
- * @param n the number of bits in the integer (8, 16, 24, or 32).
- *
- * @return this buffer.
- */
-util.ByteStringBuffer.prototype.putSignedInt = function(i, n) {
-  // putInt checks n
-  if(i < 0) {
-    i += 2 << (n - 1);
-  }
-  return this.putInt(i, n);
-};
-
-/**
- * Puts the given buffer into this buffer.
- *
- * @param buffer the buffer to put into this one.
- *
- * @return this buffer.
- */
-util.ByteStringBuffer.prototype.putBuffer = function(buffer) {
-  return this.putBytes(buffer.getBytes());
-};
-
-/**
- * Gets a byte from this buffer and advances the read pointer by 1.
- *
- * @return the byte.
- */
-util.ByteStringBuffer.prototype.getByte = function() {
-  return this.data.charCodeAt(this.read++);
-};
-
-/**
- * Gets a uint16 from this buffer in big-endian order and advances the read
- * pointer by 2.
- *
- * @return the uint16.
- */
-util.ByteStringBuffer.prototype.getInt16 = function() {
-  var rval = (
-    this.data.charCodeAt(this.read) << 8 ^
-    this.data.charCodeAt(this.read + 1));
-  this.read += 2;
-  return rval;
-};
-
-/**
- * Gets a uint24 from this buffer in big-endian order and advances the read
- * pointer by 3.
- *
- * @return the uint24.
- */
-util.ByteStringBuffer.prototype.getInt24 = function() {
-  var rval = (
-    this.data.charCodeAt(this.read) << 16 ^
-    this.data.charCodeAt(this.read + 1) << 8 ^
-    this.data.charCodeAt(this.read + 2));
-  this.read += 3;
-  return rval;
-};
-
-/**
- * Gets a uint32 from this buffer in big-endian order and advances the read
- * pointer by 4.
- *
- * @return the word.
- */
-util.ByteStringBuffer.prototype.getInt32 = function() {
-  var rval = (
-    this.data.charCodeAt(this.read) << 24 ^
-    this.data.charCodeAt(this.read + 1) << 16 ^
-    this.data.charCodeAt(this.read + 2) << 8 ^
-    this.data.charCodeAt(this.read + 3));
-  this.read += 4;
-  return rval;
-};
-
-/**
- * Gets a uint16 from this buffer in little-endian order and advances the read
- * pointer by 2.
- *
- * @return the uint16.
- */
-util.ByteStringBuffer.prototype.getInt16Le = function() {
-  var rval = (
-    this.data.charCodeAt(this.read) ^
-    this.data.charCodeAt(this.read + 1) << 8);
-  this.read += 2;
-  return rval;
-};
-
-/**
- * Gets a uint24 from this buffer in little-endian order and advances the read
- * pointer by 3.
- *
- * @return the uint24.
- */
-util.ByteStringBuffer.prototype.getInt24Le = function() {
-  var rval = (
-    this.data.charCodeAt(this.read) ^
-    this.data.charCodeAt(this.read + 1) << 8 ^
-    this.data.charCodeAt(this.read + 2) << 16);
-  this.read += 3;
-  return rval;
-};
-
-/**
- * Gets a uint32 from this buffer in little-endian order and advances the read
- * pointer by 4.
- *
- * @return the word.
- */
-util.ByteStringBuffer.prototype.getInt32Le = function() {
-  var rval = (
-    this.data.charCodeAt(this.read) ^
-    this.data.charCodeAt(this.read + 1) << 8 ^
-    this.data.charCodeAt(this.read + 2) << 16 ^
-    this.data.charCodeAt(this.read + 3) << 24);
-  this.read += 4;
-  return rval;
-};
-
-/**
- * Gets an n-bit integer from this buffer in big-endian order and advances the
- * read pointer by ceil(n/8).
- *
- * @param n the number of bits in the integer (8, 16, 24, or 32).
- *
- * @return the integer.
- */
-util.ByteStringBuffer.prototype.getInt = function(n) {
-  _checkBitsParam(n);
-  var rval = 0;
-  do {
-    // TODO: Use (rval * 0x100) if adding support for 33 to 53 bits.
-    rval = (rval << 8) + this.data.charCodeAt(this.read++);
-    n -= 8;
-  } while(n > 0);
-  return rval;
-};
-
-/**
- * Gets a signed n-bit integer from this buffer in big-endian order, using
- * two's complement, and advances the read pointer by n/8.
- *
- * @param n the number of bits in the integer (8, 16, 24, or 32).
- *
- * @return the integer.
- */
-util.ByteStringBuffer.prototype.getSignedInt = function(n) {
-  // getInt checks n
-  var x = this.getInt(n);
-  var max = 2 << (n - 2);
-  if(x >= max) {
-    x -= max << 1;
-  }
-  return x;
-};
-
-/**
- * Reads bytes out as a binary encoded string and clears them from the
- * buffer. Note that the resulting string is binary encoded (in node.js this
- * encoding is referred to as `binary`, it is *not* `utf8`).
- *
- * @param count the number of bytes to read, undefined or null for all.
- *
- * @return a binary encoded string of bytes.
- */
-util.ByteStringBuffer.prototype.getBytes = function(count) {
-  var rval;
-  if(count) {
-    // read count bytes
-    count = Math.min(this.length(), count);
-    rval = this.data.slice(this.read, this.read + count);
-    this.read += count;
-  } else if(count === 0) {
-    rval = '';
-  } else {
-    // read all bytes, optimize to only copy when needed
-    rval = (this.read === 0) ? this.data : this.data.slice(this.read);
-    this.clear();
-  }
-  return rval;
-};
-
-/**
- * Gets a binary encoded string of the bytes from this buffer without
- * modifying the read pointer.
- *
- * @param count the number of bytes to get, omit to get all.
- *
- * @return a string full of binary encoded characters.
- */
-util.ByteStringBuffer.prototype.bytes = function(count) {
-  return (typeof(count) === 'undefined' ?
-    this.data.slice(this.read) :
-    this.data.slice(this.read, this.read + count));
-};
-
-/**
- * Gets a byte at the given index without modifying the read pointer.
- *
- * @param i the byte index.
- *
- * @return the byte.
- */
-util.ByteStringBuffer.prototype.at = function(i) {
-  return this.data.charCodeAt(this.read + i);
-};
-
-/**
- * Puts a byte at the given index without modifying the read pointer.
- *
- * @param i the byte index.
- * @param b the byte to put.
- *
- * @return this buffer.
- */
-util.ByteStringBuffer.prototype.setAt = function(i, b) {
-  this.data = this.data.substr(0, this.read + i) +
-    String.fromCharCode(b) +
-    this.data.substr(this.read + i + 1);
-  return this;
-};
-
-/**
- * Gets the last byte without modifying the read pointer.
- *
- * @return the last byte.
- */
-util.ByteStringBuffer.prototype.last = function() {
-  return this.data.charCodeAt(this.data.length - 1);
-};
-
-/**
- * Creates a copy of this buffer.
- *
- * @return the copy.
- */
-util.ByteStringBuffer.prototype.copy = function() {
-  var c = util.createBuffer(this.data);
-  c.read = this.read;
-  return c;
-};
-
-/**
- * Compacts this buffer.
- *
- * @return this buffer.
- */
-util.ByteStringBuffer.prototype.compact = function() {
-  if(this.read > 0) {
-    this.data = this.data.slice(this.read);
-    this.read = 0;
-  }
-  return this;
-};
-
-/**
- * Clears this buffer.
- *
- * @return this buffer.
- */
-util.ByteStringBuffer.prototype.clear = function() {
-  this.data = '';
-  this.read = 0;
-  return this;
-};
-
-/**
- * Shortens this buffer by triming bytes off of the end of this buffer.
- *
- * @param count the number of bytes to trim off.
- *
- * @return this buffer.
- */
-util.ByteStringBuffer.prototype.truncate = function(count) {
-  var len = Math.max(0, this.length() - count);
-  this.data = this.data.substr(this.read, len);
-  this.read = 0;
-  return this;
-};
-
-/**
- * Converts this buffer to a hexadecimal string.
- *
- * @return a hexadecimal string.
- */
-util.ByteStringBuffer.prototype.toHex = function() {
-  var rval = '';
-  for(var i = this.read; i < this.data.length; ++i) {
-    var b = this.data.charCodeAt(i);
-    if(b < 16) {
-      rval += '0';
-    }
-    rval += b.toString(16);
-  }
-  return rval;
-};
-
-/**
- * Converts this buffer to a UTF-16 string (standard JavaScript string).
- *
- * @return a UTF-16 string.
- */
-util.ByteStringBuffer.prototype.toString = function() {
-  return util.decodeUtf8(this.bytes());
-};
-
-/** End Buffer w/BinaryString backing */
-
-/** Buffer w/UInt8Array backing */
-
-/**
- * FIXME: Experimental. Do not use yet.
- *
- * Constructor for an ArrayBuffer-backed byte buffer.
- *
- * The buffer may be constructed from a string, an ArrayBuffer, DataView, or a
- * TypedArray.
- *
- * If a string is given, its encoding should be provided as an option,
- * otherwise it will default to 'binary'. A 'binary' string is encoded such
- * that each character is one byte in length and size.
- *
- * If an ArrayBuffer, DataView, or TypedArray is given, it will be used
- * *directly* without any copying. Note that, if a write to the buffer requires
- * more space, the buffer will allocate a new backing ArrayBuffer to
- * accommodate. The starting read and write offsets for the buffer may be
- * given as options.
- *
- * @param [b] the initial bytes for this buffer.
- * @param options the options to use:
- *          [readOffset] the starting read offset to use (default: 0).
- *          [writeOffset] the starting write offset to use (default: the
- *            length of the first parameter).
- *          [growSize] the minimum amount, in bytes, to grow the buffer by to
- *            accommodate writes (default: 1024).
- *          [encoding] the encoding ('binary', 'utf8', 'utf16', 'hex') for the
- *            first parameter, if it is a string (default: 'binary').
- */
-function DataBuffer(b, options) {
-  // default options
-  options = options || {};
-
-  // pointers for read from/write to buffer
-  this.read = options.readOffset || 0;
-  this.growSize = options.growSize || 1024;
-
-  var isArrayBuffer = util.isArrayBuffer(b);
-  var isArrayBufferView = util.isArrayBufferView(b);
-  if(isArrayBuffer || isArrayBufferView) {
-    // use ArrayBuffer directly
-    if(isArrayBuffer) {
-      this.data = new DataView(b);
-    } else {
-      // TODO: adjust read/write offset based on the type of view
-      // or specify that this must be done in the options ... that the
-      // offsets are byte-based
-      this.data = new DataView(b.buffer, b.byteOffset, b.byteLength);
-    }
-    this.write = ('writeOffset' in options ?
-      options.writeOffset : this.data.byteLength);
-    return;
-  }
-
-  // initialize to empty array buffer and add any given bytes using putBytes
-  this.data = new DataView(new ArrayBuffer(0));
-  this.write = 0;
-
-  if(b !== null && b !== undefined) {
-    this.putBytes(b);
-  }
-
-  if('writeOffset' in options) {
-    this.write = options.writeOffset;
-  }
-}
-util.DataBuffer = DataBuffer;
-
-/**
- * Gets the number of bytes in this buffer.
- *
- * @return the number of bytes in this buffer.
- */
-util.DataBuffer.prototype.length = function() {
-  return this.write - this.read;
-};
-
-/**
- * Gets whether or not this buffer is empty.
- *
- * @return true if this buffer is empty, false if not.
- */
-util.DataBuffer.prototype.isEmpty = function() {
-  return this.length() <= 0;
-};
-
-/**
- * Ensures this buffer has enough empty space to accommodate the given number
- * of bytes. An optional parameter may be given that indicates a minimum
- * amount to grow the buffer if necessary. If the parameter is not given,
- * the buffer will be grown by some previously-specified default amount
- * or heuristic.
- *
- * @param amount the number of bytes to accommodate.
- * @param [growSize] the minimum amount, in bytes, to grow the buffer by if
- *          necessary.
- */
-util.DataBuffer.prototype.accommodate = function(amount, growSize) {
-  if(this.length() >= amount) {
-    return this;
-  }
-  growSize = Math.max(growSize || this.growSize, amount);
-
-  // grow buffer
-  var src = new Uint8Array(
-    this.data.buffer, this.data.byteOffset, this.data.byteLength);
-  var dst = new Uint8Array(this.length() + growSize);
-  dst.set(src);
-  this.data = new DataView(dst.buffer);
-
-  return this;
-};
-
-/**
- * Puts a byte in this buffer.
- *
- * @param b the byte to put.
- *
- * @return this buffer.
- */
-util.DataBuffer.prototype.putByte = function(b) {
-  this.accommodate(1);
-  this.data.setUint8(this.write++, b);
-  return this;
-};
-
-/**
- * Puts a byte in this buffer N times.
- *
- * @param b the byte to put.
- * @param n the number of bytes of value b to put.
- *
- * @return this buffer.
- */
-util.DataBuffer.prototype.fillWithByte = function(b, n) {
-  this.accommodate(n);
-  for(var i = 0; i < n; ++i) {
-    this.data.setUint8(b);
-  }
-  return this;
-};
-
-/**
- * Puts bytes in this buffer. The bytes may be given as a string, an
- * ArrayBuffer, a DataView, or a TypedArray.
- *
- * @param bytes the bytes to put.
- * @param [encoding] the encoding for the first parameter ('binary', 'utf8',
- *          'utf16', 'hex'), if it is a string (default: 'binary').
- *
- * @return this buffer.
- */
-util.DataBuffer.prototype.putBytes = function(bytes, encoding) {
-  if(util.isArrayBufferView(bytes)) {
-    var src = new Uint8Array(bytes.buffer, bytes.byteOffset, bytes.byteLength);
-    var len = src.byteLength - src.byteOffset;
-    this.accommodate(len);
-    var dst = new Uint8Array(this.data.buffer, this.write);
-    dst.set(src);
-    this.write += len;
-    return this;
-  }
-
-  if(util.isArrayBuffer(bytes)) {
-    var src = new Uint8Array(bytes);
-    this.accommodate(src.byteLength);
-    var dst = new Uint8Array(this.data.buffer);
-    dst.set(src, this.write);
-    this.write += src.byteLength;
-    return this;
-  }
-
-  // bytes is a util.DataBuffer or equivalent
-  if(bytes instanceof util.DataBuffer ||
-    (typeof bytes === 'object' &&
-    typeof bytes.read === 'number' && typeof bytes.write === 'number' &&
-    util.isArrayBufferView(bytes.data))) {
-    var src = new Uint8Array(bytes.data.byteLength, bytes.read, bytes.length());
-    this.accommodate(src.byteLength);
-    var dst = new Uint8Array(bytes.data.byteLength, this.write);
-    dst.set(src);
-    this.write += src.byteLength;
-    return this;
-  }
-
-  if(bytes instanceof util.ByteStringBuffer) {
-    // copy binary string and process as the same as a string parameter below
-    bytes = bytes.data;
-    encoding = 'binary';
-  }
-
-  // string conversion
-  encoding = encoding || 'binary';
-  if(typeof bytes === 'string') {
-    var view;
-
-    // decode from string
-    if(encoding === 'hex') {
-      this.accommodate(Math.ceil(bytes.length / 2));
-      view = new Uint8Array(this.data.buffer, this.write);
-      this.write += util.binary.hex.decode(bytes, view, this.write);
-      return this;
-    }
-    if(encoding === 'base64') {
-      this.accommodate(Math.ceil(bytes.length / 4) * 3);
-      view = new Uint8Array(this.data.buffer, this.write);
-      this.write += util.binary.base64.decode(bytes, view, this.write);
-      return this;
-    }
-
-    // encode text as UTF-8 bytes
-    if(encoding === 'utf8') {
-      // encode as UTF-8 then decode string as raw binary
-      bytes = util.encodeUtf8(bytes);
-      encoding = 'binary';
-    }
-
-    // decode string as raw binary
-    if(encoding === 'binary' || encoding === 'raw') {
-      // one byte per character
-      this.accommodate(bytes.length);
-      view = new Uint8Array(this.data.buffer, this.write);
-      this.write += util.binary.raw.decode(view);
-      return this;
-    }
-
-    // encode text as UTF-16 bytes
-    if(encoding === 'utf16') {
-      // two bytes per character
-      this.accommodate(bytes.length * 2);
-      view = new Uint16Array(this.data.buffer, this.write);
-      this.write += util.text.utf16.encode(view);
-      return this;
-    }
-
-    throw new Error('Invalid encoding: ' + encoding);
-  }
-
-  throw Error('Invalid parameter: ' + bytes);
-};
-
-/**
- * Puts the given buffer into this buffer.
- *
- * @param buffer the buffer to put into this one.
- *
- * @return this buffer.
- */
-util.DataBuffer.prototype.putBuffer = function(buffer) {
-  this.putBytes(buffer);
-  buffer.clear();
-  return this;
-};
-
-/**
- * Puts a string into this buffer.
- *
- * @param str the string to put.
- * @param [encoding] the encoding for the string (default: 'utf16').
- *
- * @return this buffer.
- */
-util.DataBuffer.prototype.putString = function(str) {
-  return this.putBytes(str, 'utf16');
-};
-
-/**
- * Puts a 16-bit integer in this buffer in big-endian order.
- *
- * @param i the 16-bit integer.
- *
- * @return this buffer.
- */
-util.DataBuffer.prototype.putInt16 = function(i) {
-  this.accommodate(2);
-  this.data.setInt16(this.write, i);
-  this.write += 2;
-  return this;
-};
-
-/**
- * Puts a 24-bit integer in this buffer in big-endian order.
- *
- * @param i the 24-bit integer.
- *
- * @return this buffer.
- */
-util.DataBuffer.prototype.putInt24 = function(i) {
-  this.accommodate(3);
-  this.data.setInt16(this.write, i >> 8 & 0xFFFF);
-  this.data.setInt8(this.write, i >> 16 & 0xFF);
-  this.write += 3;
-  return this;
-};
-
-/**
- * Puts a 32-bit integer in this buffer in big-endian order.
- *
- * @param i the 32-bit integer.
- *
- * @return this buffer.
- */
-util.DataBuffer.prototype.putInt32 = function(i) {
-  this.accommodate(4);
-  this.data.setInt32(this.write, i);
-  this.write += 4;
-  return this;
-};
-
-/**
- * Puts a 16-bit integer in this buffer in little-endian order.
- *
- * @param i the 16-bit integer.
- *
- * @return this buffer.
- */
-util.DataBuffer.prototype.putInt16Le = function(i) {
-  this.accommodate(2);
-  this.data.setInt16(this.write, i, true);
-  this.write += 2;
-  return this;
-};
-
-/**
- * Puts a 24-bit integer in this buffer in little-endian order.
- *
- * @param i the 24-bit integer.
- *
- * @return this buffer.
- */
-util.DataBuffer.prototype.putInt24Le = function(i) {
-  this.accommodate(3);
-  this.data.setInt8(this.write, i >> 16 & 0xFF);
-  this.data.setInt16(this.write, i >> 8 & 0xFFFF, true);
-  this.write += 3;
-  return this;
-};
-
-/**
- * Puts a 32-bit integer in this buffer in little-endian order.
- *
- * @param i the 32-bit integer.
- *
- * @return this buffer.
- */
-util.DataBuffer.prototype.putInt32Le = function(i) {
-  this.accommodate(4);
-  this.data.setInt32(this.write, i, true);
-  this.write += 4;
-  return this;
-};
-
-/**
- * Puts an n-bit integer in this buffer in big-endian order.
- *
- * @param i the n-bit integer.
- * @param n the number of bits in the integer (8, 16, 24, or 32).
- *
- * @return this buffer.
- */
-util.DataBuffer.prototype.putInt = function(i, n) {
-  _checkBitsParam(n);
-  this.accommodate(n / 8);
-  do {
-    n -= 8;
-    this.data.setInt8(this.write++, (i >> n) & 0xFF);
-  } while(n > 0);
-  return this;
-};
-
-/**
- * Puts a signed n-bit integer in this buffer in big-endian order. Two's
- * complement representation is used.
- *
- * @param i the n-bit integer.
- * @param n the number of bits in the integer.
- *
- * @return this buffer.
- */
-util.DataBuffer.prototype.putSignedInt = function(i, n) {
-  _checkBitsParam(n);
-  this.accommodate(n / 8);
-  if(i < 0) {
-    i += 2 << (n - 1);
-  }
-  return this.putInt(i, n);
-};
-
-/**
- * Gets a byte from this buffer and advances the read pointer by 1.
- *
- * @return the byte.
- */
-util.DataBuffer.prototype.getByte = function() {
-  return this.data.getInt8(this.read++);
-};
-
-/**
- * Gets a uint16 from this buffer in big-endian order and advances the read
- * pointer by 2.
- *
- * @return the uint16.
- */
-util.DataBuffer.prototype.getInt16 = function() {
-  var rval = this.data.getInt16(this.read);
-  this.read += 2;
-  return rval;
-};
-
-/**
- * Gets a uint24 from this buffer in big-endian order and advances the read
- * pointer by 3.
- *
- * @return the uint24.
- */
-util.DataBuffer.prototype.getInt24 = function() {
-  var rval = (
-    this.data.getInt16(this.read) << 8 ^
-    this.data.getInt8(this.read + 2));
-  this.read += 3;
-  return rval;
-};
-
-/**
- * Gets a uint32 from this buffer in big-endian order and advances the read
- * pointer by 4.
- *
- * @return the word.
- */
-util.DataBuffer.prototype.getInt32 = function() {
-  var rval = this.data.getInt32(this.read);
-  this.read += 4;
-  return rval;
-};
-
-/**
- * Gets a uint16 from this buffer in little-endian order and advances the read
- * pointer by 2.
- *
- * @return the uint16.
- */
-util.DataBuffer.prototype.getInt16Le = function() {
-  var rval = this.data.getInt16(this.read, true);
-  this.read += 2;
-  return rval;
-};
-
-/**
- * Gets a uint24 from this buffer in little-endian order and advances the read
- * pointer by 3.
- *
- * @return the uint24.
- */
-util.DataBuffer.prototype.getInt24Le = function() {
-  var rval = (
-    this.data.getInt8(this.read) ^
-    this.data.getInt16(this.read + 1, true) << 8);
-  this.read += 3;
-  return rval;
-};
-
-/**
- * Gets a uint32 from this buffer in little-endian order and advances the read
- * pointer by 4.
- *
- * @return the word.
- */
-util.DataBuffer.prototype.getInt32Le = function() {
-  var rval = this.data.getInt32(this.read, true);
-  this.read += 4;
-  return rval;
-};
-
-/**
- * Gets an n-bit integer from this buffer in big-endian order and advances the
- * read pointer by n/8.
- *
- * @param n the number of bits in the integer (8, 16, 24, or 32).
- *
- * @return the integer.
- */
-util.DataBuffer.prototype.getInt = function(n) {
-  _checkBitsParam(n);
-  var rval = 0;
-  do {
-    // TODO: Use (rval * 0x100) if adding support for 33 to 53 bits.
-    rval = (rval << 8) + this.data.getInt8(this.read++);
-    n -= 8;
-  } while(n > 0);
-  return rval;
-};
-
-/**
- * Gets a signed n-bit integer from this buffer in big-endian order, using
- * two's complement, and advances the read pointer by n/8.
- *
- * @param n the number of bits in the integer (8, 16, 24, or 32).
- *
- * @return the integer.
- */
-util.DataBuffer.prototype.getSignedInt = function(n) {
-  // getInt checks n
-  var x = this.getInt(n);
-  var max = 2 << (n - 2);
-  if(x >= max) {
-    x -= max << 1;
-  }
-  return x;
-};
-
-/**
- * Reads bytes out as a binary encoded string and clears them from the
- * buffer.
- *
- * @param count the number of bytes to read, undefined or null for all.
- *
- * @return a binary encoded string of bytes.
- */
-util.DataBuffer.prototype.getBytes = function(count) {
-  // TODO: deprecate this method, it is poorly named and
-  // this.toString('binary') replaces it
-  // add a toTypedArray()/toArrayBuffer() function
-  var rval;
-  if(count) {
-    // read count bytes
-    count = Math.min(this.length(), count);
-    rval = this.data.slice(this.read, this.read + count);
-    this.read += count;
-  } else if(count === 0) {
-    rval = '';
-  } else {
-    // read all bytes, optimize to only copy when needed
-    rval = (this.read === 0) ? this.data : this.data.slice(this.read);
-    this.clear();
-  }
-  return rval;
-};
-
-/**
- * Gets a binary encoded string of the bytes from this buffer without
- * modifying the read pointer.
- *
- * @param count the number of bytes to get, omit to get all.
- *
- * @return a string full of binary encoded characters.
- */
-util.DataBuffer.prototype.bytes = function(count) {
-  // TODO: deprecate this method, it is poorly named, add "getString()"
-  return (typeof(count) === 'undefined' ?
-    this.data.slice(this.read) :
-    this.data.slice(this.read, this.read + count));
-};
-
-/**
- * Gets a byte at the given index without modifying the read pointer.
- *
- * @param i the byte index.
- *
- * @return the byte.
- */
-util.DataBuffer.prototype.at = function(i) {
-  return this.data.getUint8(this.read + i);
-};
-
-/**
- * Puts a byte at the given index without modifying the read pointer.
- *
- * @param i the byte index.
- * @param b the byte to put.
- *
- * @return this buffer.
- */
-util.DataBuffer.prototype.setAt = function(i, b) {
-  this.data.setUint8(i, b);
-  return this;
-};
-
-/**
- * Gets the last byte without modifying the read pointer.
- *
- * @return the last byte.
- */
-util.DataBuffer.prototype.last = function() {
-  return this.data.getUint8(this.write - 1);
-};
-
-/**
- * Creates a copy of this buffer.
- *
- * @return the copy.
- */
-util.DataBuffer.prototype.copy = function() {
-  return new util.DataBuffer(this);
-};
-
-/**
- * Compacts this buffer.
- *
- * @return this buffer.
- */
-util.DataBuffer.prototype.compact = function() {
-  if(this.read > 0) {
-    var src = new Uint8Array(this.data.buffer, this.read);
-    var dst = new Uint8Array(src.byteLength);
-    dst.set(src);
-    this.data = new DataView(dst);
-    this.write -= this.read;
-    this.read = 0;
-  }
-  return this;
-};
-
-/**
- * Clears this buffer.
- *
- * @return this buffer.
- */
-util.DataBuffer.prototype.clear = function() {
-  this.data = new DataView(new ArrayBuffer(0));
-  this.read = this.write = 0;
-  return this;
-};
-
-/**
- * Shortens this buffer by triming bytes off of the end of this buffer.
- *
- * @param count the number of bytes to trim off.
- *
- * @return this buffer.
- */
-util.DataBuffer.prototype.truncate = function(count) {
-  this.write = Math.max(0, this.length() - count);
-  this.read = Math.min(this.read, this.write);
-  return this;
-};
-
-/**
- * Converts this buffer to a hexadecimal string.
- *
- * @return a hexadecimal string.
- */
-util.DataBuffer.prototype.toHex = function() {
-  var rval = '';
-  for(var i = this.read; i < this.data.byteLength; ++i) {
-    var b = this.data.getUint8(i);
-    if(b < 16) {
-      rval += '0';
-    }
-    rval += b.toString(16);
-  }
-  return rval;
-};
-
-/**
- * Converts this buffer to a string, using the given encoding. If no
- * encoding is given, 'utf8' (UTF-8) is used.
- *
- * @param [encoding] the encoding to use: 'binary', 'utf8', 'utf16', 'hex',
- *          'base64' (default: 'utf8').
- *
- * @return a string representation of the bytes in this buffer.
- */
-util.DataBuffer.prototype.toString = function(encoding) {
-  var view = new Uint8Array(this.data, this.read, this.length());
-  encoding = encoding || 'utf8';
-
-  // encode to string
-  if(encoding === 'binary' || encoding === 'raw') {
-    return util.binary.raw.encode(view);
-  }
-  if(encoding === 'hex') {
-    return util.binary.hex.encode(view);
-  }
-  if(encoding === 'base64') {
-    return util.binary.base64.encode(view);
-  }
-
-  // decode to text
-  if(encoding === 'utf8') {
-    return util.text.utf8.decode(view);
-  }
-  if(encoding === 'utf16') {
-    return util.text.utf16.decode(view);
-  }
-
-  throw new Error('Invalid encoding: ' + encoding);
-};
-
-/** End Buffer w/UInt8Array backing */
-
-/**
- * Creates a buffer that stores bytes. A value may be given to populate the
- * buffer with data. This value can either be string of encoded bytes or a
- * regular string of characters. When passing a string of binary encoded
- * bytes, the encoding `raw` should be given. This is also the default. When
- * passing a string of characters, the encoding `utf8` should be given.
- *
- * @param [input] a string with encoded bytes to store in the buffer.
- * @param [encoding] (default: 'raw', other: 'utf8').
- */
-util.createBuffer = function(input, encoding) {
-  // TODO: deprecate, use new ByteBuffer() instead
-  encoding = encoding || 'raw';
-  if(input !== undefined && encoding === 'utf8') {
-    input = util.encodeUtf8(input);
-  }
-  return new util.ByteBuffer(input);
-};
-
-/**
- * Fills a string with a particular value. If you want the string to be a byte
- * string, pass in String.fromCharCode(theByte).
- *
- * @param c the character to fill the string with, use String.fromCharCode
- *          to fill the string with a byte value.
- * @param n the number of characters of value c to fill with.
- *
- * @return the filled string.
- */
-util.fillString = function(c, n) {
-  var s = '';
-  while(n > 0) {
-    if(n & 1) {
-      s += c;
-    }
-    n >>>= 1;
-    if(n > 0) {
-      c += c;
-    }
-  }
-  return s;
-};
-
-/**
- * Performs a per byte XOR between two byte strings and returns the result as a
- * string of bytes.
- *
- * @param s1 first string of bytes.
- * @param s2 second string of bytes.
- * @param n the number of bytes to XOR.
- *
- * @return the XOR'd result.
- */
-util.xorBytes = function(s1, s2, n) {
-  var s3 = '';
-  var b = '';
-  var t = '';
-  var i = 0;
-  var c = 0;
-  for(; n > 0; --n, ++i) {
-    b = s1.charCodeAt(i) ^ s2.charCodeAt(i);
-    if(c >= 10) {
-      s3 += t;
-      t = '';
-      c = 0;
-    }
-    t += String.fromCharCode(b);
-    ++c;
-  }
-  s3 += t;
-  return s3;
-};
-
-/**
- * Converts a hex string into a 'binary' encoded string of bytes.
- *
- * @param hex the hexadecimal string to convert.
- *
- * @return the binary-encoded string of bytes.
- */
-util.hexToBytes = function(hex) {
-  // TODO: deprecate: "Deprecated. Use util.binary.hex.decode instead."
-  var rval = '';
-  var i = 0;
-  if(hex.length & 1 == 1) {
-    // odd number of characters, convert first character alone
-    i = 1;
-    rval += String.fromCharCode(parseInt(hex[0], 16));
-  }
-  // convert 2 characters (1 byte) at a time
-  for(; i < hex.length; i += 2) {
-    rval += String.fromCharCode(parseInt(hex.substr(i, 2), 16));
-  }
-  return rval;
-};
-
-/**
- * Converts a 'binary' encoded string of bytes to hex.
- *
- * @param bytes the byte string to convert.
- *
- * @return the string of hexadecimal characters.
- */
-util.bytesToHex = function(bytes) {
-  // TODO: deprecate: "Deprecated. Use util.binary.hex.encode instead."
-  return util.createBuffer(bytes).toHex();
-};
-
-/**
- * Converts an 32-bit integer to 4-big-endian byte string.
- *
- * @param i the integer.
- *
- * @return the byte string.
- */
-util.int32ToBytes = function(i) {
-  return (
-    String.fromCharCode(i >> 24 & 0xFF) +
-    String.fromCharCode(i >> 16 & 0xFF) +
-    String.fromCharCode(i >> 8 & 0xFF) +
-    String.fromCharCode(i & 0xFF));
-};
-
-// base64 characters, reverse mapping
-var _base64 =
-  'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/=';
-var _base64Idx = [
-/*43 -43 = 0*/
-/*'+',  1,  2,  3,'/' */
-   62, -1, -1, -1, 63,
-
-/*'0','1','2','3','4','5','6','7','8','9' */
-   52, 53, 54, 55, 56, 57, 58, 59, 60, 61,
-
-/*15, 16, 17,'=', 19, 20, 21 */
-  -1, -1, -1, 64, -1, -1, -1,
-
-/*65 - 43 = 22*/
-/*'A','B','C','D','E','F','G','H','I','J','K','L','M', */
-   0,  1,  2,  3,  4,  5,  6,  7,  8,  9, 10, 11, 12,
-
-/*'N','O','P','Q','R','S','T','U','V','W','X','Y','Z' */
-   13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25,
-
-/*91 - 43 = 48 */
-/*48, 49, 50, 51, 52, 53 */
-  -1, -1, -1, -1, -1, -1,
-
-/*97 - 43 = 54*/
-/*'a','b','c','d','e','f','g','h','i','j','k','l','m' */
-   26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38,
-
-/*'n','o','p','q','r','s','t','u','v','w','x','y','z' */
-   39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51
-];
-
-// base58 characters (Bitcoin alphabet)
-var _base58 = '123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz';
-
-/**
- * Base64 encodes a 'binary' encoded string of bytes.
- *
- * @param input the binary encoded string of bytes to base64-encode.
- * @param maxline the maximum number of encoded characters per line to use,
- *          defaults to none.
- *
- * @return the base64-encoded output.
- */
-util.encode64 = function(input, maxline) {
-  // TODO: deprecate: "Deprecated. Use util.binary.base64.encode instead."
-  var line = '';
-  var output = '';
-  var chr1, chr2, chr3;
-  var i = 0;
-  while(i < input.length) {
-    chr1 = input.charCodeAt(i++);
-    chr2 = input.charCodeAt(i++);
-    chr3 = input.charCodeAt(i++);
-
-    // encode 4 character group
-    line += _base64.charAt(chr1 >> 2);
-    line += _base64.charAt(((chr1 & 3) << 4) | (chr2 >> 4));
-    if(isNaN(chr2)) {
-      line += '==';
-    } else {
-      line += _base64.charAt(((chr2 & 15) << 2) | (chr3 >> 6));
-      line += isNaN(chr3) ? '=' : _base64.charAt(chr3 & 63);
-    }
-
-    if(maxline && line.length > maxline) {
-      output += line.substr(0, maxline) + '\r\n';
-      line = line.substr(maxline);
-    }
-  }
-  output += line;
-  return output;
-};
-
-/**
- * Base64 decodes a string into a 'binary' encoded string of bytes.
- *
- * @param input the base64-encoded input.
- *
- * @return the binary encoded string.
- */
-util.decode64 = function(input) {
-  // TODO: deprecate: "Deprecated. Use util.binary.base64.decode instead."
-
-  // remove all non-base64 characters
-  input = input.replace(/[^A-Za-z0-9\+\/\=]/g, '');
-
-  var output = '';
-  var enc1, enc2, enc3, enc4;
-  var i = 0;
-
-  while(i < input.length) {
-    enc1 = _base64Idx[input.charCodeAt(i++) - 43];
-    enc2 = _base64Idx[input.charCodeAt(i++) - 43];
-    enc3 = _base64Idx[input.charCodeAt(i++) - 43];
-    enc4 = _base64Idx[input.charCodeAt(i++) - 43];
-
-    output += String.fromCharCode((enc1 << 2) | (enc2 >> 4));
-    if(enc3 !== 64) {
-      // decoded at least 2 bytes
-      output += String.fromCharCode(((enc2 & 15) << 4) | (enc3 >> 2));
-      if(enc4 !== 64) {
-        // decoded 3 bytes
-        output += String.fromCharCode(((enc3 & 3) << 6) | enc4);
-      }
-    }
-  }
-
-  return output;
-};
-
-/**
- * Encodes the given string of characters (a standard JavaScript
- * string) as a binary encoded string where the bytes represent
- * a UTF-8 encoded string of characters. Non-ASCII characters will be
- * encoded as multiple bytes according to UTF-8.
- *
- * @param str a standard string of characters to encode.
- *
- * @return the binary encoded string.
- */
-util.encodeUtf8 = function(str) {
-  return unescape(encodeURIComponent(str));
-};
-
-/**
- * Decodes a binary encoded string that contains bytes that
- * represent a UTF-8 encoded string of characters -- into a
- * string of characters (a standard JavaScript string).
- *
- * @param str the binary encoded string to decode.
- *
- * @return the resulting standard string of characters.
- */
-util.decodeUtf8 = function(str) {
-  return decodeURIComponent(escape(str));
-};
-
-// binary encoding/decoding tools
-// FIXME: Experimental. Do not use yet.
-util.binary = {
-  raw: {},
-  hex: {},
-  base64: {},
-  base58: {},
-  baseN : {
-    encode: baseN.encode,
-    decode: baseN.decode
-  }
-};
-
-/**
- * Encodes a Uint8Array as a binary-encoded string. This encoding uses
- * a value between 0 and 255 for each character.
- *
- * @param bytes the Uint8Array to encode.
- *
- * @return the binary-encoded string.
- */
-util.binary.raw.encode = function(bytes) {
-  return String.fromCharCode.apply(null, bytes);
-};
-
-/**
- * Decodes a binary-encoded string to a Uint8Array. This encoding uses
- * a value between 0 and 255 for each character.
- *
- * @param str the binary-encoded string to decode.
- * @param [output] an optional Uint8Array to write the output to; if it
- *          is too small, an exception will be thrown.
- * @param [offset] the start offset for writing to the output (default: 0).
- *
- * @return the Uint8Array or the number of bytes written if output was given.
- */
-util.binary.raw.decode = function(str, output, offset) {
-  var out = output;
-  if(!out) {
-    out = new Uint8Array(str.length);
-  }
-  offset = offset || 0;
-  var j = offset;
-  for(var i = 0; i < str.length; ++i) {
-    out[j++] = str.charCodeAt(i);
-  }
-  return output ? (j - offset) : out;
-};
-
-/**
- * Encodes a 'binary' string, ArrayBuffer, DataView, TypedArray, or
- * ByteBuffer as a string of hexadecimal characters.
- *
- * @param bytes the bytes to convert.
- *
- * @return the string of hexadecimal characters.
- */
-util.binary.hex.encode = util.bytesToHex;
-
-/**
- * Decodes a hex-encoded string to a Uint8Array.
- *
- * @param hex the hexadecimal string to convert.
- * @param [output] an optional Uint8Array to write the output to; if it
- *          is too small, an exception will be thrown.
- * @param [offset] the start offset for writing to the output (default: 0).
- *
- * @return the Uint8Array or the number of bytes written if output was given.
- */
-util.binary.hex.decode = function(hex, output, offset) {
-  var out = output;
-  if(!out) {
-    out = new Uint8Array(Math.ceil(hex.length / 2));
-  }
-  offset = offset || 0;
-  var i = 0, j = offset;
-  if(hex.length & 1) {
-    // odd number of characters, convert first character alone
-    i = 1;
-    out[j++] = parseInt(hex[0], 16);
-  }
-  // convert 2 characters (1 byte) at a time
-  for(; i < hex.length; i += 2) {
-    out[j++] = parseInt(hex.substr(i, 2), 16);
-  }
-  return output ? (j - offset) : out;
-};
-
-/**
- * Base64-encodes a Uint8Array.
- *
- * @param input the Uint8Array to encode.
- * @param maxline the maximum number of encoded characters per line to use,
- *          defaults to none.
- *
- * @return the base64-encoded output string.
- */
-util.binary.base64.encode = function(input, maxline) {
-  var line = '';
-  var output = '';
-  var chr1, chr2, chr3;
-  var i = 0;
-  while(i < input.byteLength) {
-    chr1 = input[i++];
-    chr2 = input[i++];
-    chr3 = input[i++];
-
-    // encode 4 character group
-    line += _base64.charAt(chr1 >> 2);
-    line += _base64.charAt(((chr1 & 3) << 4) | (chr2 >> 4));
-    if(isNaN(chr2)) {
-      line += '==';
-    } else {
-      line += _base64.charAt(((chr2 & 15) << 2) | (chr3 >> 6));
-      line += isNaN(chr3) ? '=' : _base64.charAt(chr3 & 63);
-    }
-
-    if(maxline && line.length > maxline) {
-      output += line.substr(0, maxline) + '\r\n';
-      line = line.substr(maxline);
-    }
-  }
-  output += line;
-  return output;
-};
-
-/**
- * Decodes a base64-encoded string to a Uint8Array.
- *
- * @param input the base64-encoded input string.
- * @param [output] an optional Uint8Array to write the output to; if it
- *          is too small, an exception will be thrown.
- * @param [offset] the start offset for writing to the output (default: 0).
- *
- * @return the Uint8Array or the number of bytes written if output was given.
- */
-util.binary.base64.decode = function(input, output, offset) {
-  var out = output;
-  if(!out) {
-    out = new Uint8Array(Math.ceil(input.length / 4) * 3);
-  }
-
-  // remove all non-base64 characters
-  input = input.replace(/[^A-Za-z0-9\+\/\=]/g, '');
-
-  offset = offset || 0;
-  var enc1, enc2, enc3, enc4;
-  var i = 0, j = offset;
-
-  while(i < input.length) {
-    enc1 = _base64Idx[input.charCodeAt(i++) - 43];
-    enc2 = _base64Idx[input.charCodeAt(i++) - 43];
-    enc3 = _base64Idx[input.charCodeAt(i++) - 43];
-    enc4 = _base64Idx[input.charCodeAt(i++) - 43];
-
-    out[j++] = (enc1 << 2) | (enc2 >> 4);
-    if(enc3 !== 64) {
-      // decoded at least 2 bytes
-      out[j++] = ((enc2 & 15) << 4) | (enc3 >> 2);
-      if(enc4 !== 64) {
-        // decoded 3 bytes
-        out[j++] = ((enc3 & 3) << 6) | enc4;
-      }
-    }
-  }
-
-  // make sure result is the exact decoded length
-  return output ? (j - offset) : out.subarray(0, j);
-};
-
-// add support for base58 encoding/decoding with Bitcoin alphabet
-util.binary.base58.encode = function(input, maxline) {
-  return util.binary.baseN.encode(input, _base58, maxline);
-};
-util.binary.base58.decode = function(input, maxline) {
-  return util.binary.baseN.decode(input, _base58, maxline);
-};
-
-// text encoding/decoding tools
-// FIXME: Experimental. Do not use yet.
-util.text = {
-  utf8: {},
-  utf16: {}
-};
-
-/**
- * Encodes the given string as UTF-8 in a Uint8Array.
- *
- * @param str the string to encode.
- * @param [output] an optional Uint8Array to write the output to; if it
- *          is too small, an exception will be thrown.
- * @param [offset] the start offset for writing to the output (default: 0).
- *
- * @return the Uint8Array or the number of bytes written if output was given.
- */
-util.text.utf8.encode = function(str, output, offset) {
-  str = util.encodeUtf8(str);
-  var out = output;
-  if(!out) {
-    out = new Uint8Array(str.length);
-  }
-  offset = offset || 0;
-  var j = offset;
-  for(var i = 0; i < str.length; ++i) {
-    out[j++] = str.charCodeAt(i);
-  }
-  return output ? (j - offset) : out;
-};
-
-/**
- * Decodes the UTF-8 contents from a Uint8Array.
- *
- * @param bytes the Uint8Array to decode.
- *
- * @return the resulting string.
- */
-util.text.utf8.decode = function(bytes) {
-  return util.decodeUtf8(String.fromCharCode.apply(null, bytes));
-};
-
-/**
- * Encodes the given string as UTF-16 in a Uint8Array.
- *
- * @param str the string to encode.
- * @param [output] an optional Uint8Array to write the output to; if it
- *          is too small, an exception will be thrown.
- * @param [offset] the start offset for writing to the output (default: 0).
- *
- * @return the Uint8Array or the number of bytes written if output was given.
- */
-util.text.utf16.encode = function(str, output, offset) {
-  var out = output;
-  if(!out) {
-    out = new Uint8Array(str.length * 2);
-  }
-  var view = new Uint16Array(out.buffer);
-  offset = offset || 0;
-  var j = offset;
-  var k = offset;
-  for(var i = 0; i < str.length; ++i) {
-    view[k++] = str.charCodeAt(i);
-    j += 2;
-  }
-  return output ? (j - offset) : out;
-};
-
-/**
- * Decodes the UTF-16 contents from a Uint8Array.
- *
- * @param bytes the Uint8Array to decode.
- *
- * @return the resulting string.
- */
-util.text.utf16.decode = function(bytes) {
-  return String.fromCharCode.apply(null, new Uint16Array(bytes.buffer));
-};
-
-/**
- * Deflates the given data using a flash interface.
- *
- * @param api the flash interface.
- * @param bytes the data.
- * @param raw true to return only raw deflate data, false to include zlib
- *          header and trailer.
- *
- * @return the deflated data as a string.
- */
-util.deflate = function(api, bytes, raw) {
-  bytes = util.decode64(api.deflate(util.encode64(bytes)).rval);
-
-  // strip zlib header and trailer if necessary
-  if(raw) {
-    // zlib header is 2 bytes (CMF,FLG) where FLG indicates that
-    // there is a 4-byte DICT (alder-32) block before the data if
-    // its 5th bit is set
-    var start = 2;
-    var flg = bytes.charCodeAt(1);
-    if(flg & 0x20) {
-      start = 6;
-    }
-    // zlib trailer is 4 bytes of adler-32
-    bytes = bytes.substring(start, bytes.length - 4);
-  }
-
-  return bytes;
-};
-
-/**
- * Inflates the given data using a flash interface.
- *
- * @param api the flash interface.
- * @param bytes the data.
- * @param raw true if the incoming data has no zlib header or trailer and is
- *          raw DEFLATE data.
- *
- * @return the inflated data as a string, null on error.
- */
-util.inflate = function(api, bytes, raw) {
-  // TODO: add zlib header and trailer if necessary/possible
-  var rval = api.inflate(util.encode64(bytes)).rval;
-  return (rval === null) ? null : util.decode64(rval);
-};
-
-/**
- * Sets a storage object.
- *
- * @param api the storage interface.
- * @param id the storage ID to use.
- * @param obj the storage object, null to remove.
- */
-var _setStorageObject = function(api, id, obj) {
-  if(!api) {
-    throw new Error('WebStorage not available.');
-  }
-
-  var rval;
-  if(obj === null) {
-    rval = api.removeItem(id);
-  } else {
-    // json-encode and base64-encode object
-    obj = util.encode64(JSON.stringify(obj));
-    rval = api.setItem(id, obj);
-  }
-
-  // handle potential flash error
-  if(typeof(rval) !== 'undefined' && rval.rval !== true) {
-    var error = new Error(rval.error.message);
-    error.id = rval.error.id;
-    error.name = rval.error.name;
-    throw error;
-  }
-};
-
-/**
- * Gets a storage object.
- *
- * @param api the storage interface.
- * @param id the storage ID to use.
- *
- * @return the storage object entry or null if none exists.
- */
-var _getStorageObject = function(api, id) {
-  if(!api) {
-    throw new Error('WebStorage not available.');
-  }
-
-  // get the existing entry
-  var rval = api.getItem(id);
-
-  /* Note: We check api.init because we can't do (api == localStorage)
-    on IE because of "Class doesn't support Automation" exception. Only
-    the flash api has an init method so this works too, but we need a
-    better solution in the future. */
-
-  // flash returns item wrapped in an object, handle special case
-  if(api.init) {
-    if(rval.rval === null) {
-      if(rval.error) {
-        var error = new Error(rval.error.message);
-        error.id = rval.error.id;
-        error.name = rval.error.name;
-        throw error;
-      }
-      // no error, but also no item
-      rval = null;
-    } else {
-      rval = rval.rval;
-    }
-  }
-
-  // handle decoding
-  if(rval !== null) {
-    // base64-decode and json-decode data
-    rval = JSON.parse(util.decode64(rval));
-  }
-
-  return rval;
-};
-
-/**
- * Stores an item in local storage.
- *
- * @param api the storage interface.
- * @param id the storage ID to use.
- * @param key the key for the item.
- * @param data the data for the item (any javascript object/primitive).
- */
-var _setItem = function(api, id, key, data) {
-  // get storage object
-  var obj = _getStorageObject(api, id);
-  if(obj === null) {
-    // create a new storage object
-    obj = {};
-  }
-  // update key
-  obj[key] = data;
-
-  // set storage object
-  _setStorageObject(api, id, obj);
-};
-
-/**
- * Gets an item from local storage.
- *
- * @param api the storage interface.
- * @param id the storage ID to use.
- * @param key the key for the item.
- *
- * @return the item.
- */
-var _getItem = function(api, id, key) {
-  // get storage object
-  var rval = _getStorageObject(api, id);
-  if(rval !== null) {
-    // return data at key
-    rval = (key in rval) ? rval[key] : null;
-  }
-
-  return rval;
-};
-
-/**
- * Removes an item from local storage.
- *
- * @param api the storage interface.
- * @param id the storage ID to use.
- * @param key the key for the item.
- */
-var _removeItem = function(api, id, key) {
-  // get storage object
-  var obj = _getStorageObject(api, id);
-  if(obj !== null && key in obj) {
-    // remove key
-    delete obj[key];
-
-    // see if entry has no keys remaining
-    var empty = true;
-    for(var prop in obj) {
-      empty = false;
-      break;
-    }
-    if(empty) {
-      // remove entry entirely if no keys are left
-      obj = null;
-    }
-
-    // set storage object
-    _setStorageObject(api, id, obj);
-  }
-};
-
-/**
- * Clears the local disk storage identified by the given ID.
- *
- * @param api the storage interface.
- * @param id the storage ID to use.
- */
-var _clearItems = function(api, id) {
-  _setStorageObject(api, id, null);
-};
-
-/**
- * Calls a storage function.
- *
- * @param func the function to call.
- * @param args the arguments for the function.
- * @param location the location argument.
- *
- * @return the return value from the function.
- */
-var _callStorageFunction = function(func, args, location) {
-  var rval = null;
-
-  // default storage types
-  if(typeof(location) === 'undefined') {
-    location = ['web', 'flash'];
-  }
-
-  // apply storage types in order of preference
-  var type;
-  var done = false;
-  var exception = null;
-  for(var idx in location) {
-    type = location[idx];
-    try {
-      if(type === 'flash' || type === 'both') {
-        if(args[0] === null) {
-          throw new Error('Flash local storage not available.');
-        }
-        rval = func.apply(this, args);
-        done = (type === 'flash');
-      }
-      if(type === 'web' || type === 'both') {
-        args[0] = localStorage;
-        rval = func.apply(this, args);
-        done = true;
-      }
-    } catch(ex) {
-      exception = ex;
-    }
-    if(done) {
-      break;
-    }
-  }
-
-  if(!done) {
-    throw exception;
-  }
-
-  return rval;
-};
-
-/**
- * Stores an item on local disk.
- *
- * The available types of local storage include 'flash', 'web', and 'both'.
- *
- * The type 'flash' refers to flash local storage (SharedObject). In order
- * to use flash local storage, the 'api' parameter must be valid. The type
- * 'web' refers to WebStorage, if supported by the browser. The type 'both'
- * refers to storing using both 'flash' and 'web', not just one or the
- * other.
- *
- * The location array should list the storage types to use in order of
- * preference:
- *
- * ['flash']: flash only storage
- * ['web']: web only storage
- * ['both']: try to store in both
- * ['flash','web']: store in flash first, but if not available, 'web'
- * ['web','flash']: store in web first, but if not available, 'flash'
- *
- * The location array defaults to: ['web', 'flash']
- *
- * @param api the flash interface, null to use only WebStorage.
- * @param id the storage ID to use.
- * @param key the key for the item.
- * @param data the data for the item (any javascript object/primitive).
- * @param location an array with the preferred types of storage to use.
- */
-util.setItem = function(api, id, key, data, location) {
-  _callStorageFunction(_setItem, arguments, location);
-};
-
-/**
- * Gets an item on local disk.
- *
- * Set setItem() for details on storage types.
- *
- * @param api the flash interface, null to use only WebStorage.
- * @param id the storage ID to use.
- * @param key the key for the item.
- * @param location an array with the preferred types of storage to use.
- *
- * @return the item.
- */
-util.getItem = function(api, id, key, location) {
-  return _callStorageFunction(_getItem, arguments, location);
-};
-
-/**
- * Removes an item on local disk.
- *
- * Set setItem() for details on storage types.
- *
- * @param api the flash interface.
- * @param id the storage ID to use.
- * @param key the key for the item.
- * @param location an array with the preferred types of storage to use.
- */
-util.removeItem = function(api, id, key, location) {
-  _callStorageFunction(_removeItem, arguments, location);
-};
-
-/**
- * Clears the local disk storage identified by the given ID.
- *
- * Set setItem() for details on storage types.
- *
- * @param api the flash interface if flash is available.
- * @param id the storage ID to use.
- * @param location an array with the preferred types of storage to use.
- */
-util.clearItems = function(api, id, location) {
-  _callStorageFunction(_clearItems, arguments, location);
-};
-
-/**
- * Parses the scheme, host, and port from an http(s) url.
- *
- * @param str the url string.
- *
- * @return the parsed url object or null if the url is invalid.
- */
-util.parseUrl = function(str) {
-  // FIXME: this regex looks a bit broken
-  var regex = /^(https?):\/\/([^:&^\/]*):?(\d*)(.*)$/g;
-  regex.lastIndex = 0;
-  var m = regex.exec(str);
-  var url = (m === null) ? null : {
-    full: str,
-    scheme: m[1],
-    host: m[2],
-    port: m[3],
-    path: m[4]
-  };
-  if(url) {
-    url.fullHost = url.host;
-    if(url.port) {
-      if(url.port !== 80 && url.scheme === 'http') {
-        url.fullHost += ':' + url.port;
-      } else if(url.port !== 443 && url.scheme === 'https') {
-        url.fullHost += ':' + url.port;
-      }
-    } else if(url.scheme === 'http') {
-      url.port = 80;
-    } else if(url.scheme === 'https') {
-      url.port = 443;
-    }
-    url.full = url.scheme + '://' + url.fullHost;
-  }
-  return url;
-};
-
-/* Storage for query variables */
-var _queryVariables = null;
-
-/**
- * Returns the window location query variables. Query is parsed on the first
- * call and the same object is returned on subsequent calls. The mapping
- * is from keys to an array of values. Parameters without values will have
- * an object key set but no value added to the value array. Values are
- * unescaped.
- *
- * ...?k1=v1&k2=v2:
- * {
- *   "k1": ["v1"],
- *   "k2": ["v2"]
- * }
- *
- * ...?k1=v1&k1=v2:
- * {
- *   "k1": ["v1", "v2"]
- * }
- *
- * ...?k1=v1&k2:
- * {
- *   "k1": ["v1"],
- *   "k2": []
- * }
- *
- * ...?k1=v1&k1:
- * {
- *   "k1": ["v1"]
- * }
- *
- * ...?k1&k1:
- * {
- *   "k1": []
- * }
- *
- * @param query the query string to parse (optional, default to cached
- *          results from parsing window location search query).
- *
- * @return object mapping keys to variables.
- */
-util.getQueryVariables = function(query) {
-  var parse = function(q) {
-    var rval = {};
-    var kvpairs = q.split('&');
-    for(var i = 0; i < kvpairs.length; i++) {
-      var pos = kvpairs[i].indexOf('=');
-      var key;
-      var val;
-      if(pos > 0) {
-        key = kvpairs[i].substring(0, pos);
-        val = kvpairs[i].substring(pos + 1);
-      } else {
-        key = kvpairs[i];
-        val = null;
-      }
-      if(!(key in rval)) {
-        rval[key] = [];
-      }
-      // disallow overriding object prototype keys
-      if(!(key in Object.prototype) && val !== null) {
-        rval[key].push(unescape(val));
-      }
-    }
-    return rval;
-  };
-
-   var rval;
-   if(typeof(query) === 'undefined') {
-     // set cached variables if needed
-     if(_queryVariables === null) {
-       if(typeof(window) !== 'undefined' && window.location && window.location.search) {
-          // parse window search query
-          _queryVariables = parse(window.location.search.substring(1));
-       } else {
-          // no query variables available
-          _queryVariables = {};
-       }
-     }
-     rval = _queryVariables;
-   } else {
-     // parse given query
-     rval = parse(query);
-   }
-   return rval;
-};
-
-/**
- * Parses a fragment into a path and query. This method will take a URI
- * fragment and break it up as if it were the main URI. For example:
- *    /bar/baz?a=1&b=2
- * results in:
- *    {
- *       path: ["bar", "baz"],
- *       query: {"k1": ["v1"], "k2": ["v2"]}
- *    }
- *
- * @return object with a path array and query object.
- */
-util.parseFragment = function(fragment) {
-  // default to whole fragment
-  var fp = fragment;
-  var fq = '';
-  // split into path and query if possible at the first '?'
-  var pos = fragment.indexOf('?');
-  if(pos > 0) {
-    fp = fragment.substring(0, pos);
-    fq = fragment.substring(pos + 1);
-  }
-  // split path based on '/' and ignore first element if empty
-  var path = fp.split('/');
-  if(path.length > 0 && path[0] === '') {
-    path.shift();
-  }
-  // convert query into object
-  var query = (fq === '') ? {} : util.getQueryVariables(fq);
-
-  return {
-    pathString: fp,
-    queryString: fq,
-    path: path,
-    query: query
-  };
-};
-
-/**
- * Makes a request out of a URI-like request string. This is intended to
- * be used where a fragment id (after a URI '#') is parsed as a URI with
- * path and query parts. The string should have a path beginning and
- * delimited by '/' and optional query parameters following a '?'. The
- * query should be a standard URL set of key value pairs delimited by
- * '&'. For backwards compatibility the initial '/' on the path is not
- * required. The request object has the following API, (fully described
- * in the method code):
- *    {
- *       path: <the path string part>.
- *       query: <the query string part>,
- *       getPath(i): get part or all of the split path array,
- *       getQuery(k, i): get part or all of a query key array,
- *       getQueryLast(k, _default): get last element of a query key array.
- *    }
- *
- * @return object with request parameters.
- */
-util.makeRequest = function(reqString) {
-  var frag = util.parseFragment(reqString);
-  var req = {
-    // full path string
-    path: frag.pathString,
-    // full query string
-    query: frag.queryString,
-    /**
-     * Get path or element in path.
-     *
-     * @param i optional path index.
-     *
-     * @return path or part of path if i provided.
-     */
-    getPath: function(i) {
-      return (typeof(i) === 'undefined') ? frag.path : frag.path[i];
-    },
-    /**
-     * Get query, values for a key, or value for a key index.
-     *
-     * @param k optional query key.
-     * @param i optional query key index.
-     *
-     * @return query, values for a key, or value for a key index.
-     */
-    getQuery: function(k, i) {
-      var rval;
-      if(typeof(k) === 'undefined') {
-        rval = frag.query;
-      } else {
-        rval = frag.query[k];
-        if(rval && typeof(i) !== 'undefined') {
-           rval = rval[i];
-        }
-      }
-      return rval;
-    },
-    getQueryLast: function(k, _default) {
-      var rval;
-      var vals = req.getQuery(k);
-      if(vals) {
-        rval = vals[vals.length - 1];
-      } else {
-        rval = _default;
-      }
-      return rval;
-    }
-  };
-  return req;
-};
-
-/**
- * Makes a URI out of a path, an object with query parameters, and a
- * fragment. Uses jQuery.param() internally for query string creation.
- * If the path is an array, it will be joined with '/'.
- *
- * @param path string path or array of strings.
- * @param query object with query parameters. (optional)
- * @param fragment fragment string. (optional)
- *
- * @return string object with request parameters.
- */
-util.makeLink = function(path, query, fragment) {
-  // join path parts if needed
-  path = jQuery.isArray(path) ? path.join('/') : path;
-
-  var qstr = jQuery.param(query || {});
-  fragment = fragment || '';
-  return path +
-    ((qstr.length > 0) ? ('?' + qstr) : '') +
-    ((fragment.length > 0) ? ('#' + fragment) : '');
-};
-
-/**
- * Check if an object is empty.
- *
- * Taken from:
- * http://stackoverflow.com/questions/679915/how-do-i-test-for-an-empty-javascript-object-from-json/679937#679937
- *
- * @param object the object to check.
- */
-util.isEmpty = function(obj) {
-  for(var prop in obj) {
-    if(obj.hasOwnProperty(prop)) {
-      return false;
-    }
-  }
-  return true;
-};
-
-/**
- * Format with simple printf-style interpolation.
- *
- * %%: literal '%'
- * %s,%o: convert next argument into a string.
- *
- * @param format the string to format.
- * @param ... arguments to interpolate into the format string.
- */
-util.format = function(format) {
-  var re = /%./g;
-  // current match
-  var match;
-  // current part
-  var part;
-  // current arg index
-  var argi = 0;
-  // collected parts to recombine later
-  var parts = [];
-  // last index found
-  var last = 0;
-  // loop while matches remain
-  while((match = re.exec(format))) {
-    part = format.substring(last, re.lastIndex - 2);
-    // don't add empty strings (ie, parts between %s%s)
-    if(part.length > 0) {
-      parts.push(part);
-    }
-    last = re.lastIndex;
-    // switch on % code
-    var code = match[0][1];
-    switch(code) {
-    case 's':
-    case 'o':
-      // check if enough arguments were given
-      if(argi < arguments.length) {
-        parts.push(arguments[argi++ + 1]);
-      } else {
-        parts.push('<?>');
-      }
-      break;
-    // FIXME: do proper formating for numbers, etc
-    //case 'f':
-    //case 'd':
-    case '%':
-      parts.push('%');
-      break;
-    default:
-      parts.push('<%' + code + '?>');
-    }
-  }
-  // add trailing part of format string
-  parts.push(format.substring(last));
-  return parts.join('');
-};
-
-/**
- * Formats a number.
- *
- * http://snipplr.com/view/5945/javascript-numberformat--ported-from-php/
- */
-util.formatNumber = function(number, decimals, dec_point, thousands_sep) {
-  // http://kevin.vanzonneveld.net
-  // +   original by: Jonas Raoni Soares Silva (http://www.jsfromhell.com)
-  // +   improved by: Kevin van Zonneveld (http://kevin.vanzonneveld.net)
-  // +     bugfix by: Michael White (http://crestidg.com)
-  // +     bugfix by: Benjamin Lupton
-  // +     bugfix by: Allan Jensen (http://www.winternet.no)
-  // +    revised by: Jonas Raoni Soares Silva (http://www.jsfromhell.com)
-  // *     example 1: number_format(1234.5678, 2, '.', '');
-  // *     returns 1: 1234.57
-
-  var n = number, c = isNaN(decimals = Math.abs(decimals)) ? 2 : decimals;
-  var d = dec_point === undefined ? ',' : dec_point;
-  var t = thousands_sep === undefined ?
-   '.' : thousands_sep, s = n < 0 ? '-' : '';
-  var i = parseInt((n = Math.abs(+n || 0).toFixed(c)), 10) + '';
-  var j = (i.length > 3) ? i.length % 3 : 0;
-  return s + (j ? i.substr(0, j) + t : '') +
-    i.substr(j).replace(/(\d{3})(?=\d)/g, '$1' + t) +
-    (c ? d + Math.abs(n - i).toFixed(c).slice(2) : '');
-};
-
-/**
- * Formats a byte size.
- *
- * http://snipplr.com/view/5949/format-humanize-file-byte-size-presentation-in-javascript/
- */
-util.formatSize = function(size) {
-  if(size >= 1073741824) {
-    size = util.formatNumber(size / 1073741824, 2, '.', '') + ' GiB';
-  } else if(size >= 1048576) {
-    size = util.formatNumber(size / 1048576, 2, '.', '') + ' MiB';
-  } else if(size >= 1024) {
-    size = util.formatNumber(size / 1024, 0) + ' KiB';
-  } else {
-    size = util.formatNumber(size, 0) + ' bytes';
-  }
-  return size;
-};
-
-/**
- * Converts an IPv4 or IPv6 string representation into bytes (in network order).
- *
- * @param ip the IPv4 or IPv6 address to convert.
- *
- * @return the 4-byte IPv6 or 16-byte IPv6 address or null if the address can't
- *         be parsed.
- */
-util.bytesFromIP = function(ip) {
-  if(ip.indexOf('.') !== -1) {
-    return util.bytesFromIPv4(ip);
-  }
-  if(ip.indexOf(':') !== -1) {
-    return util.bytesFromIPv6(ip);
-  }
-  return null;
-};
-
-/**
- * Converts an IPv4 string representation into bytes (in network order).
- *
- * @param ip the IPv4 address to convert.
- *
- * @return the 4-byte address or null if the address can't be parsed.
- */
-util.bytesFromIPv4 = function(ip) {
-  ip = ip.split('.');
-  if(ip.length !== 4) {
-    return null;
-  }
-  var b = util.createBuffer();
-  for(var i = 0; i < ip.length; ++i) {
-    var num = parseInt(ip[i], 10);
-    if(isNaN(num)) {
-      return null;
-    }
-    b.putByte(num);
-  }
-  return b.getBytes();
-};
-
-/**
- * Converts an IPv6 string representation into bytes (in network order).
- *
- * @param ip the IPv6 address to convert.
- *
- * @return the 16-byte address or null if the address can't be parsed.
- */
-util.bytesFromIPv6 = function(ip) {
-  var blanks = 0;
-  ip = ip.split(':').filter(function(e) {
-    if(e.length === 0) ++blanks;
-    return true;
-  });
-  var zeros = (8 - ip.length + blanks) * 2;
-  var b = util.createBuffer();
-  for(var i = 0; i < 8; ++i) {
-    if(!ip[i] || ip[i].length === 0) {
-      b.fillWithByte(0, zeros);
-      zeros = 0;
-      continue;
-    }
-    var bytes = util.hexToBytes(ip[i]);
-    if(bytes.length < 2) {
-      b.putByte(0);
-    }
-    b.putBytes(bytes);
-  }
-  return b.getBytes();
-};
-
-/**
- * Converts 4-bytes into an IPv4 string representation or 16-bytes into
- * an IPv6 string representation. The bytes must be in network order.
- *
- * @param bytes the bytes to convert.
- *
- * @return the IPv4 or IPv6 string representation if 4 or 16 bytes,
- *         respectively, are given, otherwise null.
- */
-util.bytesToIP = function(bytes) {
-  if(bytes.length === 4) {
-    return util.bytesToIPv4(bytes);
-  }
-  if(bytes.length === 16) {
-    return util.bytesToIPv6(bytes);
-  }
-  return null;
-};
-
-/**
- * Converts 4-bytes into an IPv4 string representation. The bytes must be
- * in network order.
- *
- * @param bytes the bytes to convert.
- *
- * @return the IPv4 string representation or null for an invalid # of bytes.
- */
-util.bytesToIPv4 = function(bytes) {
-  if(bytes.length !== 4) {
-    return null;
-  }
-  var ip = [];
-  for(var i = 0; i < bytes.length; ++i) {
-    ip.push(bytes.charCodeAt(i));
-  }
-  return ip.join('.');
-};
-
-/**
- * Converts 16-bytes into an IPv16 string representation. The bytes must be
- * in network order.
- *
- * @param bytes the bytes to convert.
- *
- * @return the IPv16 string representation or null for an invalid # of bytes.
- */
-util.bytesToIPv6 = function(bytes) {
-  if(bytes.length !== 16) {
-    return null;
-  }
-  var ip = [];
-  var zeroGroups = [];
-  var zeroMaxGroup = 0;
-  for(var i = 0; i < bytes.length; i += 2) {
-    var hex = util.bytesToHex(bytes[i] + bytes[i + 1]);
-    // canonicalize zero representation
-    while(hex[0] === '0' && hex !== '0') {
-      hex = hex.substr(1);
-    }
-    if(hex === '0') {
-      var last = zeroGroups[zeroGroups.length - 1];
-      var idx = ip.length;
-      if(!last || idx !== last.end + 1) {
-        zeroGroups.push({start: idx, end: idx});
-      } else {
-        last.end = idx;
-        if((last.end - last.start) >
-          (zeroGroups[zeroMaxGroup].end - zeroGroups[zeroMaxGroup].start)) {
-          zeroMaxGroup = zeroGroups.length - 1;
-        }
-      }
-    }
-    ip.push(hex);
-  }
-  if(zeroGroups.length > 0) {
-    var group = zeroGroups[zeroMaxGroup];
-    // only shorten group of length > 0
-    if(group.end - group.start > 0) {
-      ip.splice(group.start, group.end - group.start + 1, '');
-      if(group.start === 0) {
-        ip.unshift('');
-      }
-      if(group.end === 7) {
-        ip.push('');
-      }
-    }
-  }
-  return ip.join(':');
-};
-
-/**
- * Estimates the number of processes that can be run concurrently. If
- * creating Web Workers, keep in mind that the main JavaScript process needs
- * its own core.
- *
- * @param options the options to use:
- *          update true to force an update (not use the cached value).
- * @param callback(err, max) called once the operation completes.
- */
-util.estimateCores = function(options, callback) {
-  if(typeof options === 'function') {
-    callback = options;
-    options = {};
-  }
-  options = options || {};
-  if('cores' in util && !options.update) {
-    return callback(null, util.cores);
-  }
-  if(typeof navigator !== 'undefined' &&
-    'hardwareConcurrency' in navigator &&
-    navigator.hardwareConcurrency > 0) {
-    util.cores = navigator.hardwareConcurrency;
-    return callback(null, util.cores);
-  }
-  if(typeof Worker === 'undefined') {
-    // workers not available
-    util.cores = 1;
-    return callback(null, util.cores);
-  }
-  if(typeof Blob === 'undefined') {
-    // can't estimate, default to 2
-    util.cores = 2;
-    return callback(null, util.cores);
-  }
-
-  // create worker concurrency estimation code as blob
-  var blobUrl = URL.createObjectURL(new Blob(['(',
-    function() {
-      self.addEventListener('message', function(e) {
-        // run worker for 4 ms
-        var st = Date.now();
-        var et = st + 4;
-        while(Date.now() < et);
-        self.postMessage({st: st, et: et});
-      });
-    }.toString(),
-  ')()'], {type: 'application/javascript'}));
-
-  // take 5 samples using 16 workers
-  sample([], 5, 16);
-
-  function sample(max, samples, numWorkers) {
-    if(samples === 0) {
-      // get overlap average
-      var avg = Math.floor(max.reduce(function(avg, x) {
-        return avg + x;
-      }, 0) / max.length);
-      util.cores = Math.max(1, avg);
-      URL.revokeObjectURL(blobUrl);
-      return callback(null, util.cores);
-    }
-    map(numWorkers, function(err, results) {
-      max.push(reduce(numWorkers, results));
-      sample(max, samples - 1, numWorkers);
-    });
-  }
-
-  function map(numWorkers, callback) {
-    var workers = [];
-    var results = [];
-    for(var i = 0; i < numWorkers; ++i) {
-      var worker = new Worker(blobUrl);
-      worker.addEventListener('message', function(e) {
-        results.push(e.data);
-        if(results.length === numWorkers) {
-          for(var i = 0; i < numWorkers; ++i) {
-            workers[i].terminate();
-          }
-          callback(null, results);
-        }
-      });
-      workers.push(worker);
-    }
-    for(var i = 0; i < numWorkers; ++i) {
-      workers[i].postMessage(i);
-    }
-  }
-
-  function reduce(numWorkers, results) {
-    // find overlapping time windows
-    var overlaps = [];
-    for(var n = 0; n < numWorkers; ++n) {
-      var r1 = results[n];
-      var overlap = overlaps[n] = [];
-      for(var i = 0; i < numWorkers; ++i) {
-        if(n === i) {
-          continue;
-        }
-        var r2 = results[i];
-        if((r1.st > r2.st && r1.st < r2.et) ||
-          (r2.st > r1.st && r2.st < r1.et)) {
-          overlap.push(i);
-        }
-      }
-    }
-    // get maximum overlaps ... don't include overlapping worker itself
-    // as the main JS process was also being scheduled during the work and
-    // would have to be subtracted from the estimate anyway
-    return overlaps.reduce(function(max, overlap) {
-      return Math.max(max, overlap.length);
-    }, 0);
-  }
-};
-
-}).call(this)}).call(this,require('_process'),typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {},require("buffer").Buffer,arguments[3],arguments[4],arguments[5],arguments[6],require("timers").setImmediate)
-},{"./baseN":53,"./forge":54,"_process":59,"buffer":27,"timers":81}],59:[function(require,module,exports){
+},{"yallist":77}],54:[function(require,module,exports){
 // shim for using process in browser
 var process = module.exports = {};
 
@@ -14404,142 +10634,11 @@ process.chdir = function (dir) {
 };
 process.umask = function() { return 0; };
 
-},{}],60:[function(require,module,exports){
-/**
- * Copyright (c) 2016-2017 Digital Bazaar, Inc. All rights reserved.
- */
-'use strict';
-
-const util = require('./util');
-
-module.exports = class AsyncAlgorithm {
-  constructor({
-    maxCallStackDepth = 500,
-    maxTotalCallStackDepth = 0xFFFFFFFF,
-    // milliseconds
-    timeSlice = 10
-  } = {}) {
-    this.schedule = {};
-    this.schedule.MAX_DEPTH = maxCallStackDepth;
-    this.schedule.MAX_TOTAL_DEPTH = maxTotalCallStackDepth;
-    this.schedule.depth = 0;
-    this.schedule.totalDepth = 0;
-    this.schedule.timeSlice = timeSlice;
-  }
-
-  // do some work in a time slice, but in serial
-  doWork(fn, callback) {
-    const schedule = this.schedule;
-
-    if(schedule.totalDepth >= schedule.MAX_TOTAL_DEPTH) {
-      return callback(new Error(
-        'Maximum total call stack depth exceeded; canonicalization aborting.'));
-    }
-
-    (function work() {
-      if(schedule.depth === schedule.MAX_DEPTH) {
-        // stack too deep, run on next tick
-        schedule.depth = 0;
-        schedule.running = false;
-        return util.nextTick(work);
-      }
-
-      // if not yet running, force run
-      const now = Date.now();
-      if(!schedule.running) {
-        schedule.start = Date.now();
-        schedule.deadline = schedule.start + schedule.timeSlice;
-      }
-
-      // TODO: should also include an estimate of expectedWorkTime
-      if(now < schedule.deadline) {
-        schedule.running = true;
-        schedule.depth++;
-        schedule.totalDepth++;
-        return fn((err, result) => {
-          schedule.depth--;
-          schedule.totalDepth--;
-          callback(err, result);
-        });
-      }
-
-      // not enough time left in this slice, run after letting browser
-      // do some other things
-      schedule.depth = 0;
-      schedule.running = false;
-      util.setImmediate(work);
-    })();
-  }
-
-  // asynchronously loop
-  forEach(iterable, fn, callback) {
-    const self = this;
-    let iterator;
-    let idx = 0;
-    let length;
-    if(Array.isArray(iterable)) {
-      length = iterable.length;
-      iterator = () => {
-        if(idx === length) {
-          return false;
-        }
-        iterator.value = iterable[idx++];
-        iterator.key = idx;
-        return true;
-      };
-    } else {
-      const keys = Object.keys(iterable);
-      length = keys.length;
-      iterator = () => {
-        if(idx === length) {
-          return false;
-        }
-        iterator.key = keys[idx++];
-        iterator.value = iterable[iterator.key];
-        return true;
-      };
-    }
-
-    (function iterate(err) {
-      if(err) {
-        return callback(err);
-      }
-      if(iterator()) {
-        return self.doWork(() => fn(iterator.value, iterator.key, iterate));
-      }
-      callback();
-    })();
-  }
-
-  // asynchronous waterfall
-  waterfall(fns, callback) {
-    const self = this;
-    self.forEach(
-      fns, (fn, idx, callback) => self.doWork(fn, callback), callback);
-  }
-
-  // asynchronous while
-  whilst(condition, fn, callback) {
-    const self = this;
-    (function loop(err) {
-      if(err) {
-        return callback(err);
-      }
-      if(!condition()) {
-        return callback();
-      }
-      self.doWork(fn, loop);
-    })();
-  }
-};
-
-},{"./util":70}],61:[function(require,module,exports){
+},{}],55:[function(require,module,exports){
 /*
- * Copyright (c) 2016-2017 Digital Bazaar, Inc. All rights reserved.
+ * Copyright (c) 2016-2020 Digital Bazaar, Inc. All rights reserved.
  */
 'use strict';
-
-const util = require('./util');
 
 module.exports = class IdentifierIssuer {
   /**
@@ -14547,11 +10646,13 @@ module.exports = class IdentifierIssuer {
    * identifiers, keeping track of any previously issued identifiers.
    *
    * @param prefix the prefix to use ('<prefix><counter>').
+   * @param existing an existing Map to use.
+   * @param counter the counter to use.
    */
-  constructor(prefix) {
+  constructor(prefix, existing = new Map(), counter = 0) {
     this.prefix = prefix;
-    this.counter = 0;
-    this.existing = {};
+    this._existing = existing;
+    this.counter = counter;
   }
 
   /**
@@ -14560,10 +10661,8 @@ module.exports = class IdentifierIssuer {
    * @return a copy of this IdentifierIssuer.
    */
   clone() {
-    const copy = new IdentifierIssuer(this.prefix);
-    copy.counter = this.counter;
-    copy.existing = util.clone(this.existing);
-    return copy;
+    const {prefix, _existing, counter} = this;
+    return new IdentifierIssuer(prefix, new Map(_existing), counter);
   }
 
   /**
@@ -14576,17 +10675,18 @@ module.exports = class IdentifierIssuer {
    */
   getId(old) {
     // return existing old identifier
-    if(old && old in this.existing) {
-      return this.existing[old];
+    const existing = old && this._existing.get(old);
+    if(existing) {
+      return existing;
     }
 
     // get next identifier
     const identifier = this.prefix + this.counter;
-    this.counter += 1;
+    this.counter++;
 
     // save mapping
     if(old) {
-      this.existing[old] = identifier;
+      this._existing.set(old, identifier);
     }
 
     return identifier;
@@ -14602,20 +10702,31 @@ module.exports = class IdentifierIssuer {
    *   false if not.
    */
   hasId(old) {
-    return (old in this.existing);
+    return this._existing.has(old);
+  }
+
+  /**
+   * Returns all of the IDs that have been issued new IDs in the order in
+   * which they were issued new IDs.
+   *
+   * @return the list of old IDs that has been issued new IDs in order.
+   */
+  getOldIds() {
+    return [...this._existing.keys()];
   }
 };
 
-},{"./util":70}],62:[function(require,module,exports){
+},{}],56:[function(require,module,exports){
 /*
- * Copyright (c) 2016-2017 Digital Bazaar, Inc. All rights reserved.
+ * Copyright (c) 2016-2020 Digital Bazaar, Inc. All rights reserved.
  */
 'use strict';
 
-const forge = require('node-forge/lib/forge');
-require('node-forge/lib/md');
-require('node-forge/lib/sha1');
-require('node-forge/lib/sha256');
+require('setimmediate');
+
+const crypto = self.crypto || self.msCrypto;
+
+// TODO: synchronous version no longer supported in browser
 
 module.exports = class MessageDigest {
   /**
@@ -14624,21 +10735,41 @@ module.exports = class MessageDigest {
    * @param algorithm the algorithm to use.
    */
   constructor(algorithm) {
-    this.md = forge.md[algorithm].create();
+    // check if crypto.subtle is available
+    // check is here rather than top-level to only fail if class is used
+    if(!(crypto && crypto.subtle)) {
+      throw new Error('crypto.subtle not found.');
+    }
+    if(algorithm === 'sha256') {
+      this.algorithm = {name: 'SHA-256'};
+    } else if(algorithm === 'sha1') {
+      this.algorithm = {name: 'SHA-1'};
+    } else {
+      throw new Error(`Unsupport algorithm "${algorithm}".`);
+    }
+    this._content = '';
   }
 
   update(msg) {
-    this.md.update(msg, 'utf8');
+    this._content += msg;
   }
 
-  digest() {
-    return this.md.digest().toHex();
+  async digest() {
+    const data = new TextEncoder().encode(this._content);
+    const buffer = new Uint8Array(
+      await crypto.subtle.digest(this.algorithm, data));
+    // return digest in hex
+    let hex = '';
+    for(let i = 0; i < buffer.length; ++i) {
+      hex += buffer[i].toString(16).padStart(2, '0');
+    }
+    return hex;
   }
 };
 
-},{"node-forge/lib/forge":54,"node-forge/lib/md":55,"node-forge/lib/sha1":56,"node-forge/lib/sha256":57}],63:[function(require,module,exports){
+},{"setimmediate":74}],57:[function(require,module,exports){
 /*
- * Copyright (c) 2016-2017 Digital Bazaar, Inc. All rights reserved.
+ * Copyright (c) 2016-2020 Digital Bazaar, Inc. All rights reserved.
  */
 'use strict';
 
@@ -14647,6 +10778,11 @@ const TERMS = ['subject', 'predicate', 'object', 'graph'];
 const RDF = 'http://www.w3.org/1999/02/22-rdf-syntax-ns#';
 const RDF_LANGSTRING = RDF + 'langString';
 const XSD_STRING = 'http://www.w3.org/2001/XMLSchema#string';
+
+const TYPE_NAMED_NODE = 'NamedNode';
+const TYPE_BLANK_NODE = 'BlankNode';
+const TYPE_LITERAL = 'Literal';
+const TYPE_DEFAULT_GRAPH = 'DefaultGraph';
 
 // build regexes
 const REGEX = {};
@@ -14738,29 +10874,29 @@ module.exports = class NQuads {
       }
 
       // create RDF quad
-      const quad = {};
+      const quad = {subject: null, predicate: null, object: null, graph: null};
 
       // get subject
       if(match[1] !== undefined) {
-        quad.subject = {termType: 'NamedNode', value: match[1]};
+        quad.subject = {termType: TYPE_NAMED_NODE, value: match[1]};
       } else {
-        quad.subject = {termType: 'BlankNode', value: match[2]};
+        quad.subject = {termType: TYPE_BLANK_NODE, value: match[2]};
       }
 
       // get predicate
-      quad.predicate = {termType: 'NamedNode', value: match[3]};
+      quad.predicate = {termType: TYPE_NAMED_NODE, value: match[3]};
 
       // get object
       if(match[4] !== undefined) {
-        quad.object = {termType: 'NamedNode', value: match[4]};
+        quad.object = {termType: TYPE_NAMED_NODE, value: match[4]};
       } else if(match[5] !== undefined) {
-        quad.object = {termType: 'BlankNode', value: match[5]};
+        quad.object = {termType: TYPE_BLANK_NODE, value: match[5]};
       } else {
         quad.object = {
-          termType: 'Literal',
+          termType: TYPE_LITERAL,
           value: undefined,
           datatype: {
-            termType: 'NamedNode'
+            termType: TYPE_NAMED_NODE
           }
         };
         if(match[7] !== undefined) {
@@ -14777,17 +10913,17 @@ module.exports = class NQuads {
       // get graph
       if(match[9] !== undefined) {
         quad.graph = {
-          termType: 'NamedNode',
+          termType: TYPE_NAMED_NODE,
           value: match[9]
         };
       } else if(match[10] !== undefined) {
         quad.graph = {
-          termType: 'BlankNode',
+          termType: TYPE_BLANK_NODE,
           value: match[10]
         };
       } else {
         quad.graph = {
-          termType: 'DefaultGraph',
+          termType: TYPE_DEFAULT_GRAPH,
           value: ''
         };
       }
@@ -14848,38 +10984,38 @@ module.exports = class NQuads {
 
     let nquad = '';
 
-    // subject and predicate can only be NamedNode or BlankNode
-    [s, p].forEach(term => {
-      if(term.termType === 'NamedNode') {
-        nquad += '<' + term.value + '>';
-      } else {
-        nquad += term.value;
-      }
-      nquad += ' ';
-    });
+    // subject can only be NamedNode or BlankNode
+    if(s.termType === TYPE_NAMED_NODE) {
+      nquad += `<${s.value}>`;
+    } else {
+      nquad += `${s.value}`;
+    }
+
+    // predicate can only be NamedNode
+    nquad += ` <${p.value}> `;
 
     // object is NamedNode, BlankNode, or Literal
-    if(o.termType === 'NamedNode') {
-      nquad += '<' + o.value + '>';
-    } else if(o.termType === 'BlankNode') {
+    if(o.termType === TYPE_NAMED_NODE) {
+      nquad += `<${o.value}>`;
+    } else if(o.termType === TYPE_BLANK_NODE) {
       nquad += o.value;
     } else {
-      nquad += '"' + _escape(o.value) + '"';
+      nquad += `"${_escape(o.value)}"`;
       if(o.datatype.value === RDF_LANGSTRING) {
         if(o.language) {
-          nquad += '@' + o.language;
+          nquad += `@${o.language}`;
         }
       } else if(o.datatype.value !== XSD_STRING) {
-        nquad += '^^<' + o.datatype.value + '>';
+        nquad += `^^<${o.datatype.value}>`;
       }
     }
 
     // graph can only be NamedNode or BlankNode (or DefaultGraph, but that
     // does not add to `nquad`)
-    if(g.termType === 'NamedNode') {
-      nquad += ' <' + g.value + '>';
-    } else if(g.termType === 'BlankNode') {
-      nquad += ' ' + g.value;
+    if(g.termType === TYPE_NAMED_NODE) {
+      nquad += ` <${g.value}>`;
+    } else if(g.termType === TYPE_BLANK_NODE) {
+      nquad += ` ${g.value}`;
     }
 
     nquad += ' .\n';
@@ -14898,9 +11034,9 @@ module.exports = class NQuads {
     const quads = [];
 
     const termTypeMap = {
-      'blank node': 'BlankNode',
-      IRI: 'NamedNode',
-      literal: 'Literal'
+      'blank node': TYPE_BLANK_NODE,
+      IRI: TYPE_NAMED_NODE,
+      literal: TYPE_LITERAL
     };
 
     for(const graphName in dataset) {
@@ -14913,9 +11049,9 @@ module.exports = class NQuads {
             termType: termTypeMap[oldComponent.type],
             value: oldComponent.value
           };
-          if(newComponent.termType === 'Literal') {
+          if(newComponent.termType === TYPE_LITERAL) {
             newComponent.datatype = {
-              termType: 'NamedNode'
+              termType: TYPE_NAMED_NODE
             };
             if('datatype' in oldComponent) {
               newComponent.datatype.value = oldComponent.datatype;
@@ -14933,12 +11069,13 @@ module.exports = class NQuads {
         }
         if(graphName === '@default') {
           quad.graph = {
-            termType: 'DefaultGraph',
+            termType: TYPE_DEFAULT_GRAPH,
             value: ''
           };
         } else {
           quad.graph = {
-            termType: graphName.startsWith('_:') ? 'BlankNode' : 'NamedNode',
+            termType: graphName.startsWith('_:') ?
+              TYPE_BLANK_NODE : TYPE_NAMED_NODE,
             value: graphName
           };
         }
@@ -14959,18 +11096,25 @@ module.exports = class NQuads {
  * @return true if the triples are the same, false if not.
  */
 function _compareTriples(t1, t2) {
-  for(const k in t1) {
-    if(t1[k].termType !== t2[k].termType || t1[k].value !== t2[k].value) {
-      return false;
-    }
+  // compare subject and object types first as it is the quickest check
+  if(!(t1.subject.termType === t2.subject.termType &&
+    t1.object.termType === t2.object.termType)) {
+    return false;
   }
-  if(t1.object.termType !== 'Literal') {
+  // compare values
+  if(!(t1.subject.value === t2.subject.value &&
+    t1.predicate.value === t2.predicate.value &&
+    t1.object.value === t2.object.value)) {
+    return false;
+  }
+  if(t1.object.termType !== TYPE_LITERAL) {
+    // no `datatype` or `language` to check
     return true;
   }
   return (
     (t1.object.datatype.termType === t2.object.datatype.termType) &&
-    (t1.object.datatype.value === t2.object.datatype.value) &&
-    (t1.object.language === t2.object.language)
+    (t1.object.language === t2.object.language) &&
+    (t1.object.datatype.value === t2.object.datatype.value)
   );
 }
 
@@ -15018,30 +11162,30 @@ function _unescape(s) {
   });
 }
 
-},{}],64:[function(require,module,exports){
+},{}],58:[function(require,module,exports){
 /*
- * Copyright (c) 2016-2017 Digital Bazaar, Inc. All rights reserved.
+ * Copyright (c) 2016-2020 Digital Bazaar, Inc. All rights reserved.
  */
 'use strict';
 
-// TODO: convert to ES6 iterable
+// TODO: convert to ES6 iterable?
 
-module.exports = class Permutator {
+module.exports = class Permuter {
   /**
-   * A Permutator iterates over all possible permutations of the given array
+   * A Permuter iterates over all possible permutations of the given array
    * of elements.
    *
    * @param list the array of elements to iterate over.
    */
   constructor(list) {
     // original array
-    this.list = list.sort();
+    this.current = list.sort();
     // indicates whether there are more permutations
     this.done = false;
     // directional info for permutation algorithm
-    this.left = {};
+    this.dir = new Map();
     for(let i = 0; i < list.length; ++i) {
-      this.left[list[i]] = true;
+      this.dir.set(list[i], true);
     }
   }
 
@@ -15061,8 +11205,9 @@ module.exports = class Permutator {
    * @return the next permutation.
    */
   next() {
-    // copy current permutation
-    const rval = this.list.slice();
+    // copy current permutation to return it
+    const {current, dir} = this;
+    const rval = current.slice();
 
     /* Calculate the next permutation using the Steinhaus-Johnson-Trotter
      permutation algorithm. */
@@ -15071,13 +11216,13 @@ module.exports = class Permutator {
     // (mobile: element is greater than the one it is looking at)
     let k = null;
     let pos = 0;
-    const length = this.list.length;
+    const length = current.length;
     for(let i = 0; i < length; ++i) {
-      const element = this.list[i];
-      const left = this.left[element];
+      const element = current[i];
+      const left = dir.get(element);
       if((k === null || element > k) &&
-        ((left && i > 0 && element > this.list[i - 1]) ||
-        (!left && i < (length - 1) && element > this.list[i + 1]))) {
+        ((left && i > 0 && element > current[i - 1]) ||
+        (!left && i < (length - 1) && element > current[i + 1]))) {
         k = element;
         pos = i;
       }
@@ -15088,14 +11233,14 @@ module.exports = class Permutator {
       this.done = true;
     } else {
       // swap k and the element it is looking at
-      const swap = this.left[k] ? pos - 1 : pos + 1;
-      this.list[pos] = this.list[swap];
-      this.list[swap] = k;
+      const swap = dir.get(k) ? pos - 1 : pos + 1;
+      current[pos] = current[swap];
+      current[swap] = k;
 
       // reverse the direction of all elements larger than k
-      for(let i = 0; i < length; ++i) {
-        if(this.list[i] > k) {
-          this.left[this.list[i]] = !this.left[this.list[i]];
+      for(const element of current) {
+        if(element > k) {
+          dir.set(element, !dir.get(element));
         }
       }
     }
@@ -15104,625 +11249,40 @@ module.exports = class Permutator {
   }
 };
 
-
-},{}],65:[function(require,module,exports){
+},{}],59:[function(require,module,exports){
+(function (setImmediate){(function (){
 /*
- * Copyright (c) 2016-2017 Digital Bazaar, Inc. All rights reserved.
- */
-'use strict';
-
-const AsyncAlgorithm = require('./AsyncAlgorithm');
-const IdentifierIssuer = require('./IdentifierIssuer');
-const MessageDigest = require('./MessageDigest');
-const Permutator = require('./Permutator');
-const NQuads = require('./NQuads');
-const util = require('./util');
-
-const POSITIONS = {subject: 's', object: 'o', graph: 'g'};
-
-module.exports = class URDNA2015 extends AsyncAlgorithm {
-  constructor(options) {
-    options = options || {};
-    super(options);
-    this.name = 'URDNA2015';
-    this.options = Object.assign({}, options);
-    this.blankNodeInfo = {};
-    this.hashToBlankNodes = {};
-    this.canonicalIssuer = new IdentifierIssuer('_:c14n');
-    this.hashAlgorithm = 'sha256';
-    this.quads;
-  }
-
-  // 4.4) Normalization Algorithm
-  main(dataset, callback) {
-    const self = this;
-    self.schedule.start = Date.now();
-    let result;
-    self.quads = dataset;
-
-    // 1) Create the normalization state.
-
-    // Note: Optimize by generating non-normalized blank node map concurrently.
-    const nonNormalized = {};
-
-    self.waterfall([
-      callback => {
-        // 2) For every quad in input dataset:
-        self.forEach(dataset, (quad, idx, callback) => {
-          // 2.1) For each blank node that occurs in the quad, add a reference
-          // to the quad using the blank node identifier in the blank node to
-          // quads map, creating a new entry if necessary.
-          self.forEachComponent(quad, component => {
-            if(component.termType !== 'BlankNode') {
-              return;
-            }
-            const id = component.value;
-            if(id in self.blankNodeInfo) {
-              self.blankNodeInfo[id].quads.push(quad);
-            } else {
-              nonNormalized[id] = true;
-              self.blankNodeInfo[id] = {quads: [quad]};
-            }
-          });
-
-          callback();
-        }, callback);
-      },
-      callback => {
-        // 3) Create a list of non-normalized blank node identifiers
-        // non-normalized identifiers and populate it using the keys from the
-        // blank node to quads map.
-        // Note: We use a map here and it was generated during step 2.
-
-        // 4) Initialize simple, a boolean flag, to true.
-        let simple = true;
-
-        // 5) While simple is true, issue canonical identifiers for blank nodes:
-        self.whilst(() => simple, callback => {
-          // 5.1) Set simple to false.
-          simple = false;
-
-          // 5.2) Clear hash to blank nodes map.
-          self.hashToBlankNodes = {};
-
-          self.waterfall([
-            callback => {
-              // 5.3) For each blank node identifier identifier in
-              // non-normalized identifiers:
-              self.forEach(nonNormalized, (value, id, callback) => {
-                // 5.3.1) Create a hash, hash, according to the Hash First
-                // Degree Quads algorithm.
-                self.hashFirstDegreeQuads(id, (err, hash) => {
-                  if(err) {
-                    return callback(err);
-                  }
-                  // 5.3.2) Add hash and identifier to hash to blank nodes map,
-                  // creating a new entry if necessary.
-                  if(hash in self.hashToBlankNodes) {
-                    self.hashToBlankNodes[hash].push(id);
-                  } else {
-                    self.hashToBlankNodes[hash] = [id];
-                  }
-                  callback();
-                });
-              }, callback);
-            },
-            callback => {
-              // 5.4) For each hash to identifier list mapping in hash to blank
-              // nodes map, lexicographically-sorted by hash:
-              const hashes = Object.keys(self.hashToBlankNodes).sort();
-              self.forEach(hashes, (hash, i, callback) => {
-                // 5.4.1) If the length of identifier list is greater than 1,
-                // continue to the next mapping.
-                const idList = self.hashToBlankNodes[hash];
-                if(idList.length > 1) {
-                  return callback();
-                }
-
-                // 5.4.2) Use the Issue Identifier algorithm, passing canonical
-                // issuer and the single blank node identifier in identifier
-                // list, identifier, to issue a canonical replacement identifier
-                // for identifier.
-                // TODO: consider changing `getId` to `issue`
-                const id = idList[0];
-                self.canonicalIssuer.getId(id);
-
-                // 5.4.3) Remove identifier from non-normalized identifiers.
-                delete nonNormalized[id];
-
-                // 5.4.4) Remove hash from the hash to blank nodes map.
-                delete self.hashToBlankNodes[hash];
-
-                // 5.4.5) Set simple to true.
-                simple = true;
-                callback();
-              }, callback);
-            }
-          ], callback);
-        }, callback);
-      },
-      callback => {
-        // 6) For each hash to identifier list mapping in hash to blank nodes
-        // map, lexicographically-sorted by hash:
-        const hashes = Object.keys(self.hashToBlankNodes).sort();
-        self.forEach(hashes, (hash, idx, callback) => {
-          // 6.1) Create hash path list where each item will be a result of
-          // running the Hash N-Degree Quads algorithm.
-          const hashPathList = [];
-
-          // 6.2) For each blank node identifier identifier in identifier list:
-          const idList = self.hashToBlankNodes[hash];
-          self.waterfall([
-            callback => {
-              self.forEach(idList, (id, idx, callback) => {
-                // 6.2.1) If a canonical identifier has already been issued for
-                // identifier, continue to the next identifier.
-                if(self.canonicalIssuer.hasId(id)) {
-                  return callback();
-                }
-
-                // 6.2.2) Create temporary issuer, an identifier issuer
-                // initialized with the prefix _:b.
-                const issuer = new IdentifierIssuer('_:b');
-
-                // 6.2.3) Use the Issue Identifier algorithm, passing temporary
-                // issuer and identifier, to issue a new temporary blank node
-                // identifier for identifier.
-                issuer.getId(id);
-
-                // 6.2.4) Run the Hash N-Degree Quads algorithm, passing
-                // temporary issuer, and append the result to the hash path
-                // list.
-                self.hashNDegreeQuads(id, issuer, (err, result) => {
-                  if(err) {
-                    return callback(err);
-                  }
-                  hashPathList.push(result);
-                  callback();
-                });
-              }, callback);
-            },
-            callback => {
-              // 6.3) For each result in the hash path list,
-              // lexicographically-sorted by the hash in result:
-              // TODO: use `String.localeCompare`?
-              hashPathList.sort((a, b) =>
-                (a.hash < b.hash) ? -1 : ((a.hash > b.hash) ? 1 : 0));
-              self.forEach(hashPathList, (result, idx, callback) => {
-                // 6.3.1) For each blank node identifier, existing identifier,
-                // that was issued a temporary identifier by identifier issuer
-                // in result, issue a canonical identifier, in the same order,
-                // using the Issue Identifier algorithm, passing canonical
-                // issuer and existing identifier.
-                for(const existing in result.issuer.existing) {
-                  self.canonicalIssuer.getId(existing);
-                }
-                callback();
-              }, callback);
-            }
-          ], callback);
-        }, callback);
-      }, callback => {
-        /* Note: At this point all blank nodes in the set of RDF quads have been
-        assigned canonical identifiers, which have been stored in the canonical
-        issuer. Here each quad is updated by assigning each of its blank nodes
-        its new identifier. */
-
-        // 7) For each quad, quad, in input dataset:
-        const normalized = [];
-        self.waterfall([
-          callback => {
-            self.forEach(self.quads, (quad, idx, callback) => {
-              // 7.1) Create a copy, quad copy, of quad and replace any existing
-              // blank node identifiers using the canonical identifiers
-              // previously issued by canonical issuer.
-              // Note: We optimize away the copy here.
-              self.forEachComponent(quad, component => {
-                if(component.termType === 'BlankNode' &&
-                  !component.value.startsWith(self.canonicalIssuer.prefix)) {
-                  component.value = self.canonicalIssuer.getId(component.value);
-                }
-              });
-              // 7.2) Add quad copy to the normalized dataset.
-              normalized.push(NQuads.serializeQuad(quad));
-              callback();
-            }, callback);
-          },
-          callback => {
-            // sort normalized output
-            normalized.sort();
-
-            // 8) Return the normalized dataset.
-            result = normalized.join('');
-            return callback();
-          }
-        ], callback);
-      }
-    ], err => callback(err, result));
-  }
-
-  // 4.6) Hash First Degree Quads
-  hashFirstDegreeQuads(id, callback) {
-    const self = this;
-
-    // return cached hash
-    const info = self.blankNodeInfo[id];
-    if('hash' in info) {
-      return callback(null, info.hash);
-    }
-
-    // 1) Initialize nquads to an empty list. It will be used to store quads in
-    // N-Quads format.
-    const nquads = [];
-
-    // 2) Get the list of quads quads associated with the reference blank node
-    // identifier in the blank node to quads map.
-    const quads = info.quads;
-
-    // 3) For each quad quad in quads:
-    self.forEach(quads, (quad, idx, callback) => {
-      // 3.1) Serialize the quad in N-Quads format with the following special
-      // rule:
-
-      // 3.1.1) If any component in quad is an blank node, then serialize it
-      // using a special identifier as follows:
-      const copy = {predicate: quad.predicate};
-      self.forEachComponent(quad, (component, key) => {
-        // 3.1.2) If the blank node's existing blank node identifier matches the
-        // reference blank node identifier then use the blank node identifier
-        // _:a, otherwise, use the blank node identifier _:z.
-        copy[key] = self.modifyFirstDegreeComponent(id, component, key);
-      });
-      nquads.push(NQuads.serializeQuad(copy));
-      callback();
-    }, err => {
-      if(err) {
-        return callback(err);
-      }
-      // 4) Sort nquads in lexicographical order.
-      nquads.sort();
-
-      // 5) Return the hash that results from passing the sorted, joined nquads
-      // through the hash algorithm.
-      const md = new MessageDigest(self.hashAlgorithm);
-      for(let i = 0; i < nquads.length; ++i) {
-        md.update(nquads[i]);
-      }
-      // TODO: represent as byte buffer instead to cut memory usage in half
-      info.hash = md.digest();
-      callback(null, info.hash);
-    });
-  }
-
-  // 4.7) Hash Related Blank Node
-  hashRelatedBlankNode(related, quad, issuer, position, callback) {
-    const self = this;
-
-    // 1) Set the identifier to use for related, preferring first the canonical
-    // identifier for related if issued, second the identifier issued by issuer
-    // if issued, and last, if necessary, the result of the Hash First Degree
-    // Quads algorithm, passing related.
-    let id;
-    self.waterfall([
-      callback => {
-        if(self.canonicalIssuer.hasId(related)) {
-          id = self.canonicalIssuer.getId(related);
-          return callback();
-        }
-        if(issuer.hasId(related)) {
-          id = issuer.getId(related);
-          return callback();
-        }
-        self.hashFirstDegreeQuads(related, (err, hash) => {
-          if(err) {
-            return callback(err);
-          }
-          id = hash;
-          callback();
-        });
-      }
-    ], err => {
-      if(err) {
-        return callback(err);
-      }
-
-      // 2) Initialize a string input to the value of position.
-      // Note: We use a hash object instead.
-      const md = new MessageDigest(self.hashAlgorithm);
-      md.update(position);
-
-      // 3) If position is not g, append <, the value of the predicate in quad,
-      // and > to input.
-      if(position !== 'g') {
-        md.update(self.getRelatedPredicate(quad));
-      }
-
-      // 4) Append identifier to input.
-      md.update(id);
-
-      // 5) Return the hash that results from passing input through the hash
-      // algorithm.
-      // TODO: represent as byte buffer instead to cut memory usage in half
-      return callback(null, md.digest());
-    });
-  }
-
-  // 4.8) Hash N-Degree Quads
-  hashNDegreeQuads(id, issuer, callback) {
-    const self = this;
-
-    // 1) Create a hash to related blank nodes map for storing hashes that
-    // identify related blank nodes.
-    // Note: 2) and 3) handled within `createHashToRelated`
-    let hashToRelated;
-    const md = new MessageDigest(self.hashAlgorithm);
-    self.waterfall([
-      callback => self.createHashToRelated(id, issuer, (err, result) => {
-        if(err) {
-          return callback(err);
-        }
-        hashToRelated = result;
-        callback();
-      }),
-      callback => {
-        // 4) Create an empty string, data to hash.
-        // Note: We created a hash object `md` above instead.
-
-        // 5) For each related hash to blank node list mapping in hash to
-        // related blank nodes map, sorted lexicographically by related hash:
-        const hashes = Object.keys(hashToRelated).sort();
-        self.forEach(hashes, (hash, idx, callback) => {
-          // 5.1) Append the related hash to the data to hash.
-          md.update(hash);
-
-          // 5.2) Create a string chosen path.
-          let chosenPath = '';
-
-          // 5.3) Create an unset chosen issuer variable.
-          let chosenIssuer;
-
-          // 5.4) For each permutation of blank node list:
-          const permutator = new Permutator(hashToRelated[hash]);
-          self.whilst(() => permutator.hasNext(), nextPermutation => {
-            const permutation = permutator.next();
-
-            // 5.4.1) Create a copy of issuer, issuer copy.
-            let issuerCopy = issuer.clone();
-
-            // 5.4.2) Create a string path.
-            let path = '';
-
-            // 5.4.3) Create a recursion list, to store blank node identifiers
-            // that must be recursively processed by this algorithm.
-            const recursionList = [];
-
-            self.waterfall([
-              callback => {
-                // 5.4.4) For each related in permutation:
-                self.forEach(permutation, (related, idx, callback) => {
-                  // 5.4.4.1) If a canonical identifier has been issued for
-                  // related, append it to path.
-                  if(self.canonicalIssuer.hasId(related)) {
-                    path += self.canonicalIssuer.getId(related);
-                  } else {
-                    // 5.4.4.2) Otherwise:
-                    // 5.4.4.2.1) If issuer copy has not issued an identifier
-                    // for related, append related to recursion list.
-                    if(!issuerCopy.hasId(related)) {
-                      recursionList.push(related);
-                    }
-                    // 5.4.4.2.2) Use the Issue Identifier algorithm, passing
-                    // issuer copy and related and append the result to path.
-                    path += issuerCopy.getId(related);
-                  }
-
-                  // 5.4.4.3) If chosen path is not empty and the length of path
-                  // is greater than or equal to the length of chosen path and
-                  // path is lexicographically greater than chosen path, then
-                  // skip to the next permutation.
-                  // Note: Comparing path length to chosen path length can be
-                  // optimized away; only compare lexicographically.
-                  if(chosenPath.length !== 0 && path > chosenPath) {
-                    // FIXME: may cause inaccurate total depth calculation
-                    return nextPermutation();
-                  }
-                  callback();
-                }, callback);
-              },
-              callback => {
-                // 5.4.5) For each related in recursion list:
-                self.forEach(recursionList, (related, idx, callback) => {
-                  // 5.4.5.1) Set result to the result of recursively executing
-                  // the Hash N-Degree Quads algorithm, passing related for
-                  // identifier and issuer copy for path identifier issuer.
-                  self.hashNDegreeQuads(related, issuerCopy, (err, result) => {
-                    if(err) {
-                      return callback(err);
-                    }
-
-                    // 5.4.5.2) Use the Issue Identifier algorithm, passing
-                    // issuer copy and related and append the result to path.
-                    path += issuerCopy.getId(related);
-
-                    // 5.4.5.3) Append <, the hash in result, and > to path.
-                    path += '<' + result.hash + '>';
-
-                    // 5.4.5.4) Set issuer copy to the identifier issuer in
-                    // result.
-                    issuerCopy = result.issuer;
-
-                    // 5.4.5.5) If chosen path is not empty and the length of
-                    // path is greater than or equal to the length of chosen
-                    // path and path is lexicographically greater than chosen
-                    // path, then skip to the next permutation.
-                    // Note: Comparing path length to chosen path length can be
-                    // optimized away; only compare lexicographically.
-                    if(chosenPath.length !== 0 && path > chosenPath) {
-                      // FIXME: may cause inaccurate total depth calculation
-                      return nextPermutation();
-                    }
-                    callback();
-                  });
-                }, callback);
-              },
-              callback => {
-                // 5.4.6) If chosen path is empty or path is lexicographically
-                // less than chosen path, set chosen path to path and chosen
-                // issuer to issuer copy.
-                if(chosenPath.length === 0 || path < chosenPath) {
-                  chosenPath = path;
-                  chosenIssuer = issuerCopy;
-                }
-                callback();
-              }
-            ], nextPermutation);
-          }, err => {
-            if(err) {
-              return callback(err);
-            }
-
-            // 5.5) Append chosen path to data to hash.
-            md.update(chosenPath);
-
-            // 5.6) Replace issuer, by reference, with chosen issuer.
-            issuer = chosenIssuer;
-            callback();
-          });
-        }, callback);
-      }
-    ], err => {
-      // 6) Return issuer and the hash that results from passing data to hash
-      // through the hash algorithm.
-      callback(err, {hash: md.digest(), issuer});
-    });
-  }
-
-  // helper for modifying component during Hash First Degree Quads
-  modifyFirstDegreeComponent(id, component) {
-    if(component.termType !== 'BlankNode') {
-      return component;
-    }
-    component = util.clone(component);
-    component.value = (component.value === id ? '_:a' : '_:z');
-    return component;
-  }
-
-  // helper for getting a related predicate
-  getRelatedPredicate(quad) {
-    return '<' + quad.predicate.value + '>';
-  }
-
-  // helper for creating hash to related blank nodes map
-  createHashToRelated(id, issuer, callback) {
-    const self = this;
-
-    // 1) Create a hash to related blank nodes map for storing hashes that
-    // identify related blank nodes.
-    const hashToRelated = {};
-
-    // 2) Get a reference, quads, to the list of quads in the blank node to
-    // quads map for the key identifier.
-    const quads = self.blankNodeInfo[id].quads;
-
-    // 3) For each quad in quads:
-    self.forEach(quads, (quad, idx, callback) => {
-      // 3.1) For each component in quad, if component is the subject, object,
-      // and graph name and it is a blank node that is not identified by
-      // identifier:
-      self.forEach(quad, (component, key, callback) => {
-        if(key === 'predicate' ||
-          !(component.termType === 'BlankNode' && component.value !== id)) {
-          return callback();
-        }
-        // 3.1.1) Set hash to the result of the Hash Related Blank Node
-        // algorithm, passing the blank node identifier for component as
-        // related, quad, path identifier issuer as issuer, and position as
-        // either s, o, or g based on whether component is a subject, object,
-        // graph name, respectively.
-        const related = component.value;
-        const position = POSITIONS[key];
-        self.hashRelatedBlankNode(
-          related, quad, issuer, position, (err, hash) => {
-            if(err) {
-              return callback(err);
-            }
-            // 3.1.2) Add a mapping of hash to the blank node identifier for
-            // component to hash to related blank nodes map, adding an entry as
-            // necessary.
-            if(hash in hashToRelated) {
-              hashToRelated[hash].push(related);
-            } else {
-              hashToRelated[hash] = [related];
-            }
-            callback();
-          });
-      }, callback);
-    }, err => callback(err, hashToRelated));
-  }
-
-  // helper that iterates over quad components (skips predicate)
-  forEachComponent(quad, op) {
-    for(const key in quad) {
-      // skip `predicate`
-      if(key === 'predicate') {
-        continue;
-      }
-      op(quad[key], key, quad);
-    }
-  }
-};
-
-},{"./AsyncAlgorithm":60,"./IdentifierIssuer":61,"./MessageDigest":62,"./NQuads":63,"./Permutator":64,"./util":70}],66:[function(require,module,exports){
-/*
- * Copyright (c) 2016 Digital Bazaar, Inc. All rights reserved.
+ * Copyright (c) 2016-2020 Digital Bazaar, Inc. All rights reserved.
  */
 'use strict';
 
 const IdentifierIssuer = require('./IdentifierIssuer');
 const MessageDigest = require('./MessageDigest');
-const Permutator = require('./Permutator');
+const Permuter = require('./Permuter');
 const NQuads = require('./NQuads');
-const util = require('./util');
 
-const POSITIONS = {subject: 's', object: 'o', graph: 'g'};
-
-module.exports = class URDNA2015Sync {
+module.exports = class URDNA2015 {
   constructor() {
     this.name = 'URDNA2015';
-    this.blankNodeInfo = {};
-    this.hashToBlankNodes = {};
+    this.blankNodeInfo = new Map();
     this.canonicalIssuer = new IdentifierIssuer('_:c14n');
     this.hashAlgorithm = 'sha256';
-    this.quads;
+    this.quads = null;
   }
 
   // 4.4) Normalization Algorithm
-  main(dataset) {
-    const self = this;
-    self.quads = dataset;
+  async main(dataset) {
+    this.quads = dataset;
 
     // 1) Create the normalization state.
-
-    // Note: Optimize by generating non-normalized blank node map concurrently.
-    const nonNormalized = {};
-
     // 2) For every quad in input dataset:
     for(const quad of dataset) {
       // 2.1) For each blank node that occurs in the quad, add a reference
       // to the quad using the blank node identifier in the blank node to
       // quads map, creating a new entry if necessary.
-      self.forEachComponent(quad, component => {
-        if(component.termType !== 'BlankNode') {
-          return;
-        }
-        const id = component.value;
-        if(id in self.blankNodeInfo) {
-          self.blankNodeInfo[id].quads.push(quad);
-        } else {
-          nonNormalized[id] = true;
-          self.blankNodeInfo[id] = {quads: [quad]};
-        }
-      });
+      this._addBlankNodeQuadInfo({quad, component: quad.subject});
+      this._addBlankNodeQuadInfo({quad, component: quad.object});
+      this._addBlankNodeQuadInfo({quad, component: quad.graph});
     }
 
     // 3) Create a list of non-normalized blank node identifiers
@@ -15730,80 +11290,69 @@ module.exports = class URDNA2015Sync {
     // blank node to quads map.
     // Note: We use a map here and it was generated during step 2.
 
-    // 4) Initialize simple, a boolean flag, to true.
-    let simple = true;
+    // 4) `simple` flag is skipped -- loop is optimized away. This optimization
+    // is permitted because there was a typo in the hash first degree quads
+    // algorithm in the URDNA2015 spec that was implemented widely making it
+    // such that it could not be fixed; the result was that the loop only
+    // needs to be run once and the first degree quad hashes will never change.
+    // 5.1-5.2 are skipped; first degree quad hashes are generated just once
+    // for all non-normalized blank nodes.
 
-    // 5) While simple is true, issue canonical identifiers for blank nodes:
-    while(simple) {
-      // 5.1) Set simple to false.
-      simple = false;
+    // 5.3) For each blank node identifier identifier in non-normalized
+    // identifiers:
+    const hashToBlankNodes = new Map();
+    const nonNormalized = [...this.blankNodeInfo.keys()];
+    let i = 0;
+    for(const id of nonNormalized) {
+      // Note: batch hashing first degree quads 100 at a time
+      if(++i % 100 === 0) {
+        await this._yield();
+      }
+      // steps 5.3.1 and 5.3.2:
+      await this._hashAndTrackBlankNode({id, hashToBlankNodes});
+    }
 
-      // 5.2) Clear hash to blank nodes map.
-      self.hashToBlankNodes = {};
-
-      // 5.3) For each blank node identifier identifier in non-normalized
-      // identifiers:
-      for(const id in nonNormalized) {
-        // 5.3.1) Create a hash, hash, according to the Hash First Degree
-        // Quads algorithm.
-        const hash = self.hashFirstDegreeQuads(id);
-
-        // 5.3.2) Add hash and identifier to hash to blank nodes map,
-        // creating a new entry if necessary.
-        if(hash in self.hashToBlankNodes) {
-          self.hashToBlankNodes[hash].push(id);
-        } else {
-          self.hashToBlankNodes[hash] = [id];
-        }
+    // 5.4) For each hash to identifier list mapping in hash to blank
+    // nodes map, lexicographically-sorted by hash:
+    const hashes = [...hashToBlankNodes.keys()].sort();
+    // optimize away second sort, gather non-unique hashes in order as we go
+    const nonUnique = [];
+    for(const hash of hashes) {
+      // 5.4.1) If the length of identifier list is greater than 1,
+      // continue to the next mapping.
+      const idList = hashToBlankNodes.get(hash);
+      if(idList.length > 1) {
+        nonUnique.push(idList);
+        continue;
       }
 
-      // 5.4) For each hash to identifier list mapping in hash to blank
-      // nodes map, lexicographically-sorted by hash:
-      const hashes = Object.keys(self.hashToBlankNodes).sort();
-      for(let i = 0; i < hashes.length; ++i) {
-        // 5.4.1) If the length of identifier list is greater than 1,
-        // continue to the next mapping.
-        const hash = hashes[i];
-        const idList = self.hashToBlankNodes[hash];
-        if(idList.length > 1) {
-          continue;
-        }
+      // 5.4.2) Use the Issue Identifier algorithm, passing canonical
+      // issuer and the single blank node identifier in identifier
+      // list, identifier, to issue a canonical replacement identifier
+      // for identifier.
+      const id = idList[0];
+      this.canonicalIssuer.getId(id);
 
-        // 5.4.2) Use the Issue Identifier algorithm, passing canonical
-        // issuer and the single blank node identifier in identifier
-        // list, identifier, to issue a canonical replacement identifier
-        // for identifier.
-        // TODO: consider changing `getId` to `issue`
-        const id = idList[0];
-        self.canonicalIssuer.getId(id);
-
-        // 5.4.3) Remove identifier from non-normalized identifiers.
-        delete nonNormalized[id];
-
-        // 5.4.4) Remove hash from the hash to blank nodes map.
-        delete self.hashToBlankNodes[hash];
-
-        // 5.4.5) Set simple to true.
-        simple = true;
-      }
+      // Note: These steps are skipped, optimized away since the loop
+      // only needs to be run once.
+      // 5.4.3) Remove identifier from non-normalized identifiers.
+      // 5.4.4) Remove hash from the hash to blank nodes map.
+      // 5.4.5) Set simple to true.
     }
 
     // 6) For each hash to identifier list mapping in hash to blank nodes map,
     // lexicographically-sorted by hash:
-    const hashes = Object.keys(self.hashToBlankNodes).sort();
-    for(let i = 0; i < hashes.length; ++i) {
+    // Note: sort optimized away, use `nonUnique`.
+    for(const idList of nonUnique) {
       // 6.1) Create hash path list where each item will be a result of
       // running the Hash N-Degree Quads algorithm.
       const hashPathList = [];
 
       // 6.2) For each blank node identifier identifier in identifier list:
-      const hash = hashes[i];
-      const idList = self.hashToBlankNodes[hash];
-      for(let j = 0; j < idList.length; ++j) {
+      for(const id of idList) {
         // 6.2.1) If a canonical identifier has already been issued for
         // identifier, continue to the next identifier.
-        const id = idList[j];
-        if(self.canonicalIssuer.hasId(id)) {
+        if(this.canonicalIssuer.hasId(id)) {
           continue;
         }
 
@@ -15818,24 +11367,22 @@ module.exports = class URDNA2015Sync {
 
         // 6.2.4) Run the Hash N-Degree Quads algorithm, passing
         // temporary issuer, and append the result to the hash path list.
-        const result = self.hashNDegreeQuads(id, issuer);
+        const result = await this.hashNDegreeQuads(id, issuer);
         hashPathList.push(result);
       }
 
       // 6.3) For each result in the hash path list,
       // lexicographically-sorted by the hash in result:
-      // TODO: use `String.localeCompare`?
-      hashPathList.sort((a, b) =>
-        (a.hash < b.hash) ? -1 : ((a.hash > b.hash) ? 1 : 0));
-      for(let j = 0; j < hashPathList.length; ++j) {
+      hashPathList.sort(_stringHashCompare);
+      for(const result of hashPathList) {
         // 6.3.1) For each blank node identifier, existing identifier,
         // that was issued a temporary identifier by identifier issuer
         // in result, issue a canonical identifier, in the same order,
         // using the Issue Identifier algorithm, passing canonical
         // issuer and existing identifier.
-        const result = hashPathList[j];
-        for(const existing in result.issuer.existing) {
-          self.canonicalIssuer.getId(existing);
+        const oldIds = result.issuer.getOldIds();
+        for(const id of oldIds) {
+          this.canonicalIssuer.getId(id);
         }
       }
     }
@@ -15847,20 +11394,17 @@ module.exports = class URDNA2015Sync {
 
     // 7) For each quad, quad, in input dataset:
     const normalized = [];
-    for(let i = 0; i < self.quads.length; ++i) {
+    for(const quad of this.quads) {
       // 7.1) Create a copy, quad copy, of quad and replace any existing
       // blank node identifiers using the canonical identifiers
       // previously issued by canonical issuer.
-      // Note: We optimize away the copy here.
-      const quad = self.quads[i];
-      self.forEachComponent(quad, component => {
-        if(component.termType === 'BlankNode' &&
-          !component.value.startsWith(self.canonicalIssuer.prefix)) {
-          component.value = self.canonicalIssuer.getId(component.value);
-        }
-      });
+      // Note: We optimize with shallow copies here.
+      const q = {...quad};
+      q.subject = this._useCanonicalId({component: q.subject});
+      q.object = this._useCanonicalId({component: q.object});
+      q.graph = this._useCanonicalId({component: q.graph});
       // 7.2) Add quad copy to the normalized dataset.
-      normalized.push(NQuads.serializeQuad(quad));
+      normalized.push(NQuads.serializeQuad(q));
     }
 
     // sort normalized output
@@ -15871,39 +11415,35 @@ module.exports = class URDNA2015Sync {
   }
 
   // 4.6) Hash First Degree Quads
-  hashFirstDegreeQuads(id) {
-    const self = this;
-
-    // return cached hash
-    const info = self.blankNodeInfo[id];
-    if('hash' in info) {
-      return info.hash;
-    }
-
+  async hashFirstDegreeQuads(id) {
     // 1) Initialize nquads to an empty list. It will be used to store quads in
     // N-Quads format.
     const nquads = [];
 
     // 2) Get the list of quads `quads` associated with the reference blank node
     // identifier in the blank node to quads map.
+    const info = this.blankNodeInfo.get(id);
     const quads = info.quads;
 
     // 3) For each quad `quad` in `quads`:
-    for(let i = 0; i < quads.length; ++i) {
-      const quad = quads[i];
-
+    for(const quad of quads) {
       // 3.1) Serialize the quad in N-Quads format with the following special
       // rule:
 
       // 3.1.1) If any component in quad is an blank node, then serialize it
       // using a special identifier as follows:
-      const copy = {predicate: quad.predicate};
-      self.forEachComponent(quad, (component, key) => {
-        // 3.1.2) If the blank node's existing blank node identifier matches
-        // the reference blank node identifier then use the blank node
-        // identifier _:a, otherwise, use the blank node identifier _:z.
-        copy[key] = self.modifyFirstDegreeComponent(id, component, key);
-      });
+      const copy = {
+        subject: null, predicate: quad.predicate, object: null, graph: null
+      };
+      // 3.1.2) If the blank node's existing blank node identifier matches
+      // the reference blank node identifier then use the blank node
+      // identifier _:a, otherwise, use the blank node identifier _:z.
+      copy.subject = this.modifyFirstDegreeComponent(
+        id, quad.subject, 'subject');
+      copy.object = this.modifyFirstDegreeComponent(
+        id, quad.object, 'object');
+      copy.graph = this.modifyFirstDegreeComponent(
+        id, quad.graph, 'graph');
       nquads.push(NQuads.serializeQuad(copy));
     }
 
@@ -15912,41 +11452,38 @@ module.exports = class URDNA2015Sync {
 
     // 5) Return the hash that results from passing the sorted, joined nquads
     // through the hash algorithm.
-    const md = new MessageDigest(self.hashAlgorithm);
-    for(let i = 0; i < nquads.length; ++i) {
-      md.update(nquads[i]);
+    const md = new MessageDigest(this.hashAlgorithm);
+    for(const nquad of nquads) {
+      md.update(nquad);
     }
-    // TODO: represent as byte buffer instead to cut memory usage in half
-    info.hash = md.digest();
+    info.hash = await md.digest();
     return info.hash;
   }
 
   // 4.7) Hash Related Blank Node
-  hashRelatedBlankNode(related, quad, issuer, position) {
-    const self = this;
-
+  async hashRelatedBlankNode(related, quad, issuer, position) {
     // 1) Set the identifier to use for related, preferring first the canonical
     // identifier for related if issued, second the identifier issued by issuer
     // if issued, and last, if necessary, the result of the Hash First Degree
     // Quads algorithm, passing related.
     let id;
-    if(self.canonicalIssuer.hasId(related)) {
-      id = self.canonicalIssuer.getId(related);
+    if(this.canonicalIssuer.hasId(related)) {
+      id = this.canonicalIssuer.getId(related);
     } else if(issuer.hasId(related)) {
       id = issuer.getId(related);
     } else {
-      id = self.hashFirstDegreeQuads(related);
+      id = this.blankNodeInfo.get(related).hash;
     }
 
     // 2) Initialize a string input to the value of position.
     // Note: We use a hash object instead.
-    const md = new MessageDigest(self.hashAlgorithm);
+    const md = new MessageDigest(this.hashAlgorithm);
     md.update(position);
 
     // 3) If position is not g, append <, the value of the predicate in quad,
     // and > to input.
     if(position !== 'g') {
-      md.update(self.getRelatedPredicate(quad));
+      md.update(this.getRelatedPredicate(quad));
     }
 
     // 4) Append identifier to input.
@@ -15954,29 +11491,25 @@ module.exports = class URDNA2015Sync {
 
     // 5) Return the hash that results from passing input through the hash
     // algorithm.
-    // TODO: represent as byte buffer instead to cut memory usage in half
     return md.digest();
   }
 
   // 4.8) Hash N-Degree Quads
-  hashNDegreeQuads(id, issuer) {
-    const self = this;
-
+  async hashNDegreeQuads(id, issuer) {
     // 1) Create a hash to related blank nodes map for storing hashes that
     // identify related blank nodes.
     // Note: 2) and 3) handled within `createHashToRelated`
-    const md = new MessageDigest(self.hashAlgorithm);
-    const hashToRelated = self.createHashToRelated(id, issuer);
+    const md = new MessageDigest(this.hashAlgorithm);
+    const hashToRelated = await this.createHashToRelated(id, issuer);
 
     // 4) Create an empty string, data to hash.
     // Note: We created a hash object `md` above instead.
 
     // 5) For each related hash to blank node list mapping in hash to related
     // blank nodes map, sorted lexicographically by related hash:
-    const hashes = Object.keys(hashToRelated).sort();
-    for(let i = 0; i < hashes.length; ++i) {
+    const hashes = [...hashToRelated.keys()].sort();
+    for(const hash of hashes) {
       // 5.1) Append the related hash to the data to hash.
-      const hash = hashes[i];
       md.update(hash);
 
       // 5.2) Create a string chosen path.
@@ -15986,9 +11519,14 @@ module.exports = class URDNA2015Sync {
       let chosenIssuer;
 
       // 5.4) For each permutation of blank node list:
-      const permutator = new Permutator(hashToRelated[hash]);
-      while(permutator.hasNext()) {
-        const permutation = permutator.next();
+      const permuter = new Permuter(hashToRelated.get(hash));
+      let i = 0;
+      while(permuter.hasNext()) {
+        const permutation = permuter.next();
+        // Note: batch permutations 3 at a time
+        if(++i % 3 === 0) {
+          await this._yield();
+        }
 
         // 5.4.1) Create a copy of issuer, issuer copy.
         let issuerCopy = issuer.clone();
@@ -16002,12 +11540,11 @@ module.exports = class URDNA2015Sync {
 
         // 5.4.4) For each related in permutation:
         let nextPermutation = false;
-        for(let j = 0; j < permutation.length; ++j) {
+        for(const related of permutation) {
           // 5.4.4.1) If a canonical identifier has been issued for
           // related, append it to path.
-          const related = permutation[j];
-          if(self.canonicalIssuer.hasId(related)) {
-            path += self.canonicalIssuer.getId(related);
+          if(this.canonicalIssuer.hasId(related)) {
+            path += this.canonicalIssuer.getId(related);
           } else {
             // 5.4.4.2) Otherwise:
             // 5.4.4.2.1) If issuer copy has not issued an identifier for
@@ -16037,19 +11574,521 @@ module.exports = class URDNA2015Sync {
         }
 
         // 5.4.5) For each related in recursion list:
-        for(let j = 0; j < recursionList.length; ++j) {
+        for(const related of recursionList) {
           // 5.4.5.1) Set result to the result of recursively executing
           // the Hash N-Degree Quads algorithm, passing related for
           // identifier and issuer copy for path identifier issuer.
-          const related = recursionList[j];
-          const result = self.hashNDegreeQuads(related, issuerCopy);
+          const result = await this.hashNDegreeQuads(related, issuerCopy);
 
           // 5.4.5.2) Use the Issue Identifier algorithm, passing issuer
           // copy and related and append the result to path.
           path += issuerCopy.getId(related);
 
           // 5.4.5.3) Append <, the hash in result, and > to path.
-          path += '<' + result.hash + '>';
+          path += `<${result.hash}>`;
+
+          // 5.4.5.4) Set issuer copy to the identifier issuer in
+          // result.
+          issuerCopy = result.issuer;
+
+          // 5.4.5.5) If chosen path is not empty and the length of path
+          // is greater than or equal to the length of chosen path and
+          // path is lexicographically greater than chosen path, then
+          // skip to the next permutation.
+          // Note: Comparing path length to chosen path length can be optimized
+          // away; only compare lexicographically.
+          if(chosenPath.length !== 0 && path > chosenPath) {
+            nextPermutation = true;
+            break;
+          }
+        }
+
+        if(nextPermutation) {
+          continue;
+        }
+
+        // 5.4.6) If chosen path is empty or path is lexicographically
+        // less than chosen path, set chosen path to path and chosen
+        // issuer to issuer copy.
+        if(chosenPath.length === 0 || path < chosenPath) {
+          chosenPath = path;
+          chosenIssuer = issuerCopy;
+        }
+      }
+
+      // 5.5) Append chosen path to data to hash.
+      md.update(chosenPath);
+
+      // 5.6) Replace issuer, by reference, with chosen issuer.
+      issuer = chosenIssuer;
+    }
+
+    // 6) Return issuer and the hash that results from passing data to hash
+    // through the hash algorithm.
+    return {hash: await md.digest(), issuer};
+  }
+
+  // helper for modifying component during Hash First Degree Quads
+  modifyFirstDegreeComponent(id, component) {
+    if(component.termType !== 'BlankNode') {
+      return component;
+    }
+    /* Note: A mistake in the URDNA2015 spec that made its way into
+    implementations (and therefore must stay to avoid interop breakage)
+    resulted in an assigned canonical ID, if available for
+    `component.value`, not being used in place of `_:a`/`_:z`, so
+    we don't use it here. */
+    return {
+      termType: 'BlankNode',
+      value: component.value === id ? '_:a' : '_:z'
+    };
+  }
+
+  // helper for getting a related predicate
+  getRelatedPredicate(quad) {
+    return `<${quad.predicate.value}>`;
+  }
+
+  // helper for creating hash to related blank nodes map
+  async createHashToRelated(id, issuer) {
+    // 1) Create a hash to related blank nodes map for storing hashes that
+    // identify related blank nodes.
+    const hashToRelated = new Map();
+
+    // 2) Get a reference, quads, to the list of quads in the blank node to
+    // quads map for the key identifier.
+    const quads = this.blankNodeInfo.get(id).quads;
+
+    // 3) For each quad in quads:
+    let i = 0;
+    for(const quad of quads) {
+      // Note: batch hashing related blank node quads 100 at a time
+      if(++i % 100 === 0) {
+        await this._yield();
+      }
+      // 3.1) For each component in quad, if component is the subject, object,
+      // and graph name and it is a blank node that is not identified by
+      // identifier:
+      // steps 3.1.1 and 3.1.2 occur in helpers:
+      await Promise.all([
+        this._addRelatedBlankNodeHash({
+          quad, component: quad.subject, position: 's',
+          id, issuer, hashToRelated
+        }),
+        this._addRelatedBlankNodeHash({
+          quad, component: quad.object, position: 'o',
+          id, issuer, hashToRelated
+        }),
+        this._addRelatedBlankNodeHash({
+          quad, component: quad.graph, position: 'g',
+          id, issuer, hashToRelated
+        })
+      ]);
+    }
+
+    return hashToRelated;
+  }
+
+  async _hashAndTrackBlankNode({id, hashToBlankNodes}) {
+    // 5.3.1) Create a hash, hash, according to the Hash First Degree
+    // Quads algorithm.
+    const hash = await this.hashFirstDegreeQuads(id);
+
+    // 5.3.2) Add hash and identifier to hash to blank nodes map,
+    // creating a new entry if necessary.
+    const idList = hashToBlankNodes.get(hash);
+    if(!idList) {
+      hashToBlankNodes.set(hash, [id]);
+    } else {
+      idList.push(id);
+    }
+  }
+
+  _addBlankNodeQuadInfo({quad, component}) {
+    if(component.termType !== 'BlankNode') {
+      return;
+    }
+    const id = component.value;
+    const info = this.blankNodeInfo.get(id);
+    if(info) {
+      info.quads.add(quad);
+    } else {
+      this.blankNodeInfo.set(id, {quads: new Set([quad]), hash: null});
+    }
+  }
+
+  async _addRelatedBlankNodeHash(
+    {quad, component, position, id, issuer, hashToRelated}) {
+    if(!(component.termType === 'BlankNode' && component.value !== id)) {
+      return;
+    }
+    // 3.1.1) Set hash to the result of the Hash Related Blank Node
+    // algorithm, passing the blank node identifier for component as
+    // related, quad, path identifier issuer as issuer, and position as
+    // either s, o, or g based on whether component is a subject, object,
+    // graph name, respectively.
+    const related = component.value;
+    const hash = await this.hashRelatedBlankNode(
+      related, quad, issuer, position);
+
+    // 3.1.2) Add a mapping of hash to the blank node identifier for
+    // component to hash to related blank nodes map, adding an entry as
+    // necessary.
+    const entries = hashToRelated.get(hash);
+    if(entries) {
+      entries.push(related);
+    } else {
+      hashToRelated.set(hash, [related]);
+    }
+  }
+
+  _useCanonicalId({component}) {
+    if(component.termType === 'BlankNode' &&
+      !component.value.startsWith(this.canonicalIssuer.prefix)) {
+      return {
+        termType: 'BlankNode',
+        value: this.canonicalIssuer.getId(component.value)
+      };
+    }
+    return component;
+  }
+
+  async _yield() {
+    return new Promise(resolve => setImmediate(resolve));
+  }
+};
+
+function _stringHashCompare(a, b) {
+  return a.hash < b.hash ? -1 : a.hash > b.hash ? 1 : 0;
+}
+
+}).call(this)}).call(this,require("timers").setImmediate)
+},{"./IdentifierIssuer":55,"./MessageDigest":56,"./NQuads":57,"./Permuter":58,"timers":75}],60:[function(require,module,exports){
+/*
+ * Copyright (c) 2016-2020 Digital Bazaar, Inc. All rights reserved.
+ */
+'use strict';
+
+const IdentifierIssuer = require('./IdentifierIssuer');
+const MessageDigest = require('./MessageDigest');
+const Permuter = require('./Permuter');
+const NQuads = require('./NQuads');
+
+module.exports = class URDNA2015Sync {
+  constructor() {
+    this.name = 'URDNA2015';
+    this.blankNodeInfo = new Map();
+    this.canonicalIssuer = new IdentifierIssuer('_:c14n');
+    this.hashAlgorithm = 'sha256';
+    this.quads = null;
+  }
+
+  // 4.4) Normalization Algorithm
+  main(dataset) {
+    this.quads = dataset;
+
+    // 1) Create the normalization state.
+    // 2) For every quad in input dataset:
+    for(const quad of dataset) {
+      // 2.1) For each blank node that occurs in the quad, add a reference
+      // to the quad using the blank node identifier in the blank node to
+      // quads map, creating a new entry if necessary.
+      this._addBlankNodeQuadInfo({quad, component: quad.subject});
+      this._addBlankNodeQuadInfo({quad, component: quad.object});
+      this._addBlankNodeQuadInfo({quad, component: quad.graph});
+    }
+
+    // 3) Create a list of non-normalized blank node identifiers
+    // non-normalized identifiers and populate it using the keys from the
+    // blank node to quads map.
+    // Note: We use a map here and it was generated during step 2.
+
+    // 4) `simple` flag is skipped -- loop is optimized away. This optimization
+    // is permitted because there was a typo in the hash first degree quads
+    // algorithm in the URDNA2015 spec that was implemented widely making it
+    // such that it could not be fixed; the result was that the loop only
+    // needs to be run once and the first degree quad hashes will never change.
+    // 5.1-5.2 are skipped; first degree quad hashes are generated just once
+    // for all non-normalized blank nodes.
+
+    // 5.3) For each blank node identifier identifier in non-normalized
+    // identifiers:
+    const hashToBlankNodes = new Map();
+    const nonNormalized = [...this.blankNodeInfo.keys()];
+    for(const id of nonNormalized) {
+      // steps 5.3.1 and 5.3.2:
+      this._hashAndTrackBlankNode({id, hashToBlankNodes});
+    }
+
+    // 5.4) For each hash to identifier list mapping in hash to blank
+    // nodes map, lexicographically-sorted by hash:
+    const hashes = [...hashToBlankNodes.keys()].sort();
+    // optimize away second sort, gather non-unique hashes in order as we go
+    const nonUnique = [];
+    for(const hash of hashes) {
+      // 5.4.1) If the length of identifier list is greater than 1,
+      // continue to the next mapping.
+      const idList = hashToBlankNodes.get(hash);
+      if(idList.length > 1) {
+        nonUnique.push(idList);
+        continue;
+      }
+
+      // 5.4.2) Use the Issue Identifier algorithm, passing canonical
+      // issuer and the single blank node identifier in identifier
+      // list, identifier, to issue a canonical replacement identifier
+      // for identifier.
+      const id = idList[0];
+      this.canonicalIssuer.getId(id);
+
+      // Note: These steps are skipped, optimized away since the loop
+      // only needs to be run once.
+      // 5.4.3) Remove identifier from non-normalized identifiers.
+      // 5.4.4) Remove hash from the hash to blank nodes map.
+      // 5.4.5) Set simple to true.
+    }
+
+    // 6) For each hash to identifier list mapping in hash to blank nodes map,
+    // lexicographically-sorted by hash:
+    // Note: sort optimized away, use `nonUnique`.
+    for(const idList of nonUnique) {
+      // 6.1) Create hash path list where each item will be a result of
+      // running the Hash N-Degree Quads algorithm.
+      const hashPathList = [];
+
+      // 6.2) For each blank node identifier identifier in identifier list:
+      for(const id of idList) {
+        // 6.2.1) If a canonical identifier has already been issued for
+        // identifier, continue to the next identifier.
+        if(this.canonicalIssuer.hasId(id)) {
+          continue;
+        }
+
+        // 6.2.2) Create temporary issuer, an identifier issuer
+        // initialized with the prefix _:b.
+        const issuer = new IdentifierIssuer('_:b');
+
+        // 6.2.3) Use the Issue Identifier algorithm, passing temporary
+        // issuer and identifier, to issue a new temporary blank node
+        // identifier for identifier.
+        issuer.getId(id);
+
+        // 6.2.4) Run the Hash N-Degree Quads algorithm, passing
+        // temporary issuer, and append the result to the hash path list.
+        const result = this.hashNDegreeQuads(id, issuer);
+        hashPathList.push(result);
+      }
+
+      // 6.3) For each result in the hash path list,
+      // lexicographically-sorted by the hash in result:
+      hashPathList.sort(_stringHashCompare);
+      for(const result of hashPathList) {
+        // 6.3.1) For each blank node identifier, existing identifier,
+        // that was issued a temporary identifier by identifier issuer
+        // in result, issue a canonical identifier, in the same order,
+        // using the Issue Identifier algorithm, passing canonical
+        // issuer and existing identifier.
+        const oldIds = result.issuer.getOldIds();
+        for(const id of oldIds) {
+          this.canonicalIssuer.getId(id);
+        }
+      }
+    }
+
+    /* Note: At this point all blank nodes in the set of RDF quads have been
+    assigned canonical identifiers, which have been stored in the canonical
+    issuer. Here each quad is updated by assigning each of its blank nodes
+    its new identifier. */
+
+    // 7) For each quad, quad, in input dataset:
+    const normalized = [];
+    for(const quad of this.quads) {
+      // 7.1) Create a copy, quad copy, of quad and replace any existing
+      // blank node identifiers using the canonical identifiers
+      // previously issued by canonical issuer.
+      // Note: We optimize with shallow copies here.
+      const q = {...quad};
+      q.subject = this._useCanonicalId({component: q.subject});
+      q.object = this._useCanonicalId({component: q.object});
+      q.graph = this._useCanonicalId({component: q.graph});
+      // 7.2) Add quad copy to the normalized dataset.
+      normalized.push(NQuads.serializeQuad(q));
+    }
+
+    // sort normalized output
+    normalized.sort();
+
+    // 8) Return the normalized dataset.
+    return normalized.join('');
+  }
+
+  // 4.6) Hash First Degree Quads
+  hashFirstDegreeQuads(id) {
+    // 1) Initialize nquads to an empty list. It will be used to store quads in
+    // N-Quads format.
+    const nquads = [];
+
+    // 2) Get the list of quads `quads` associated with the reference blank node
+    // identifier in the blank node to quads map.
+    const info = this.blankNodeInfo.get(id);
+    const quads = info.quads;
+
+    // 3) For each quad `quad` in `quads`:
+    for(const quad of quads) {
+      // 3.1) Serialize the quad in N-Quads format with the following special
+      // rule:
+
+      // 3.1.1) If any component in quad is an blank node, then serialize it
+      // using a special identifier as follows:
+      const copy = {
+        subject: null, predicate: quad.predicate, object: null, graph: null
+      };
+      // 3.1.2) If the blank node's existing blank node identifier matches
+      // the reference blank node identifier then use the blank node
+      // identifier _:a, otherwise, use the blank node identifier _:z.
+      copy.subject = this.modifyFirstDegreeComponent(
+        id, quad.subject, 'subject');
+      copy.object = this.modifyFirstDegreeComponent(
+        id, quad.object, 'object');
+      copy.graph = this.modifyFirstDegreeComponent(
+        id, quad.graph, 'graph');
+      nquads.push(NQuads.serializeQuad(copy));
+    }
+
+    // 4) Sort nquads in lexicographical order.
+    nquads.sort();
+
+    // 5) Return the hash that results from passing the sorted, joined nquads
+    // through the hash algorithm.
+    const md = new MessageDigest(this.hashAlgorithm);
+    for(const nquad of nquads) {
+      md.update(nquad);
+    }
+    info.hash = md.digest();
+    return info.hash;
+  }
+
+  // 4.7) Hash Related Blank Node
+  hashRelatedBlankNode(related, quad, issuer, position) {
+    // 1) Set the identifier to use for related, preferring first the canonical
+    // identifier for related if issued, second the identifier issued by issuer
+    // if issued, and last, if necessary, the result of the Hash First Degree
+    // Quads algorithm, passing related.
+    let id;
+    if(this.canonicalIssuer.hasId(related)) {
+      id = this.canonicalIssuer.getId(related);
+    } else if(issuer.hasId(related)) {
+      id = issuer.getId(related);
+    } else {
+      id = this.blankNodeInfo.get(related).hash;
+    }
+
+    // 2) Initialize a string input to the value of position.
+    // Note: We use a hash object instead.
+    const md = new MessageDigest(this.hashAlgorithm);
+    md.update(position);
+
+    // 3) If position is not g, append <, the value of the predicate in quad,
+    // and > to input.
+    if(position !== 'g') {
+      md.update(this.getRelatedPredicate(quad));
+    }
+
+    // 4) Append identifier to input.
+    md.update(id);
+
+    // 5) Return the hash that results from passing input through the hash
+    // algorithm.
+    return md.digest();
+  }
+
+  // 4.8) Hash N-Degree Quads
+  hashNDegreeQuads(id, issuer) {
+    // 1) Create a hash to related blank nodes map for storing hashes that
+    // identify related blank nodes.
+    // Note: 2) and 3) handled within `createHashToRelated`
+    const md = new MessageDigest(this.hashAlgorithm);
+    const hashToRelated = this.createHashToRelated(id, issuer);
+
+    // 4) Create an empty string, data to hash.
+    // Note: We created a hash object `md` above instead.
+
+    // 5) For each related hash to blank node list mapping in hash to related
+    // blank nodes map, sorted lexicographically by related hash:
+    const hashes = [...hashToRelated.keys()].sort();
+    for(const hash of hashes) {
+      // 5.1) Append the related hash to the data to hash.
+      md.update(hash);
+
+      // 5.2) Create a string chosen path.
+      let chosenPath = '';
+
+      // 5.3) Create an unset chosen issuer variable.
+      let chosenIssuer;
+
+      // 5.4) For each permutation of blank node list:
+      const permuter = new Permuter(hashToRelated.get(hash));
+      while(permuter.hasNext()) {
+        const permutation = permuter.next();
+
+        // 5.4.1) Create a copy of issuer, issuer copy.
+        let issuerCopy = issuer.clone();
+
+        // 5.4.2) Create a string path.
+        let path = '';
+
+        // 5.4.3) Create a recursion list, to store blank node identifiers
+        // that must be recursively processed by this algorithm.
+        const recursionList = [];
+
+        // 5.4.4) For each related in permutation:
+        let nextPermutation = false;
+        for(const related of permutation) {
+          // 5.4.4.1) If a canonical identifier has been issued for
+          // related, append it to path.
+          if(this.canonicalIssuer.hasId(related)) {
+            path += this.canonicalIssuer.getId(related);
+          } else {
+            // 5.4.4.2) Otherwise:
+            // 5.4.4.2.1) If issuer copy has not issued an identifier for
+            // related, append related to recursion list.
+            if(!issuerCopy.hasId(related)) {
+              recursionList.push(related);
+            }
+            // 5.4.4.2.2) Use the Issue Identifier algorithm, passing
+            // issuer copy and related and append the result to path.
+            path += issuerCopy.getId(related);
+          }
+
+          // 5.4.4.3) If chosen path is not empty and the length of path
+          // is greater than or equal to the length of chosen path and
+          // path is lexicographically greater than chosen path, then
+          // skip to the next permutation.
+          // Note: Comparing path length to chosen path length can be optimized
+          // away; only compare lexicographically.
+          if(chosenPath.length !== 0 && path > chosenPath) {
+            nextPermutation = true;
+            break;
+          }
+        }
+
+        if(nextPermutation) {
+          continue;
+        }
+
+        // 5.4.5) For each related in recursion list:
+        for(const related of recursionList) {
+          // 5.4.5.1) Set result to the result of recursively executing
+          // the Hash N-Degree Quads algorithm, passing related for
+          // identifier and issuer copy for path identifier issuer.
+          const result = this.hashNDegreeQuads(related, issuerCopy);
+
+          // 5.4.5.2) Use the Issue Identifier algorithm, passing issuer
+          // copy and related and append the result to path.
+          path += issuerCopy.getId(related);
+
+          // 5.4.5.3) Append <, the hash in result, and > to path.
+          path += `<${result.hash}>`;
 
           // 5.4.5.4) Set issuer copy to the identifier issuer in
           // result.
@@ -16097,87 +12136,134 @@ module.exports = class URDNA2015Sync {
     if(component.termType !== 'BlankNode') {
       return component;
     }
-    component = util.clone(component);
-    component.value = (component.value === id ? '_:a' : '_:z');
-    return component;
+    /* Note: A mistake in the URDNA2015 spec that made its way into
+    implementations (and therefore must stay to avoid interop breakage)
+    resulted in an assigned canonical ID, if available for
+    `component.value`, not being used in place of `_:a`/`_:z`, so
+    we don't use it here. */
+    return {
+      termType: 'BlankNode',
+      value: component.value === id ? '_:a' : '_:z'
+    };
   }
 
   // helper for getting a related predicate
   getRelatedPredicate(quad) {
-    return '<' + quad.predicate.value + '>';
+    return `<${quad.predicate.value}>`;
   }
 
   // helper for creating hash to related blank nodes map
   createHashToRelated(id, issuer) {
-    const self = this;
-
     // 1) Create a hash to related blank nodes map for storing hashes that
     // identify related blank nodes.
-    const hashToRelated = {};
+    const hashToRelated = new Map();
 
     // 2) Get a reference, quads, to the list of quads in the blank node to
     // quads map for the key identifier.
-    const quads = self.blankNodeInfo[id].quads;
+    const quads = this.blankNodeInfo.get(id).quads;
 
     // 3) For each quad in quads:
-    for(let i = 0; i < quads.length; ++i) {
+    for(const quad of quads) {
       // 3.1) For each component in quad, if component is the subject, object,
-      // and graph name and it is a blank node that is not identified by
+      // or graph name and it is a blank node that is not identified by
       // identifier:
-      const quad = quads[i];
-      for(const key in quad) {
-        const component = quad[key];
-        if(key === 'predicate' ||
-          !(component.termType === 'BlankNode' && component.value !== id)) {
-          continue;
-        }
-        // 3.1.1) Set hash to the result of the Hash Related Blank Node
-        // algorithm, passing the blank node identifier for component as
-        // related, quad, path identifier issuer as issuer, and position as
-        // either s, o, or g based on whether component is a subject, object,
-        // graph name, respectively.
-        const related = component.value;
-        const position = POSITIONS[key];
-        const hash = self.hashRelatedBlankNode(related, quad, issuer, position);
-
-        // 3.1.2) Add a mapping of hash to the blank node identifier for
-        // component to hash to related blank nodes map, adding an entry as
-        // necessary.
-        if(hash in hashToRelated) {
-          hashToRelated[hash].push(related);
-        } else {
-          hashToRelated[hash] = [related];
-        }
-      }
+      // steps 3.1.1 and 3.1.2 occur in helpers:
+      this._addRelatedBlankNodeHash({
+        quad, component: quad.subject, position: 's',
+        id, issuer, hashToRelated
+      });
+      this._addRelatedBlankNodeHash({
+        quad, component: quad.object, position: 'o',
+        id, issuer, hashToRelated
+      });
+      this._addRelatedBlankNodeHash({
+        quad, component: quad.graph, position: 'g',
+        id, issuer, hashToRelated
+      });
     }
 
     return hashToRelated;
   }
 
-  // helper that iterates over quad components (skips predicate)
-  forEachComponent(quad, op) {
-    for(const key in quad) {
-      // skip `predicate`
-      if(key === 'predicate') {
-        continue;
-      }
-      op(quad[key], key, quad);
+  _hashAndTrackBlankNode({id, hashToBlankNodes}) {
+    // 5.3.1) Create a hash, hash, according to the Hash First Degree
+    // Quads algorithm.
+    const hash = this.hashFirstDegreeQuads(id);
+
+    // 5.3.2) Add hash and identifier to hash to blank nodes map,
+    // creating a new entry if necessary.
+    const idList = hashToBlankNodes.get(hash);
+    if(!idList) {
+      hashToBlankNodes.set(hash, [id]);
+    } else {
+      idList.push(id);
     }
+  }
+
+  _addBlankNodeQuadInfo({quad, component}) {
+    if(component.termType !== 'BlankNode') {
+      return;
+    }
+    const id = component.value;
+    const info = this.blankNodeInfo.get(id);
+    if(info) {
+      info.quads.add(quad);
+    } else {
+      this.blankNodeInfo.set(id, {quads: new Set([quad]), hash: null});
+    }
+  }
+
+  _addRelatedBlankNodeHash(
+    {quad, component, position, id, issuer, hashToRelated}) {
+    if(!(component.termType === 'BlankNode' && component.value !== id)) {
+      return;
+    }
+    // 3.1.1) Set hash to the result of the Hash Related Blank Node
+    // algorithm, passing the blank node identifier for component as
+    // related, quad, path identifier issuer as issuer, and position as
+    // either s, o, or g based on whether component is a subject, object,
+    // graph name, respectively.
+    const related = component.value;
+    const hash = this.hashRelatedBlankNode(related, quad, issuer, position);
+
+    // 3.1.2) Add a mapping of hash to the blank node identifier for
+    // component to hash to related blank nodes map, adding an entry as
+    // necessary.
+    const entries = hashToRelated.get(hash);
+    if(entries) {
+      entries.push(related);
+    } else {
+      hashToRelated.set(hash, [related]);
+    }
+  }
+
+  _useCanonicalId({component}) {
+    if(component.termType === 'BlankNode' &&
+      !component.value.startsWith(this.canonicalIssuer.prefix)) {
+      return {
+        termType: 'BlankNode',
+        value: this.canonicalIssuer.getId(component.value)
+      };
+    }
+    return component;
   }
 };
 
-},{"./IdentifierIssuer":61,"./MessageDigest":62,"./NQuads":63,"./Permutator":64,"./util":70}],67:[function(require,module,exports){
+function _stringHashCompare(a, b) {
+  return a.hash < b.hash ? -1 : a.hash > b.hash ? 1 : 0;
+}
+
+},{"./IdentifierIssuer":55,"./MessageDigest":56,"./NQuads":57,"./Permuter":58}],61:[function(require,module,exports){
 /*
- * Copyright (c) 2016-2017 Digital Bazaar, Inc. All rights reserved.
+ * Copyright (c) 2016-2020 Digital Bazaar, Inc. All rights reserved.
  */
 'use strict';
 
 const URDNA2015 = require('./URDNA2015');
-const util = require('./util');
 
 module.exports = class URDNA2012 extends URDNA2015 {
-  constructor(options) {
-    super(options);
+  constructor() {
+    super();
     this.name = 'URGNA2012';
     this.hashAlgorithm = 'sha1';
   }
@@ -16187,13 +12273,16 @@ module.exports = class URDNA2012 extends URDNA2015 {
     if(component.termType !== 'BlankNode') {
       return component;
     }
-    component = util.clone(component);
-    if(key === 'name') {
-      component.value = '_:g';
-    } else {
-      component.value = (component.value === id ? '_:a' : '_:z');
+    if(key === 'graph') {
+      return {
+        termType: 'BlankNode',
+        value: '_:g'
+      };
     }
-    return component;
+    return {
+      termType: 'BlankNode',
+      value: (component.value === id ? '_:a' : '_:z')
+    };
   }
 
   // helper for getting a related predicate
@@ -16202,19 +12291,18 @@ module.exports = class URDNA2012 extends URDNA2015 {
   }
 
   // helper for creating hash to related blank nodes map
-  createHashToRelated(id, issuer, callback) {
-    const self = this;
-
+  async createHashToRelated(id, issuer) {
     // 1) Create a hash to related blank nodes map for storing hashes that
     // identify related blank nodes.
-    const hashToRelated = {};
+    const hashToRelated = new Map();
 
     // 2) Get a reference, quads, to the list of quads in the blank node to
     // quads map for the key identifier.
-    const quads = self.blankNodeInfo[id].quads;
+    const quads = this.blankNodeInfo.get(id).quads;
 
     // 3) For each quad in quads:
-    self.forEach(quads, (quad, idx, callback) => {
+    let i = 0;
+    for(const quad of quads) {
       // 3.1) If the quad's subject is a blank node that does not match
       // identifier, set hash to the result of the Hash Related Blank Node
       // algorithm, passing the blank node identifier for subject as related,
@@ -16234,35 +12322,36 @@ module.exports = class URDNA2012 extends URDNA2015 {
         position = 'r';
       } else {
         // 3.3) Otherwise, continue to the next quad.
-        return callback();
+        continue;
+      }
+      // Note: batch hashing related blank nodes 100 at a time
+      if(++i % 100 === 0) {
+        await this._yield();
       }
       // 3.4) Add a mapping of hash to the blank node identifier for the
       // component that matched (subject or object) to hash to related blank
       // nodes map, adding an entry as necessary.
-      self.hashRelatedBlankNode(
-        related, quad, issuer, position, (err, hash) => {
-          if(err) {
-            return callback(err);
-          }
-          if(hash in hashToRelated) {
-            hashToRelated[hash].push(related);
-          } else {
-            hashToRelated[hash] = [related];
-          }
-          callback();
-        });
-    }, err => callback(err, hashToRelated));
+      const hash = await this.hashRelatedBlankNode(
+        related, quad, issuer, position);
+      const entries = hashToRelated.get(hash);
+      if(entries) {
+        entries.push(related);
+      } else {
+        hashToRelated.set(hash, [related]);
+      }
+    }
+
+    return hashToRelated;
   }
 };
 
-},{"./URDNA2015":65,"./util":70}],68:[function(require,module,exports){
+},{"./URDNA2015":59}],62:[function(require,module,exports){
 /*
- * Copyright (c) 2016 Digital Bazaar, Inc. All rights reserved.
+ * Copyright (c) 2016-2020 Digital Bazaar, Inc. All rights reserved.
  */
 'use strict';
 
 const URDNA2015Sync = require('./URDNA2015Sync');
-const util = require('./util');
 
 module.exports = class URDNA2012Sync extends URDNA2015Sync {
   constructor() {
@@ -16276,13 +12365,16 @@ module.exports = class URDNA2012Sync extends URDNA2015Sync {
     if(component.termType !== 'BlankNode') {
       return component;
     }
-    component = util.clone(component);
-    if(key === 'name') {
-      component.value = '_:g';
-    } else {
-      component.value = (component.value === id ? '_:a' : '_:z');
+    if(key === 'graph') {
+      return {
+        termType: 'BlankNode',
+        value: '_:g'
+      };
     }
-    return component;
+    return {
+      termType: 'BlankNode',
+      value: (component.value === id ? '_:a' : '_:z')
+    };
   }
 
   // helper for getting a related predicate
@@ -16292,23 +12384,20 @@ module.exports = class URDNA2012Sync extends URDNA2015Sync {
 
   // helper for creating hash to related blank nodes map
   createHashToRelated(id, issuer) {
-    const self = this;
-
     // 1) Create a hash to related blank nodes map for storing hashes that
     // identify related blank nodes.
-    const hashToRelated = {};
+    const hashToRelated = new Map();
 
     // 2) Get a reference, quads, to the list of quads in the blank node to
     // quads map for the key identifier.
-    const quads = self.blankNodeInfo[id].quads;
+    const quads = this.blankNodeInfo.get(id).quads;
 
     // 3) For each quad in quads:
-    for(let i = 0; i < quads.length; ++i) {
+    for(const quad of quads) {
       // 3.1) If the quad's subject is a blank node that does not match
       // identifier, set hash to the result of the Hash Related Blank Node
       // algorithm, passing the blank node identifier for subject as related,
       // quad, path identifier issuer as issuer, and p as position.
-      const quad = quads[i];
       let position;
       let related;
       if(quad.subject.termType === 'BlankNode' && quad.subject.value !== id) {
@@ -16329,11 +12418,12 @@ module.exports = class URDNA2012Sync extends URDNA2015Sync {
       // 3.4) Add a mapping of hash to the blank node identifier for the
       // component that matched (subject or object) to hash to related blank
       // nodes map, adding an entry as necessary.
-      const hash = self.hashRelatedBlankNode(related, quad, issuer, position);
-      if(hash in hashToRelated) {
-        hashToRelated[hash].push(related);
+      const hash = this.hashRelatedBlankNode(related, quad, issuer, position);
+      const entries = hashToRelated.get(hash);
+      if(entries) {
+        entries.push(related);
       } else {
-        hashToRelated[hash] = [related];
+        hashToRelated.set(hash, [related]);
       }
     }
 
@@ -16341,13 +12431,13 @@ module.exports = class URDNA2012Sync extends URDNA2015Sync {
   }
 };
 
-},{"./URDNA2015Sync":66,"./util":70}],69:[function(require,module,exports){
+},{"./URDNA2015Sync":60}],63:[function(require,module,exports){
 /**
  * An implementation of the RDF Dataset Normalization specification.
  * This library works in the browser and node.js.
  *
  * BSD 3-Clause License
- * Copyright (c) 2016-2017 Digital Bazaar, Inc.
+ * Copyright (c) 2016-2020 Digital Bazaar, Inc.
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -16378,7 +12468,6 @@ module.exports = class URDNA2012Sync extends URDNA2015Sync {
  */
 'use strict';
 
-const util = require('./util');
 const URDNA2015 = require('./URDNA2015');
 const URGNA2012 = require('./URGNA2012');
 const URDNA2015Sync = require('./URDNA2015Sync');
@@ -16419,57 +12508,42 @@ api._rdfCanonizeNative = function(api) {
  *          algorithm the canonicalization algorithm to use, `URDNA2015` or
  *            `URGNA2012`.
  *          [useNative] use native implementation (default: false).
- * @param [callback(err, canonical)] called once the operation completes.
  *
  * @return a Promise that resolves to the canonicalized RDF Dataset.
  */
-api.canonize = util.callbackify(async function(dataset, options) {
-  let callback;
-  const promise = new Promise((resolve, reject) => {
-    callback = (err, canonical) => {
-      if(err) {
-        return reject(err);
-      }
-
-      /*if(options.format === 'application/n-quads') {
-        canonical = canonical.join('');
-      }
-      canonical = _parseNQuads(canonical.join(''));*/
-
-      resolve(canonical);
-    };
-  });
-
+api.canonize = async function(dataset, options) {
   // back-compat with legacy dataset
   if(!Array.isArray(dataset)) {
     dataset = api.NQuads.legacyDatasetToQuads(dataset);
   }
 
-  // TODO: convert algorithms to Promise-based async
   if(options.useNative) {
-    if(rdfCanonizeNative) {
-      rdfCanonizeNative.canonize(dataset, options, callback);
-    } else {
+    if(!rdfCanonizeNative) {
       throw new Error('rdf-canonize-native not available');
     }
-  } else {
-    if(options.algorithm === 'URDNA2015') {
-      new URDNA2015(options).main(dataset, callback);
-    } else if(options.algorithm === 'URGNA2012') {
-      new URGNA2012(options).main(dataset, callback);
-    } else if(!('algorithm' in options)) {
-      throw new Error('No RDF Dataset Canonicalization algorithm specified.');
-    } else {
-      throw new Error(
-        'Invalid RDF Dataset Canonicalization algorithm: ' + options.algorithm);
-    }
+    // TODO: convert native algorithm to Promise-based async
+    return new Promise((resolve, reject) =>
+      rdfCanonizeNative.canonize(dataset, options, (err, canonical) =>
+        err ? reject(err) : resolve(canonical)));
   }
 
-  return promise;
-});
+  if(options.algorithm === 'URDNA2015') {
+    return new URDNA2015(options).main(dataset);
+  }
+  if(options.algorithm === 'URGNA2012') {
+    return new URGNA2012(options).main(dataset);
+  }
+  if(!('algorithm' in options)) {
+    throw new Error('No RDF Dataset Canonicalization algorithm specified.');
+  }
+  throw new Error(
+    'Invalid RDF Dataset Canonicalization algorithm: ' + options.algorithm);
+};
 
 /**
- * Synchronously canonizes an RDF dataset.
+ * This method is no longer available in the public API, it is for testing
+ * only. It synchronously canonizes an RDF dataset and does not work in the
+ * browser.
  *
  * @param dataset the dataset to canonize.
  * @param options the options to use:
@@ -16479,7 +12553,7 @@ api.canonize = util.callbackify(async function(dataset, options) {
  *
  * @return the RDF dataset in canonical form.
  */
-api.canonizeSync = function(dataset, options) {
+api._canonizeSync = function(dataset, options) {
   // back-compat with legacy dataset
   if(!Array.isArray(dataset)) {
     dataset = api.NQuads.legacyDatasetToQuads(dataset);
@@ -16493,7 +12567,8 @@ api.canonizeSync = function(dataset, options) {
   }
   if(options.algorithm === 'URDNA2015') {
     return new URDNA2015Sync(options).main(dataset);
-  } else if(options.algorithm === 'URGNA2012') {
+  }
+  if(options.algorithm === 'URGNA2012') {
     return new URGNA2012Sync(options).main(dataset);
   }
   if(!('algorithm' in options)) {
@@ -16503,121 +12578,7 @@ api.canonizeSync = function(dataset, options) {
     'Invalid RDF Dataset Canonicalization algorithm: ' + options.algorithm);
 };
 
-},{"./IdentifierIssuer":61,"./NQuads":63,"./URDNA2015":65,"./URDNA2015Sync":66,"./URGNA2012":67,"./URGNA2012Sync":68,"./util":70,"rdf-canonize-native":27}],70:[function(require,module,exports){
-(function (process,setImmediate){(function (){
-/*
- * Copyright (c) 2016-2017 Digital Bazaar, Inc. All rights reserved.
- */
-'use strict';
-
-const api = {};
-module.exports = api;
-
-// define setImmediate and nextTick
-//// nextTick implementation with browser-compatible fallback ////
-// from https://github.com/caolan/async/blob/master/lib/async.js
-
-// capture the global reference to guard against fakeTimer mocks
-const _setImmediate = typeof setImmediate === 'function' && setImmediate;
-
-const _delay = _setImmediate ?
-  // not a direct alias (for IE10 compatibility)
-  fn => _setImmediate(fn) :
-  fn => setTimeout(fn, 0);
-
-if(typeof process === 'object' && typeof process.nextTick === 'function') {
-  api.nextTick = process.nextTick;
-} else {
-  api.nextTick = _delay;
-}
-api.setImmediate = _setImmediate ? _delay : api.nextTick;
-
-/**
- * Clones an object, array, or string/number. If a typed JavaScript object
- * is given, such as a Date, it will be converted to a string.
- *
- * @param value the value to clone.
- *
- * @return the cloned value.
- */
-api.clone = function(value) {
-  if(value && typeof value === 'object') {
-    let rval;
-    if(Array.isArray(value)) {
-      rval = [];
-      for(let i = 0; i < value.length; ++i) {
-        rval[i] = api.clone(value[i]);
-      }
-    } else if(api.isObject(value)) {
-      rval = {};
-      for(const key in value) {
-        rval[key] = api.clone(value[key]);
-      }
-    } else {
-      rval = value.toString();
-    }
-    return rval;
-  }
-  return value;
-};
-
-/**
- * Returns true if the given value is an Object.
- *
- * @param v the value to check.
- *
- * @return true if the value is an Object, false if not.
- */
-api.isObject = v => Object.prototype.toString.call(v) === '[object Object]';
-
-/**
- * Returns true if the given value is undefined.
- *
- * @param v the value to check.
- *
- * @return true if the value is undefined, false if not.
- */
-api.isUndefined = v => typeof v === 'undefined';
-
-api.callbackify = fn => {
-  return async function(...args) {
-    const callback = args[args.length - 1];
-    if(typeof callback === 'function') {
-      args.pop();
-    }
-
-    let result;
-    try {
-      result = await fn.apply(null, args);
-    } catch(e) {
-      if(typeof callback === 'function') {
-        return _invokeCallback(callback, e);
-      }
-      throw e;
-    }
-
-    if(typeof callback === 'function') {
-      return _invokeCallback(callback, null, result);
-    }
-
-    return result;
-  };
-};
-
-function _invokeCallback(callback, err, result) {
-  try {
-    return callback(err, result);
-  } catch(unhandledError) {
-    // throw unhandled errors to prevent "unhandled rejected promise"
-    // and simulate what would have happened in a promiseless API
-    process.nextTick(() => {
-      throw unhandledError;
-    });
-  }
-}
-
-}).call(this)}).call(this,require('_process'),require("timers").setImmediate)
-},{"_process":59,"timers":81}],71:[function(require,module,exports){
+},{"./IdentifierIssuer":55,"./NQuads":57,"./URDNA2015":59,"./URDNA2015Sync":60,"./URGNA2012":61,"./URGNA2012Sync":62,"rdf-canonize-native":28}],64:[function(require,module,exports){
 "use strict";
 
 // the functions for a class Object
@@ -16775,7 +12736,7 @@ class Class extends Term {
 
 module.exports = Class;
 
-},{"./Term":79,"./utilities":80}],72:[function(require,module,exports){
+},{"./Term":72,"./utilities":73}],65:[function(require,module,exports){
 "use strict";
 
 // the functions for a data type Object
@@ -16905,7 +12866,7 @@ class DataType extends Term {
 
 module.exports = DataType;
 
-},{"./Term":79,"./utilities":80}],73:[function(require,module,exports){
+},{"./Term":72,"./utilities":73}],66:[function(require,module,exports){
 "use strict";
 
 // the functions for a enumeration Object
@@ -16994,7 +12955,7 @@ class Enumeration extends Class {
 
 module.exports = Enumeration;
 
-},{"./Class":71,"./utilities":80}],74:[function(require,module,exports){
+},{"./Class":64,"./utilities":73}],67:[function(require,module,exports){
 "use strict";
 
 // the functions for a enumeration member Object
@@ -17084,7 +13045,7 @@ class EnumerationMember extends Term {
 
 module.exports = EnumerationMember;
 
-},{"./Term":79,"./utilities":80}],75:[function(require,module,exports){
+},{"./Term":72,"./utilities":73}],68:[function(require,module,exports){
 "use strict";
 
 function asyncGeneratorStep(gen, resolve, reject, _next, _throw, key, arg) { try { var info = gen[key](arg); var value = info.value; } catch (error) { reject(error); return; } if (info.done) { resolve(value); } else { Promise.resolve(value).then(_next, _throw); } }
@@ -18107,7 +14068,7 @@ class Graph {
 
 module.exports = Graph;
 
-},{"./Class":71,"./DataType":72,"./Enumeration":73,"./EnumerationMember":74,"./Property":76,"./ReasoningEngine":77,"./utilities":80}],76:[function(require,module,exports){
+},{"./Class":64,"./DataType":65,"./Enumeration":66,"./EnumerationMember":67,"./Property":69,"./ReasoningEngine":70,"./utilities":73}],69:[function(require,module,exports){
 "use strict";
 
 // the functions for a property Object
@@ -18286,7 +14247,7 @@ class Property extends Term {
 
 module.exports = Property;
 
-},{"./Term":79,"./utilities":80}],77:[function(require,module,exports){
+},{"./Term":72,"./utilities":73}],70:[function(require,module,exports){
 "use strict";
 
 var util = require('./utilities');
@@ -18595,7 +14556,7 @@ class ReasoningEngine {
 
 module.exports = ReasoningEngine;
 
-},{"./utilities":80}],78:[function(require,module,exports){
+},{"./utilities":73}],71:[function(require,module,exports){
 "use strict";
 
 function asyncGeneratorStep(gen, resolve, reject, _next, _throw, key, arg) { try { var info = gen[key](arg); var value = info.value; } catch (error) { reject(error); return; } if (info.done) { resolve(value); } else { Promise.resolve(value).then(_next, _throw); } }
@@ -19210,7 +15171,7 @@ class SDOAdapter {
 
 module.exports = SDOAdapter;
 
-},{"./Graph":75,"./utilities":80,"axios":1}],79:[function(require,module,exports){
+},{"./Graph":68,"./utilities":73,"axios":1}],72:[function(require,module,exports){
 "use strict";
 
 // the functions for a term Object
@@ -19404,7 +15365,7 @@ class Term {
 
 module.exports = Term;
 
-},{"./utilities":80}],80:[function(require,module,exports){
+},{"./utilities":73}],73:[function(require,module,exports){
 "use strict";
 
 function asyncGeneratorStep(gen, resolve, reject, _next, _throw, key, arg) { try { var info = gen[key](arg); var value = info.value; } catch (error) { reject(error); return; } if (info.done) { resolve(value); } else { Promise.resolve(value).then(_next, _throw); } }
@@ -20023,7 +15984,197 @@ module.exports = {
   getFileNameForSchemaOrgVersion
 };
 
-},{"jsonld":46}],81:[function(require,module,exports){
+},{"jsonld":47}],74:[function(require,module,exports){
+(function (process,global){(function (){
+(function (global, undefined) {
+    "use strict";
+
+    if (global.setImmediate) {
+        return;
+    }
+
+    var nextHandle = 1; // Spec says greater than zero
+    var tasksByHandle = {};
+    var currentlyRunningATask = false;
+    var doc = global.document;
+    var registerImmediate;
+
+    function setImmediate(callback) {
+      // Callback can either be a function or a string
+      if (typeof callback !== "function") {
+        callback = new Function("" + callback);
+      }
+      // Copy function arguments
+      var args = new Array(arguments.length - 1);
+      for (var i = 0; i < args.length; i++) {
+          args[i] = arguments[i + 1];
+      }
+      // Store and register the task
+      var task = { callback: callback, args: args };
+      tasksByHandle[nextHandle] = task;
+      registerImmediate(nextHandle);
+      return nextHandle++;
+    }
+
+    function clearImmediate(handle) {
+        delete tasksByHandle[handle];
+    }
+
+    function run(task) {
+        var callback = task.callback;
+        var args = task.args;
+        switch (args.length) {
+        case 0:
+            callback();
+            break;
+        case 1:
+            callback(args[0]);
+            break;
+        case 2:
+            callback(args[0], args[1]);
+            break;
+        case 3:
+            callback(args[0], args[1], args[2]);
+            break;
+        default:
+            callback.apply(undefined, args);
+            break;
+        }
+    }
+
+    function runIfPresent(handle) {
+        // From the spec: "Wait until any invocations of this algorithm started before this one have completed."
+        // So if we're currently running a task, we'll need to delay this invocation.
+        if (currentlyRunningATask) {
+            // Delay by doing a setTimeout. setImmediate was tried instead, but in Firefox 7 it generated a
+            // "too much recursion" error.
+            setTimeout(runIfPresent, 0, handle);
+        } else {
+            var task = tasksByHandle[handle];
+            if (task) {
+                currentlyRunningATask = true;
+                try {
+                    run(task);
+                } finally {
+                    clearImmediate(handle);
+                    currentlyRunningATask = false;
+                }
+            }
+        }
+    }
+
+    function installNextTickImplementation() {
+        registerImmediate = function(handle) {
+            process.nextTick(function () { runIfPresent(handle); });
+        };
+    }
+
+    function canUsePostMessage() {
+        // The test against `importScripts` prevents this implementation from being installed inside a web worker,
+        // where `global.postMessage` means something completely different and can't be used for this purpose.
+        if (global.postMessage && !global.importScripts) {
+            var postMessageIsAsynchronous = true;
+            var oldOnMessage = global.onmessage;
+            global.onmessage = function() {
+                postMessageIsAsynchronous = false;
+            };
+            global.postMessage("", "*");
+            global.onmessage = oldOnMessage;
+            return postMessageIsAsynchronous;
+        }
+    }
+
+    function installPostMessageImplementation() {
+        // Installs an event handler on `global` for the `message` event: see
+        // * https://developer.mozilla.org/en/DOM/window.postMessage
+        // * http://www.whatwg.org/specs/web-apps/current-work/multipage/comms.html#crossDocumentMessages
+
+        var messagePrefix = "setImmediate$" + Math.random() + "$";
+        var onGlobalMessage = function(event) {
+            if (event.source === global &&
+                typeof event.data === "string" &&
+                event.data.indexOf(messagePrefix) === 0) {
+                runIfPresent(+event.data.slice(messagePrefix.length));
+            }
+        };
+
+        if (global.addEventListener) {
+            global.addEventListener("message", onGlobalMessage, false);
+        } else {
+            global.attachEvent("onmessage", onGlobalMessage);
+        }
+
+        registerImmediate = function(handle) {
+            global.postMessage(messagePrefix + handle, "*");
+        };
+    }
+
+    function installMessageChannelImplementation() {
+        var channel = new MessageChannel();
+        channel.port1.onmessage = function(event) {
+            var handle = event.data;
+            runIfPresent(handle);
+        };
+
+        registerImmediate = function(handle) {
+            channel.port2.postMessage(handle);
+        };
+    }
+
+    function installReadyStateChangeImplementation() {
+        var html = doc.documentElement;
+        registerImmediate = function(handle) {
+            // Create a <script> element; its readystatechange event will be fired asynchronously once it is inserted
+            // into the document. Do so, thus queuing up the task. Remember to clean up once it's been called.
+            var script = doc.createElement("script");
+            script.onreadystatechange = function () {
+                runIfPresent(handle);
+                script.onreadystatechange = null;
+                html.removeChild(script);
+                script = null;
+            };
+            html.appendChild(script);
+        };
+    }
+
+    function installSetTimeoutImplementation() {
+        registerImmediate = function(handle) {
+            setTimeout(runIfPresent, 0, handle);
+        };
+    }
+
+    // If supported, we should attach to the prototype of global, since that is where setTimeout et al. live.
+    var attachTo = Object.getPrototypeOf && Object.getPrototypeOf(global);
+    attachTo = attachTo && attachTo.setTimeout ? attachTo : global;
+
+    // Don't get fooled by e.g. browserify environments.
+    if ({}.toString.call(global.process) === "[object process]") {
+        // For Node.js before 0.9
+        installNextTickImplementation();
+
+    } else if (canUsePostMessage()) {
+        // For non-IE10 modern browsers
+        installPostMessageImplementation();
+
+    } else if (global.MessageChannel) {
+        // For web workers, where supported
+        installMessageChannelImplementation();
+
+    } else if (doc && "onreadystatechange" in doc.createElement("script")) {
+        // For IE 6–8
+        installReadyStateChangeImplementation();
+
+    } else {
+        // For older browsers
+        installSetTimeoutImplementation();
+    }
+
+    attachTo.setImmediate = setImmediate;
+    attachTo.clearImmediate = clearImmediate;
+}(typeof self === "undefined" ? typeof global === "undefined" ? this : global : self));
+
+}).call(this)}).call(this,require('_process'),typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
+},{"_process":54}],75:[function(require,module,exports){
 (function (setImmediate,clearImmediate){(function (){
 var nextTick = require('process/browser.js').nextTick;
 var apply = Function.prototype.apply;
@@ -20102,7 +16253,7 @@ exports.clearImmediate = typeof clearImmediate === "function" ? clearImmediate :
   delete immediateIds[id];
 };
 }).call(this)}).call(this,require("timers").setImmediate,require("timers").clearImmediate)
-},{"process/browser.js":59,"timers":81}],82:[function(require,module,exports){
+},{"process/browser.js":54,"timers":75}],76:[function(require,module,exports){
 'use strict'
 module.exports = function (Yallist) {
   Yallist.prototype[Symbol.iterator] = function* () {
@@ -20112,7 +16263,7 @@ module.exports = function (Yallist) {
   }
 }
 
-},{}],83:[function(require,module,exports){
+},{}],77:[function(require,module,exports){
 'use strict'
 module.exports = Yallist
 
@@ -20540,7 +16691,7 @@ try {
   require('./iterator.js')(Yallist)
 } catch (er) {}
 
-},{"./iterator.js":82}],84:[function(require,module,exports){
+},{"./iterator.js":76}],78:[function(require,module,exports){
 "use strict";
 
 var _schemaOrgAdapter = _interopRequireDefault(require("schema-org-adapter"));
@@ -20559,26 +16710,18 @@ var _TreeRenderer = _interopRequireDefault(require("./TreeRenderer"));
 
 var _TableRenderer = _interopRequireDefault(require("./TableRenderer"));
 
+var _SHACLRenderer = _interopRequireDefault(require("./SHACLRenderer"));
+
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
 function asyncGeneratorStep(gen, resolve, reject, _next, _throw, key, arg) { try { var info = gen[key](arg); var value = info.value; } catch (error) { reject(error); return; } if (info.done) { resolve(value); } else { Promise.resolve(value).then(_next, _throw); } }
 
 function _asyncToGenerator(fn) { return function () { var self = this, args = arguments; return new Promise(function (resolve, reject) { var gen = fn.apply(self, args); function _next(value) { asyncGeneratorStep(gen, resolve, reject, _next, _throw, "next", value); } function _throw(err) { asyncGeneratorStep(gen, resolve, reject, _next, _throw, "throw", err); } _next(undefined); }); }; }
 
-var BROWSER_TYPES = {
-  DS: 'DS',
-  LIST: 'LIST'
-};
-
 class DSBrowser {
-  constructor(elem, dsOrList) {
+  constructor(params) {
     var _this = this;
 
-    var type = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : BROWSER_TYPES.DS;
-    this.elem = elem;
-    this.dsOrList = dsOrList;
-    this.type = type;
-    this.path = null;
     this.util = new _Util.default(this);
     this.dsHandler = new _DSHandler.default(this);
     this.listRenderer = new _ListRenderer.default(this);
@@ -20586,28 +16729,55 @@ class DSBrowser {
     this.nativeRenderer = new _NativeRenderer.default(this);
     this.treeRenderer = new _TreeRenderer.default(this);
     this.tableRenderer = new _TableRenderer.default(this);
-    window.addEventListener('popstate', /*#__PURE__*/_asyncToGenerator(function* () {
-      yield _this.render();
-    }));
+    this.shaclRenderer = new _SHACLRenderer.default(this);
+    this.targetElement = params.targetElement;
+    this.locationControl = params.locationControl !== false;
+
+    if (this.locationControl) {
+      // if locationControl is true -> read parameters from URL - the ds browser is assumed to be at the domain level of a url (not inside a path /something/ ) and have complete control over the routes /ds/* and /list/*
+      this.readStateFromUrl();
+    } else {
+      // if locationControl is false -> read parameters from initialization, at least dsId or listId must be given!
+      this.listId = params.listId || null;
+      this.dsId = params.dsId || null;
+      this.path = params.path || null;
+      this.viewMode = params.viewMode || null;
+      this.format = params.format || null;
+    }
+
+    if (this.locationControl) {
+      window.addEventListener('popstate', /*#__PURE__*/_asyncToGenerator(function* () {
+        _this.readStateFromUrl();
+
+        yield _this.render();
+      }));
+    }
   }
 
   render() {
     var _this2 = this;
 
     return _asyncToGenerator(function* () {
-      _this2.elem.innerHTML = '<div style="text-align: center">' + '<img src="https://raw.githubusercontent.com/semantifyit/ds-browser/main/images/loading.gif"' + ' alt="Loading Animation" style="margin-top: 6px;">' + '</div>';
-      yield _this2.init();
+      _this2.targetElement.innerHTML = _this2.util.createHtmlLoading();
+      yield _this2.renderInit();
 
-      if (_this2.isShaclRendering()) {
-        _this2.dsRenderer.renderShacl();
-      } else if (_this2.isNativeRendering()) {
+      if (_this2.format === "shacl") {
+        // render raw SHACL of DS
+        _this2.shaclRenderer.renderSHACL();
+      } else if (_this2.dsId && _this2.viewMode !== "tree" && _this2.viewMode !== "table") {
+        // render DS with native view
         _this2.nativeRenderer.render();
-      } else if (_this2.isTreeRendering()) {
+      } else if (_this2.dsId && _this2.viewMode === "tree") {
+        // render DS with tree view
         _this2.treeRenderer.render();
-      } else if (_this2.isTableRendering()) {
+      } else if (_this2.dsId && _this2.viewMode === "table") {
+        // render DS with table view
         _this2.tableRenderer.render();
-      } else if (_this2.isListRendering()) {
+      } else if (_this2.listId) {
+        // render List as table
         _this2.listRenderer.render();
+      } else {
+        console.error("Input parameters invalid.");
       }
 
       _this2.addJSLinkEventListener();
@@ -20616,64 +16786,40 @@ class DSBrowser {
     })();
   }
 
-  init() {
+  renderInit() {
     var _this3 = this;
 
     return _asyncToGenerator(function* () {
-      // Init list
-      if (_this3.listNeedsInit()) {
+      // Init List
+      if (_this3.listId && (!_this3.list || !_this3.list["@id"].endsWith(_this3.listId))) {
         yield _this3.initList();
-      } // Init ds and/or ds node
+      } // Init DS
 
 
-      if (_this3.dsNeedsInit()) {
-        yield _this3.initDS();
+      if (_this3.dsId && (!_this3.ds || !_this3.ds["@id"].endsWith(_this3.dsId))) {
+        yield _this3.initDS(); // Init DS Node
+      }
 
-        _this3.initDSNode();
-      } else if (_this3.dsNodeNeedsInit()) {
-        _this3.initDSNode();
+      if (_this3.ds) {
+        _this3.dsRootNode = _this3.util.discoverDsRootNode(_this3.ds['@graph']);
+        _this3.dsNode = _this3.dsHandler.getDSNodeForPath();
       }
     })();
-  }
-
-  listNeedsInit() {
-    return this.type === BROWSER_TYPES.LIST && !this.list;
   }
 
   initList() {
     var _this4 = this;
 
     return _asyncToGenerator(function* () {
-      _this4.list = yield _this4.util.parseToObject(_this4.dsOrList);
+      _this4.list = yield _this4.util.parseToObject("https://semantify.it/list/" + _this4.listId + "?representation=lean");
     })();
-  }
-
-  dsNeedsInit() {
-    var searchParams = new URLSearchParams(window.location.search);
-    var dsUID = searchParams.get('ds');
-    return this.type === BROWSER_TYPES.LIST && dsUID && dsUID !== this.dsUID || this.type === BROWSER_TYPES.DS && !this.ds;
   }
 
   initDS() {
     var _this5 = this;
 
     return _asyncToGenerator(function* () {
-      if (_this5.type === BROWSER_TYPES.DS) {
-        _this5.ds = yield _this5.util.parseToObject(_this5.dsOrList);
-      } else if (_this5.type === BROWSER_TYPES.LIST) {
-        var searchParams = new URLSearchParams(window.location.search);
-        _this5.dsUID = searchParams.get('ds');
-
-        for (var part of _this5.list['schema:hasPart']) {
-          var id = part['@id'];
-
-          if (id.split('/').pop() === _this5.dsUID) {
-            _this5.ds = yield _this5.util.parseToObject(id);
-            break;
-          }
-        }
-      }
-
+      _this5.ds = yield _this5.util.parseToObject("https://semantify.it/ds/" + _this5.dsId);
       _this5.sdoAdapter = new _schemaOrgAdapter.default();
       var vocabUrls = yield _this5.getVocabUrlsForDS();
       yield _this5.sdoAdapter.addVocabularies(vocabUrls);
@@ -20689,14 +16835,20 @@ class DSBrowser {
     var _this6 = this;
 
     return _asyncToGenerator(function* () {
-      var vocabs = [];
-
-      if (_this6.ds && _this6.ds['@graph'][0] && Array.isArray(_this6.ds['@graph'][0]['ds:usedVocabularies'])) {
-        vocabs = _this6.ds['@graph'][0]['ds:usedVocabularies'];
+      if (!_this6.ds) {
+        return [];
       }
 
-      if (_this6.ds && _this6.ds['@graph'][0] && _this6.ds['@graph'][0]['schema:schemaVersion']) {
-        var sdoVersion = _this6.getSDOVersion();
+      var vocabs = [];
+
+      var dsRootNode = _this6.util.discoverDsRootNode(_this6.ds['@graph']);
+
+      if (dsRootNode && Array.isArray(dsRootNode['ds:usedVocabularies'])) {
+        vocabs = dsRootNode['ds:usedVocabularies'];
+      }
+
+      if (dsRootNode && dsRootNode['schema:schemaVersion']) {
+        var sdoVersion = _this6.getSDOVersion(dsRootNode['schema:schemaVersion']);
 
         vocabs.push(yield _this6.sdoAdapter.constructSDOVocabularyURL(sdoVersion));
       }
@@ -20705,60 +16857,10 @@ class DSBrowser {
     })();
   }
 
-  getSDOVersion() {
-    var versionRegex = /.*schema\.org\/version\/([0-9\.]+)\//g;
-    var match = versionRegex.exec(this.ds['@graph'][0]['schema:schemaVersion']);
+  getSDOVersion(schemaVersion) {
+    var versionRegex = /.*schema\.org\/version\/([0-9.]+)\//g;
+    var match = versionRegex.exec(schemaVersion);
     return match[1];
-  }
-
-  initDSNode() {
-    var searchParams = new URLSearchParams(window.location.search);
-    this.path = searchParams.get('path');
-    this.dsNode = this.dsHandler.getDSNodeForPath();
-  }
-
-  dsNodeNeedsInit() {
-    var searchParams = new URLSearchParams(window.location.search);
-    var path = searchParams.get('path');
-    return path !== this.path;
-  }
-
-  isShaclRendering() {
-    var searchParams = new URLSearchParams(window.location.search);
-    var format = searchParams.get('format');
-    return format && format === 'shacl';
-  }
-
-  isNativeRendering() {
-    var searchParams = new URLSearchParams(window.location.search);
-    var ds = searchParams.get('ds');
-    var mode = searchParams.get('mode');
-    return !mode && (this.type === BROWSER_TYPES.LIST && ds || this.type === BROWSER_TYPES.DS);
-  }
-
-  isTreeRendering() {
-    var searchParams = new URLSearchParams(window.location.search);
-    var ds = searchParams.get('ds');
-    var treeMode = searchParams.get('mode') === 'tree';
-    return treeMode && (this.type === BROWSER_TYPES.LIST && ds || this.type === BROWSER_TYPES.DS);
-  }
-
-  isTableRendering() {
-    var searchParams = new URLSearchParams(window.location.search);
-    var ds = searchParams.get('ds');
-    var tableMode = searchParams.get('mode') === 'table';
-    return tableMode && (this.type === BROWSER_TYPES.LIST && ds || this.type === BROWSER_TYPES.DS);
-  }
-  /**
-   * Check if the list should be rendered.
-   *
-   * @returns {boolean} 'true' if the list should be rendered.
-   */
-
-
-  isListRendering() {
-    var searchParams = new URLSearchParams(window.location.search);
-    return this.type === BROWSER_TYPES.LIST && !searchParams.get('voc');
   }
   /**
    * Add an 'EventListener' to every JavaScript link in the HTML element.
@@ -20769,17 +16871,23 @@ class DSBrowser {
   addJSLinkEventListener() {
     var _this7 = this;
 
-    var aJSLinks = this.elem.getElementsByClassName('a-js-link');
+    var aJSLinks = this.targetElement.getElementsByClassName('a-js-link');
 
     var _loop = function _loop(aJSLink) {
       // forEach() not possible ootb for HTMLCollections
       aJSLink.addEventListener('click', /*#__PURE__*/function () {
         var _ref2 = _asyncToGenerator(function* (event) {
-          if (event.ctrlKey) {
-            window.open(aJSLink.href);
+          if (_this7.locationControl) {
+            if (event.ctrlKey) {
+              window.open(aJSLink.href); // disabled in non control location
+            } else {
+              history.pushState(null, null, aJSLink.href); // disabled in non control location
+
+              _this7.navigate(JSON.parse(decodeURIComponent(aJSLink.getAttribute("data-state-changes")))); // await this.render();
+
+            }
           } else {
-            history.pushState(null, null, aJSLink.href);
-            yield _this7.render();
+            _this7.navigate(JSON.parse(decodeURIComponent(aJSLink.getAttribute("data-state-changes"))));
           }
         });
 
@@ -20794,11 +16902,88 @@ class DSBrowser {
     }
   }
 
+  readStateFromUrl() {
+    var searchParams = new URLSearchParams(window.location.search);
+    this.path = searchParams.get('path') || null;
+    this.format = searchParams.get('format') || null;
+    this.viewMode = searchParams.get('mode') || null;
+
+    if (window.location.pathname.includes("/ds/")) {
+      this.listId = null;
+      var dsId = window.location.pathname.substring("/ds/".length);
+
+      if (this.dsId !== dsId) {
+        this.dsId = dsId;
+        this.ds = null;
+      }
+    } else if (window.location.pathname.includes("/list/")) {
+      var listId = window.location.pathname.substring("/list/".length);
+
+      if (this.listId !== listId) {
+        this.listId = listId;
+        this.list = null;
+      }
+
+      var _dsId = searchParams.get('ds') || null;
+
+      if (this.dsId !== _dsId) {
+        this.dsId = _dsId;
+        this.ds = null;
+      }
+    } else {
+      this.listId = null;
+      this.list = null;
+      this.dsId = null;
+      this.ds = null;
+    }
+  }
+
+  navigate(newState) {
+    console.log(newState);
+
+    if (newState.listId !== undefined) {
+      this.listId = newState.listId;
+    }
+
+    if (newState.dsId !== undefined) {
+      this.dsId = newState.dsId;
+    }
+
+    if (newState.path !== undefined) {
+      this.path = newState.path;
+    }
+
+    if (newState.viewMode !== undefined) {
+      this.viewMode = newState.viewMode;
+    }
+
+    if (newState.format !== undefined) {
+      this.format = newState.format;
+    } // If there is no listId, there shall be no list
+
+
+    if (this.listId === null) {
+      this.list = undefined;
+    } // If there is no dsId, there shall be no ds
+
+
+    if (this.dsId === null) {
+      this.ds = undefined;
+    } // If there is no ds, there shall be no path
+
+
+    if (!this.ds) {
+      this.path = null;
+    }
+
+    this.render();
+  }
+
 }
 
 module.exports = DSBrowser;
 
-},{"./DSHandler":85,"./DSRenderer":86,"./ListRenderer":87,"./NativeRenderer":88,"./TableRenderer":89,"./TreeRenderer":90,"./Util":91,"schema-org-adapter":78}],85:[function(require,module,exports){
+},{"./DSHandler":79,"./DSRenderer":80,"./ListRenderer":81,"./NativeRenderer":82,"./SHACLRenderer":83,"./TableRenderer":84,"./TreeRenderer":85,"./Util":86,"schema-org-adapter":71}],79:[function(require,module,exports){
 "use strict";
 
 class DSHandler {
@@ -20809,13 +16994,13 @@ class DSHandler {
 
   getDSNodeForPath() {
     // DSNode is then the corresponding node from the domain specification
-    var ds = this.browser.ds['@graph'][0];
+    var currentNode = this.browser.dsRootNode;
     var result = {
       'type': '',
       'node': {}
     }; // Check if DS provided
 
-    if (this.browser.ds) {
+    if (currentNode) {
       if (this.browser.path) {
         var pathSteps = this.browser.path.split('-');
 
@@ -20826,27 +17011,27 @@ class DSHandler {
 
           if (pathSteps[i].charAt(0).toUpperCase() === pathSteps[i].charAt(0)) {
             // Is uppercase -> class or Enum
-            if (ds !== null) {
-              ds = this.getClass(ds['sh:or'], pathSteps[i]);
+            if (currentNode !== null) {
+              currentNode = this.getClass(currentNode['sh:or'], pathSteps[i]);
             }
           } else {
             // Property should not be the last part of an URL, skip to show containing class!
             // Although the redirectCheck() would fire before this function
-            if (ds !== null && i !== pathSteps.length - 1) {
-              if (ds["sh:targetClass"] !== undefined) {
+            if (currentNode !== null && i !== pathSteps.length - 1) {
+              if (currentNode["sh:targetClass"] !== undefined) {
                 // Root node
-                ds = this.getProperty(ds['sh:property'], pathSteps[i]);
+                currentNode = this.getProperty(currentNode['sh:property'], pathSteps[i]);
               } else {
                 // Nested nodes
-                ds = this.getProperty(ds["sh:node"]['sh:property'], pathSteps[i]);
+                currentNode = this.getProperty(currentNode["sh:node"]['sh:property'], pathSteps[i]);
               }
             }
           }
         }
 
-        if (ds && ds["sh:class"] && !Array.isArray(ds["sh:class"])) {
+        if (currentNode && currentNode["sh:class"] && !Array.isArray(currentNode["sh:class"])) {
           try {
-            this.browser.sdoAdapter.getEnumeration(ds["sh:class"]);
+            this.browser.sdoAdapter.getEnumeration(currentNode["sh:class"]);
             result.type = "Enumeration";
           } catch (e) {
             result.type = "Class";
@@ -20863,30 +17048,18 @@ class DSHandler {
       result.type = "error";
     }
 
-    result.node = ds;
+    result.node = currentNode;
     return result;
   } // Get the class or enumeration with that name
 
 
   getClass(DSNode, name) {
-    for (var i = 0; i < DSNode.length; i++) {
-      if (DSNode[i]["sh:class"] !== undefined && this.rangesToString(DSNode[i]["sh:class"]) === name) {
-        return DSNode[i];
-      }
-    }
-
-    return null;
+    return DSNode.find(el => el["sh:class"] && this.rangesToString(el["sh:class"]) === name) || null;
   } // Get the property with that name
 
 
   getProperty(propertyArray, name) {
-    for (var i = 0; i < propertyArray.length; i++) {
-      if (this.rangesToString(propertyArray[i]["sh:path"]) === name) {
-        return propertyArray[i];
-      }
-    }
-
-    return null;
+    return propertyArray.find(el => this.rangesToString(el["sh:path"]) === name) || null;
   } // Get the corresponding SDO datatype from a given SHACL XSD datatype
 
 
@@ -20934,7 +17107,7 @@ class DSHandler {
     }
   }
 
-  createCardinality(minCount, maxCount) {
+  createHtmlCardinality(minCount, maxCount) {
     var title,
         cardinality = '';
 
@@ -20961,7 +17134,7 @@ class DSHandler {
       }
     }
 
-    return '<span title="' + title + '">' + cardinality + '</span>';
+    return "<span title=\"".concat(title, "\">").concat(cardinality, "</span>");
   }
 
   generateDsClass(dsvClass, closed, showOptional) {
@@ -21038,11 +17211,15 @@ class DSHandler {
     this.processExpectedTypes(dsProperty, propertyObj['sh:or'], showOptional);
 
     if (showOptional) {
+      // return -> show property anyway (mandatory and optional)
       return dsProperty;
     } else if (!dsProperty.data.isOptional) {
+      // return -> show property only if it is mandatory (not optional)
       return dsProperty;
-    } // TODO: Probably a mistake: What happens when if / else if is not entered?
-
+    } else {
+      // dont show
+      return null;
+    }
   }
 
   processEnum(dsProperty, shOr) {
@@ -21149,7 +17326,7 @@ class DSHandler {
       rangeAsString: '',
       rangeJustification: []
     };
-    returnObj.rangeAsString = dsvExpectedTypes.map((dsvExpectedType, i) => {
+    returnObj.rangeAsString = dsvExpectedTypes.map(dsvExpectedType => {
       var justification = {};
       var name, rangePart;
       var datatype = dsvExpectedType['sh:datatype'];
@@ -21183,7 +17360,7 @@ class DSHandler {
 
 module.exports = DSHandler;
 
-},{}],86:[function(require,module,exports){
+},{}],80:[function(require,module,exports){
 "use strict";
 
 function _defineProperty(obj, key, value) { if (key in obj) { Object.defineProperty(obj, key, { value: value, enumerable: true, configurable: true, writable: true }); } else { obj[key] = value; } return obj; }
@@ -21200,25 +17377,19 @@ class DSRenderer {
     this.util = browser.util;
     this.dsHandler = browser.dsHandler;
   }
-  /**
-   * Render the JSON-LD serialization of the Vocabulary.
-   */
-
-
-  renderShacl() {
-    var preStyle = '' + // Overwrite schema.org CSS
-    'font-size: medium; ' + 'background: none; ' + 'text-align: left; ' + 'width: auto; ' + 'padding: 0; ' + 'overflow: visible; ' + 'color: rgb(0, 0, 0); ' + 'line-height: normal; ' + // Defaults for pre https://www.w3schools.com/cssref/css_default_values.asp
-    'display: block; ' + 'font-family: monospace; ' + 'margin: 1em 0; ' + // From Browser when loading SHACL file
-    'word-wrap: break-word; ' + 'white-space: pre-wrap;';
-    this.browser.elem.innerHTML = '' + '<pre style="' + preStyle + '">' + JSON.stringify(this.browser.ds, null, 2) + '</pre>';
-  }
 
   createViewModeSelectors() {
     var selected = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : this.MODES.native;
-    return '' + '<div class="ds-selector-tabs ds-selector">' + '<div class="selectors">' + (selected === this.MODES.native ? '<a class="selected">Native View</a>' : this.util.createJSLink('mode', null, 'Native View')) + (selected === this.MODES.tree ? '<a class="selected">Tree View</a>' : this.util.createJSLink('mode', 'tree', 'Tree View')) + (selected === this.MODES.table ? '<a class="selected">Table View</a>' : this.util.createJSLink('mode', 'table', 'Table View')) + '</div>' + '</div>';
+    return '' + '<div class="ds-selector-tabs ds-selector">' + '<div class="selectors">' + (selected === this.MODES.native ? '<a class="selected">Native View</a>' : this.util.createInternalLink({
+      viewMode: null
+    }, 'Native View')) + (selected === this.MODES.tree ? '<a class="selected">Tree View</a>' : this.util.createInternalLink({
+      viewMode: 'tree'
+    }, 'Tree View')) + (selected === this.MODES.table ? '<a class="selected">Table View</a>' : this.util.createInternalLink({
+      viewMode: 'table'
+    }, 'Table View')) + '</div>' + '</div>';
   }
 
-  createHeader() {
+  createHtmlHeader() {
     this.dsNode = this.browser.dsNode;
     this.node = this.dsNode.node;
     var name,
@@ -21237,7 +17408,7 @@ class DSRenderer {
     }
 
     description = this.util.repairLinksInHTMLCode(description);
-    return '' + this.createNavigation() + '<h1 property="schema:name">' + name + '</h1>' + this.util.createExternalLinkLegend() + breadcrumbs + '<div property="schema:description">' + description + '<br><br></div>';
+    return '' + this.createNavigation() + '<h1 property="schema:name">' + name + '</h1>' + this.util.createHtmlExternalLinkLegend() + breadcrumbs + '<div property="schema:description">' + description + '<br><br></div>';
   }
 
   createNodeDescription(nodeClass) {
@@ -21251,102 +17422,94 @@ class DSRenderer {
   }
 
   createBreadcrumbs() {
-    return '' + '<h4>' + '<span class="breadcrumbs">' + this.util.createJSLink('path', null, this.browser.ds['@graph'][0]['schema:name'] || 'Domain Specification') + ' > ' + this.browser.path.split('-').map((term, index, pathSplitted) => {
+    var htmlFirstBreadcrumb = this.util.createInternalLink({
+      path: null
+    }, this.browser.dsRootNode['schema:name'] || 'Domain Specification');
+    var htmlBreadcrumbs = this.browser.path.split('-').map((term, index, pathSplit) => {
       if (index % 2 === 0) {
         return term;
       } else {
-        var newPath = pathSplitted.slice(0, index + 1).join('-');
-        return this.util.createJSLink('path', newPath, term);
+        var newPath = pathSplit.slice(0, index + 1).join('-');
+        return this.util.createInternalLink({
+          path: newPath
+        }, term);
       }
-    }).join(' > ') + '</span>' + '</h4>';
+    }).join(' > ');
+    return "<h4><span class=\"breadcrumbs\">\n            ".concat(htmlFirstBreadcrumb, " > ").concat(htmlBreadcrumbs, "\n            </span></h4>");
   }
 
   createNavigation() {
-    return '' + '<span style="float: right;">' + '(' + this.util.createJSLink('format', 'shacl', 'SHACL serialization') + (this.browser.list ? ' | from List: ' + this.util.createJSLink('ds', null, this.browser.list['schema:name']) : '') + ')' + '</span>';
+    var shaclLink;
+    var dsId = this.browser.dsId;
+
+    if (this.browser.locationControl) {
+      shaclLink = this.util.createInternalLink({
+        format: 'shacl'
+      }, 'SHACL serialization');
+    } else {
+      shaclLink = "<a href=\"https://semantify.it/ds/".concat(dsId, "?format=shacl\" target=\"_blank\">SHACL serialization</a>");
+    }
+
+    var listHtml = this.browser.list ? ' | from List: ' + this.util.createInternalLink({
+      dsId: null
+    }, this.browser.list['schema:name']) : '';
+    return "<span style=\"float: right;\">(".concat(shaclLink).concat(listHtml, ")</span>");
   }
 
   createVisBtnRow() {
-    return '' + '<div id="btn-row">' + 'Show: ' + '<span id="btn-opt" class="btn-vis btn-vis-shadow" style="margin-left: 10px;">' + '<img src="" class="glyphicon glyphicon-tag optional-property"> optional' + '</span>' + '<span id="btn-man" class="btn-vis" style="margin-left: 10px;">' + '<img src="" class="glyphicon glyphicon-tag mandatory-property"> mandatory' + '</span>' + '</div>';
+    return "<div id=\"btn-row\">Show: \n            <span id=\"btn-opt\" class=\"btn-vis btn-vis-shadow\" style=\"margin-left: 10px;\">\n                <img src=\"\" class=\"glyphicon glyphicon-tag optional-property\"> optional\n            </span>\n            <span id=\"btn-man\" class=\"btn-vis\" style=\"margin-left: 10px;\">\n                <img src=\"\" class=\"glyphicon glyphicon-tag mandatory-property\"> mandatory\n            </span></div>";
   }
 
 }
 
 module.exports = DSRenderer;
 
-},{}],87:[function(require,module,exports){
+},{}],81:[function(require,module,exports){
 "use strict";
 
-/** This class is responsible to render a semantify.it based List in the HTML element of the browser. */
 class ListRenderer {
-  /**
-   * Create a ListRenderer object.
-   *
-   * @param {DSBrowser} browser - the underlying vocab browser to enable access to its data members.
-   */
   constructor(browser) {
     this.browser = browser;
     this.util = browser.util;
   }
-  /**
-   * Render the List.
-   */
-
 
   render() {
-    var mainContent = this.createHeader() + this.createDSTable();
-    this.browser.elem.innerHTML = this.util.createMainContent('schema:DataSet', mainContent);
+    var mainContent = this.createHtmlHeader() + this.createHtmlDsTable();
+    this.browser.targetElement.innerHTML = this.util.createHtmlMainContent('schema:DataSet', mainContent);
   }
-  /**
-   * Create HTML for the header of the List.
-   *
-   * @returns {string} The resulting HTML
-   */
 
-
-  createHeader() {
-    return '' + '<h1>' + this.browser.list['schema:name'] + '</h1>' + this.util.createExternalLinkLegend() + this.browser.list['schema:description'] || '';
+  createHtmlHeader() {
+    var listName = this.browser.list['schema:name'] || "";
+    var externalLinkLegend = this.util.createHtmlExternalLinkLegend();
+    var listDescription = this.browser.list['schema:description'] || "";
+    return "<h1>".concat(listName, "</h1>\n            ").concat(externalLinkLegend, "\n            ").concat(listDescription);
   }
-  /**
-   * Create HTML table for the vocabularies of the List.
-   *
-   * @returns {string} The resulting HTML.
-   */
 
-
-  createDSTable() {
-    return this.util.createDefinitionTable(['Name', 'IRI', 'Description'], this.createDSTbody(), null, {
+  createHtmlDsTable() {
+    return this.util.createHtmlDefinitionTable(['Name', 'IRI', 'Description'], this.createHtmlDsTbody(), null, {
       'class': 'supertype'
     });
   }
-  /**
-   * Create HTML table bodies for the vocabularies of the List.
-   *
-   * @returns {string} The resulting HTML.
-   */
 
-
-  createDSTbody() {
+  createHtmlDsTbody() {
     return this.browser.list['schema:hasPart'].map(ds => {
-      return this.util.createTableRow('http://vocab.sti2.at/ds/Domain Specification', ds['@id'], 'schema:name', this.util.createJSLink('ds', ds['@id'].split('/').pop(), ds['schema:name'] || 'No Name'), this.createDSSideCols(ds));
+      return this.util.createHtmlTableRow('http://vocab.sti2.at/ds/Domain Specification', ds['@id'], 'schema:name', this.util.createInternalLink({
+        dsId: ds['@id'].split('/').pop()
+      }, ds['schema:name'] || 'No Name'), this.createHtmlDsSideCols(ds));
     }).join('');
   }
-  /**
-   * Create HTML side columns for a vocabulary of the List.
-   *
-   * @param {object} ds - The vocabulary of the List.
-   * @returns {string} The resulting HTML.
-   */
 
-
-  createDSSideCols(ds) {
-    return '' + '<td property="@id">' + this.util.createLink(ds['@id']) + '</td>' + '<td property="schema:description">' + (ds['schema:description'] || '') + '</td>';
+  createHtmlDsSideCols(ds) {
+    var idLink = this.util.createLink(ds['@id']);
+    var description = ds['schema:description'] || '';
+    return "<td property=\"@id\">".concat(idLink, "</td>\n            <td property=\"schema:description\">").concat(description, "</td>");
   }
 
 }
 
 module.exports = ListRenderer;
 
-},{}],88:[function(require,module,exports){
+},{}],82:[function(require,module,exports){
 "use strict";
 
 class NativeRenderer {
@@ -21361,11 +17524,11 @@ class NativeRenderer {
     // Cannot be in constructor, cause at this time the node is not initialized
     this.dsNode = this.browser.dsNode;
     this.node = this.dsNode.node;
-    var mainContent = this.dsRenderer.createHeader() + this.dsRenderer.createViewModeSelectors(this.dsRenderer.MODES.native) + (this.dsNode.type === 'Class' ? this.createClassPropertyTable() : this.createEnumerationMembers());
-    this.browser.elem.innerHTML = this.util.createMainContent('rdfs:Class', mainContent);
+    var mainContent = this.dsRenderer.createHtmlHeader() + this.dsRenderer.createViewModeSelectors(this.dsRenderer.MODES.native) + (this.dsNode.type === 'Class' ? this.createHtmlPropertiesTable() : this.createEnumerationMembers());
+    this.browser.targetElement.innerHTML = this.util.createHtmlMainContent('rdfs:Class', mainContent);
   }
 
-  createClassPropertyTable() {
+  createHtmlPropertiesTable() {
     var properties;
 
     if (!this.browser.path) {
@@ -21377,7 +17540,7 @@ class NativeRenderer {
     var trs = properties.map(p => {
       return this.createClassProperty(p);
     }).join('');
-    return this.util.createDefinitionTable(['Property', 'Expected Type', 'Description', 'Cardinality'], trs, {
+    return this.util.createHtmlDefinitionTable(['Property', 'Expected Type', 'Description', 'Cardinality'], trs, {
       'style': 'margin-top: 0px; border-top: none;'
     });
   }
@@ -21385,20 +17548,25 @@ class NativeRenderer {
   createClassProperty(propertyNode) {
     var path = propertyNode['sh:path'];
     var property = this.browser.sdoAdapter.getProperty(path);
-    return this.util.createTableRow('rdf:Property', property.getIRI(), 'rdfs:label', this.util.createTermLink(path), this.createClassPropertySideCols(propertyNode), 'prop-name');
+    return this.util.createHtmlTableRow('rdf:Property', property.getIRI(), 'rdfs:label', this.util.createTermLink(path), this.createClassPropertySideCols(propertyNode), 'prop-name');
   }
 
   createClassPropertySideCols(node) {
-    return '' + '<td class="prop-ect">' + this.createExpectedTypes(node) + '</td>' + '<td class="prop-desc">' + this.createClassPropertyDescText(node) + '</td>' + '<td class="prop-ect">' + this.dsHandler.createCardinality(node['sh:minCount'], node['sh:minCount']) + '</td>';
+    var htmlExpectedTypes = this.createHtmlExpectedTypes(node);
+    var htmlPropertyDesc = this.createHtmlPropertyDescription(node);
+    var htmlCardinality = this.dsHandler.createHtmlCardinality(node['sh:minCount'], node['sh:minCount']);
+    return "<td class=\"prop-ect\">".concat(htmlExpectedTypes, "</td>\n            <td class=\"prop-desc\">").concat(htmlPropertyDesc, "</td>\n            <td class=\"prop-ect\">").concat(htmlCardinality, "</td>");
   }
 
-  createClassPropertyDescText(propertyNode) {
+  createHtmlPropertyDescription(propertyNode) {
     var name = this.util.prettyPrintIri(propertyNode['sh:path']);
-    var description = '';
+    var description;
 
     try {
       description = this.browser.sdoAdapter.getProperty(name).getDescription();
-    } catch (e) {}
+    } catch (e) {
+      description = '';
+    }
 
     var dsDescription = propertyNode['rdfs:comment'] ? propertyNode['rdfs:comment'] : '';
     var descText = '';
@@ -21422,7 +17590,7 @@ class NativeRenderer {
     return this.util.repairLinksInHTMLCode(descText);
   }
 
-  createExpectedTypes(propertyNode) {
+  createHtmlExpectedTypes(propertyNode) {
     var property = this.browser.sdoAdapter.getProperty(propertyNode['sh:path']);
     var propertyName = this.util.prettyPrintIri(property.getIRI(true));
     var expectedTypes = propertyNode['sh:or'];
@@ -21443,8 +17611,10 @@ class NativeRenderer {
         name = this.dsHandler.rangesToString(name);
 
         if (expectedType['sh:node'] && expectedType['sh:node']['sh:property'].length !== 0) {
-          var newPath = propertyName + '-' + name;
-          return this.util.createJSLink('path', newPath, name, null, '-');
+          var newPath = this.browser.path ? this.browser.path + "-" + propertyName + '-' + name : propertyName + '-' + name;
+          return this.util.createInternalLink({
+            path: newPath
+          }, name);
         } else {
           return this.util.createTermLink(name);
         }
@@ -21462,10 +17632,27 @@ class NativeRenderer {
     var enumMembers = this.browser.sdoAdapter.getTerm(this.node['sh:class']).getEnumerationMembers();
 
     if (enumMembers.length !== 0) {
-      return '' + 'An Enumeration with:<br>' + '<b>' + '<a id="enumbers" title="Link: #enumbers" href="#enumbers" class="clickableAnchor">' + 'Enumeration members' + '</a>' + '</b>' + '<ul>' + enumMembers.map(e => {
+      var htmlListItems = enumMembers.map(e => {
         var enumMember = this.browser.sdoAdapter.getEnumerationMember(e);
         return '' + '<li>' + this.util.createLink(enumMember.getIRI(), e) + '</li>';
-      }).join('') + '</ul>' + '<br>';
+      }).join('');
+      return "An Enumeration with:<br>\n                <b><a id=\"enumbers\" title=\"Link: #enumbers\" href=\"#enumbers\" class=\"clickableAnchor\">Enumeration members</a></b>\n                <ul>".concat(htmlListItems, "</ul><br>"); // return '' +
+      //     'An Enumeration with:<br>' +
+      //     '<b>' +
+      //     '<a id="enumbers" title="Link: #enumbers" href="#enumbers" class="clickableAnchor">' +
+      //     'Enumeration members' +
+      //     '</a>' +
+      //     '</b>' +
+      //     '<ul>' +
+      //     enumMembers.map((e) => {
+      //         const enumMember = this.browser.sdoAdapter.getEnumerationMember(e);
+      //         return '' +
+      //             '<li>' +
+      //             this.util.createLink(enumMember.getIRI(), e) +
+      //             '</li>';
+      //     }).join('') +
+      //     '</ul>' +
+      //     '<br>';
     } else {
       return '';
     }
@@ -21475,7 +17662,28 @@ class NativeRenderer {
 
 module.exports = NativeRenderer;
 
-},{}],89:[function(require,module,exports){
+},{}],83:[function(require,module,exports){
+"use strict";
+
+class SHACLRenderer {
+  constructor(browser) {
+    this.browser = browser;
+  }
+
+  renderSHACL() {
+    this.browser.targetElement.innerHTML = this.createHtmlShacl(JSON.stringify(this.browser.ds, null, 2));
+  }
+
+  createHtmlShacl(dsJson) {
+    var preStyle = "font-size: medium; /* Overwrite schema.org CSS */\n            background: none;\n            text-align: left;\n            width: auto;\n            padding: 0;\n            overflow: visible;\n            color: rgb(0, 0, 0);\n            line-height: normal;\n            display: block;     /* Defaults for pre https://www.w3schools.com/cssref/css_default_values.asp */\n            font-family: monospace;\n            margin: 1em 0;\n            word-wrap: break-word;  /* From Browser when loading SHACL file */\n            white-space: pre-wrap;";
+    return "<pre style=\"" + preStyle + "\">".concat(dsJson, "</pre>");
+  }
+
+}
+
+module.exports = SHACLRenderer;
+
+},{}],84:[function(require,module,exports){
 "use strict";
 
 class TableRenderer {
@@ -21490,28 +17698,35 @@ class TableRenderer {
   }
 
   render() {
-    var rootClass = this.dsHandler.generateDsClass(this.browser.ds['@graph'][0], false, false);
-    var mainContent = this.dsRenderer.createHeader() + this.dsRenderer.createViewModeSelectors(this.dsRenderer.MODES.table) + '<div id="table-view"> ' + this.dsRenderer.createVisBtnRow() + '<div id="table-wrapper">' + '<table id="table-ds">' + this.createTableContent(rootClass) + '</table>' + '</div>' + '</div>';
-    this.browser.elem.innerHTML = this.util.createMainContent('rdfs:Class', mainContent);
+    var rootClass = this.dsHandler.generateDsClass(this.browser.dsRootNode, false, false);
+    var htmlTableContent = this.createHtmlTableContent(rootClass);
+    var htmlHeader = this.dsRenderer.createHtmlHeader();
+    var htmlVisBtnRow = this.dsRenderer.createVisBtnRow();
+    var htmlViewModeSelector = this.dsRenderer.createViewModeSelectors(this.dsRenderer.MODES.table);
+    var mainContent = "".concat(htmlHeader).concat(htmlViewModeSelector, "\n            <div id=\"table-view\"> \n            ").concat(htmlVisBtnRow, "\n            <div id=\"table-wrapper\">\n            <table id=\"table-ds\">").concat(htmlTableContent, "</table>\n            </div></div>");
+    this.browser.targetElement.innerHTML = this.util.createHtmlMainContent('rdfs:Class', mainContent);
     this.addClickEvent();
     this.addChangeInnerDSEventListener();
   }
 
-  createTableContent(rootClass) {
-    return '' + '<tr class="first-row-ds">' + '<td><div class="align-items"><img src="" class="glyphicon glyphicon-list-alt">' + rootClass.text + '</div></td>' + '<td colspan="2">' + rootClass.data.dsDescription + '</td>' + '<td><b>Cardinality</b></td>' + '</tr>' + this.processProperties(rootClass.children, 0);
+  createHtmlTableContent(rootClass) {
+    var rootClassName = rootClass.text;
+    var dsDescription = rootClass.data.dsDescription;
+    var htmlProperties = this.createHtmlProperties(rootClass.children, 0);
+    return "<tr class=\"first-row-ds\">\n            <td><div class=\"align-items\"><img src=\"\" class=\"glyphicon glyphicon-list-alt\">".concat(rootClassName, "</div></td>\n            <td colspan=\"2\">").concat(dsDescription, "</td>\n            <td><b>Cardinality</b></td></tr>\n            ").concat(htmlProperties);
   }
 
-  processProperties(properties, depth, innerDSIndex, hasMultipleClasses) {
+  createHtmlProperties(properties, depth, innerDSIndex, hasMultipleClasses) {
     return properties.map((property, i) => {
       if (property.children && property.children.length !== 0 && !property.isEnum) {
-        return this.processPropertyWithChildren(property, depth, innerDSIndex);
+        return this.createHtmlPropertyWithChildren(property, depth, innerDSIndex);
       } else {
-        return this.processPropertyWithNoChildren(property, depth, innerDSIndex, hasMultipleClasses, properties.length === i + 1);
+        return this.createHtmlPropertyWithNoChildren(property, depth, innerDSIndex, hasMultipleClasses, properties.length === i + 1);
       }
     }).join('');
   }
 
-  processPropertyWithChildren(property, depth) {
+  createHtmlPropertyWithChildren(property, depth) {
     var csClass,
         html = '';
     depth++;
@@ -21522,8 +17737,8 @@ class TableRenderer {
       var hasMultipleClasses = this.hasMultipleClasses(terms);
       var dsRange = this.createDSRange(property, depth, terms, hasMultipleClasses);
       var properties = property.children;
-      html += '' + '<tr>' + this.createTdProperty(property) + '<td colspan="2" class="' + csClass + '">' + '<table>' + this.createInnerTableHeader(dsRange, property) + properties.map((p, i) => this.processProperties(p.children, depth, i, hasMultipleClasses)).join('') + // show first class defaultly, can be changed via click
-      '</table>' + '</td>' + '<td class="cardinality">' + this.dsHandler.createCardinality(property.data.minCount, property.data.maxCount) + '</td>' + '</tr>';
+      html += '' + '<tr>' + this.createHtmlPropertyTdTag(property) + '<td colspan="2" class="' + csClass + '">' + '<table>' + this.createInnerTableHeader(dsRange, property) + properties.map((p, i) => this.createHtmlProperties(p.children, depth, i, hasMultipleClasses)).join('') + // show first class defaultly, can be changed via click
+      '</table>' + '</td>' + '<td class="cardinality">' + this.dsHandler.createHtmlCardinality(property.data.minCount, property.data.maxCount) + '</td>' + '</tr>';
     } else {
       console.log('To many levels for table view. Level: ' + depth);
     }
@@ -21573,35 +17788,47 @@ class TableRenderer {
     return term.replace('<strong>', '').replace('</strong>', '').replace(/ /g, '');
   }
 
-  createTdProperty(property) {
+  createHtmlPropertyTdTag(property) {
     var rmBorderBottom = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : '';
-    return '' + '<td' + rmBorderBottom + '>' + '<div class="align-items">' + '<img class="glyphicon glyphicon-tag ' + (property.data.isOptional ? 'optional' : 'mandatory') + '-property" src="" />' + property.text + '</div>' + '</td>';
+    var glyphiconClass = property.data.isOptional ? 'optional' : 'mandatory';
+    var propertyName = property.text;
+    return "<td".concat(rmBorderBottom, "><div class=\"align-items\">\n            <img class=\"glyphicon glyphicon-tag ").concat(glyphiconClass, "-property\" src=\"\" />").concat(propertyName, "</div>\n            </td>");
   }
 
   createInnerTableHeader(dsRange, property) {
-    return '' + '<tr>' + '<td data-innerdsindex="0">' + dsRange + '</td>' + '<td colspan="2">' + property.data.dsDescription + '</td>' + '<td><b>Cardinality</b></td>' + '</tr>';
+    var dsDescription = property.data.dsDescription;
+    return "<tr><td data-innerdsindex=\"0\">".concat(dsRange, "</td>\n            <td colspan=\"2\">").concat(dsDescription, "</td>\n            <td><b>Cardinality</b></td></tr>");
   }
 
-  processPropertyWithNoChildren(property, level, innerDSIndex, hasMultipleClasses, isLastProperty) {
-    var cardinality = this.dsHandler.createCardinality(property.data.minCount, property.data.maxCount);
+  createHtmlPropertyWithNoChildren(property, level, innerDSIndex, hasMultipleClasses, isLastProperty) {
+    var cardinality = this.dsHandler.createHtmlCardinality(property.data.minCount, property.data.maxCount);
     var displayNone = innerDSIndex !== 0 && hasMultipleClasses ? ' style="display: none;"' : '';
     var rmBorderBottom = isLastProperty ? ' style="border-bottom: none !important;"' : '';
-    return '' + '<tr data-innerdsindex="' + innerDSIndex + '"' + displayNone + '>' + this.createTdProperty(property, rmBorderBottom) + (property.isEnum ? this.createEnum(property, level, rmBorderBottom) : this.createSimpleType(property, rmBorderBottom)) + '<td class="cardinality"' + rmBorderBottom + '>' + cardinality + '</td>' + '</tr>';
+    var htmlPropertyTdTag = this.createHtmlPropertyTdTag(property, rmBorderBottom);
+    var htmlRange = property.isEnum ? this.createHtmlEnum(property, level, rmBorderBottom) : this.createHtmlSimpleType(property, rmBorderBottom);
+    return "<tr data-innerdsindex=\"".concat(innerDSIndex, "\" ").concat(displayNone, ">\n            ").concat(htmlPropertyTdTag).concat(htmlRange, "\n            <td class=\"cardinality\" ").concat(rmBorderBottom, ">").concat(cardinality, "</td></tr>");
   }
 
-  createEnum(property, depth, rmBorderBottom) {
+  createHtmlEnum(property, depth, rmBorderBottom) {
+    var dsRange = property.data.dsRange;
+    var dsDescription = property.data.dsDescription;
+    var htmlEnumMembers = property.data.enuMembers ? this.createHtmlEnumMembers(property.data.enuMembers) : '';
     depth++;
-    return '' + '<td colspan="2" class="depth' + depth + ' innerTable"' + rmBorderBottom + '>' + '<table class="enumTable">' + '<tr>' + '<td class="enumTd"><b>' + property.data.dsRange + '</b></td>' + '<td class="enumTd">' + property.data.dsDescription + '</td>' + '</tr>' + (property.data.enuMembers ? this.genHTML_enuMembers(property.data.enuMembers) : '') + '</table>' + '</td>';
+    return "<td colspan=\"2\" class=\"depth".concat(depth, " innerTable\" ").concat(rmBorderBottom, ">\n            <table class=\"enumTable\"><tr>\n            <td class=\"enumTd\"><b>").concat(dsRange, "</b></td>\n            <td class=\"enumTd\">").concat(dsDescription, "</td>\n            </tr>").concat(htmlEnumMembers, "</table></td>");
   }
 
-  genHTML_enuMembers(enuMemberArray) {
+  createHtmlEnumMembers(enuMemberArray) {
     return enuMemberArray.map(enuMember => {
-      return '' + '<tr>' + '<td class="enumTd">' + enuMember.name + '</td>' + '<td class="enumTd">' + enuMember.description + '</td>' + '</tr>';
+      var enuMemberName = enuMember.name;
+      var enuMemberDescription = enuMember.description;
+      return "<tr>\n                <td class=\"enumTd\">".concat(enuMemberName, "</td>\n                <td class=\"enumTd\">").concat(enuMemberDescription, "</td>\n                </tr>");
     }).join('');
   }
 
-  createSimpleType(property, rmBorderBottom) {
-    return '' + '<td' + rmBorderBottom + '>' + property.data.dsRange + '</td>' + '<td' + rmBorderBottom + '>' + property.data.dsDescription + '</td>';
+  createHtmlSimpleType(property, rmBorderBottom) {
+    var rangeType = property.data.dsRange;
+    var propertyDescription = property.data.dsDescription;
+    return "<td ".concat(rmBorderBottom, ">").concat(rangeType, "</td>\n            <td ").concat(rmBorderBottom, ">").concat(propertyDescription, "</td>");
   }
 
   addClickEvent() {
@@ -21626,9 +17853,9 @@ class TableRenderer {
     }
 
     otherButton.classList.add('btn-vis-shadow');
-    var rootClass = this.dsHandler.generateDsClass(this.browser.ds['@graph'][0], false, showOptional);
+    var rootClass = this.dsHandler.generateDsClass(this.browser.dsRootNode, false, showOptional);
     var table = document.getElementById('table-ds');
-    table.innerHTML = this.createTableContent(rootClass);
+    table.innerHTML = this.createHtmlTableContent(rootClass);
     this.util.fade(table);
     this.addClickEvent();
     this.addChangeInnerDSEventListener();
@@ -21671,7 +17898,7 @@ class TableRenderer {
 
 module.exports = TableRenderer;
 
-},{}],90:[function(require,module,exports){
+},{}],85:[function(require,module,exports){
 "use strict";
 
 class TreeRenderer {
@@ -21683,9 +17910,11 @@ class TreeRenderer {
   }
 
   render() {
-    var mainContent = '' + this.dsRenderer.createHeader() + this.dsRenderer.createViewModeSelectors(this.dsRenderer.MODES.tree) + '<div id="div-iframe">' + // needed for padding
-    '<iframe id="iframe-jsTree" frameborder="0" width="100%" scrolling="no"></iframe>' + '</div>';
-    this.browser.elem.innerHTML = this.util.createMainContent('rdfs:Class', mainContent);
+    var htmlHeader = this.dsRenderer.createHtmlHeader();
+    var htmlViewModeSelector = this.dsRenderer.createViewModeSelectors(this.dsRenderer.MODES.tree); // The div-iframe is needed for padding
+
+    var mainContent = "".concat(htmlHeader, "\n            ").concat(htmlViewModeSelector, "\n            <div id=\"div-iframe\">\n            <iframe id=\"iframe-jsTree\" frameborder=\"0\" width=\"100%\" scrolling=\"no\"></iframe>\n            </div>");
+    this.browser.targetElement.innerHTML = this.util.createHtmlMainContent('rdfs:Class', mainContent);
     this.initIFrameForJSTree();
   }
 
@@ -21697,16 +17926,18 @@ class TreeRenderer {
     doc.open();
     doc.write(jsTreeHtml);
     doc.close();
-    var dsClass = this.dsHandler.generateDsClass(this.browser.ds['@graph'][0], false, false);
+    var dsClass = this.dsHandler.generateDsClass(this.browser.dsRootNode, false, false);
     this.mapNodeForJSTree([dsClass]);
   }
 
   createJSTreeHTML() {
-    return '' + '<head>' + '<script src="https://code.jquery.com/jquery-3.5.1.min.js" ' + '  integrity="sha256-9/aliU8dGd2tb6OSsuzixeV4y/faTqgFtohetphbbj0=" crossorigin="anonymous"></script>' + '<script src="https://cdnjs.cloudflare.com/ajax/libs/jstree/3.3.10/jstree.min.js"></script>' + '<script src="https://cdnjs.cloudflare.com/ajax/libs/jstreegrid/3.10.2/jstreegrid.min.js"></script>' + '<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.1/css/bootstrap.min.css" />' + '<link rel="stylesheet" ' + '  href="https://cdnjs.cloudflare.com/ajax/libs/jstree/3.3.10/themes/default/style.min.css" />' + this.createTreeStyle() + '</head>' + '<body>' + this.dsRenderer.createVisBtnRow() + '<div id="jsTree"></div>' + '</body>';
+    var htmlVisBtnRow = this.dsRenderer.createVisBtnRow();
+    var htmlTreeStyle = this.createTreeStyle();
+    return "<head>\n            <script src=\"https://code.jquery.com/jquery-3.5.1.min.js\" integrity=\"sha256-9/aliU8dGd2tb6OSsuzixeV4y/faTqgFtohetphbbj0=\" crossorigin=\"anonymous\"></script>\n            <script src=\"https://cdnjs.cloudflare.com/ajax/libs/jstree/3.3.10/jstree.min.js\"></script>\n            <script src=\"https://cdnjs.cloudflare.com/ajax/libs/jstreegrid/3.10.2/jstreegrid.min.js\"></script>\n            <link rel=\"stylesheet\" href=\"https://maxcdn.bootstrapcdn.com/bootstrap/3.4.1/css/bootstrap.min.css\" />\n            <link rel=\"stylesheet\" href=\"https://cdnjs.cloudflare.com/ajax/libs/jstree/3.3.10/themes/default/style.min.css\" />\n            ".concat(htmlTreeStyle, "\n            </head>\n            <body>").concat(htmlVisBtnRow, "<div id=\"jsTree\"></div></body>");
   }
 
   createTreeStyle() {
-    return '' + '<style>' + '.optional-property { color: #ffa517; }' + '.mandatory-property { color: #00ce0c; }' + '#btn-row { padding: 12px 0px 12px 5px; }' + '.btn-vis { padding: 5px; }' + '.btn-vis-shadow {' + '    cursor: pointer;' + '    webkit-box-shadow: 0 4px 5px 0 rgba(0, 0, 0, 0.14), 0 1px 10px 0 rgba(0, 0, 0, 0.12), 0 2px 4px -1px rgba(0, 0, 0, 0.2);' + '    box-shadow: 0 4px 5px 0 rgba(0, 0, 0, 0.14), 0 1px 10px 0 rgba(0, 0, 0, 0.12), 0 2px 4px -1px rgba(0, 0, 0, 0.2);' + '}' + '</style>';
+    return "<style>\n            .optional-property { color: #ffa517; }\n            .mandatory-property { color: #00ce0c; }\n            #btn-row { padding: 12px 0px 12px 5px; }\n            .btn-vis { padding: 5px; }\n            .btn-vis-shadow {\n                cursor: pointer;\n                webkit-box-shadow: 0 4px 5px 0 rgba(0, 0, 0, 0.14), 0 1px 10px 0 rgba(0, 0, 0, 0.12), 0 2px 4px -1px rgba(0, 0, 0, 0.2);\n                box-shadow: 0 4px 5px 0 rgba(0, 0, 0, 0.14), 0 1px 10px 0 rgba(0, 0, 0, 0.12), 0 2px 4px -1px rgba(0, 0, 0, 0.2);\n            }\n            </style>";
   }
 
   mapNodeForJSTree(data) {
@@ -21745,7 +17976,7 @@ class TreeRenderer {
             header: 'Cardinality',
             value: function value(node) {
               if (node.data.dsRange) {
-                return self.dsHandler.createCardinality(node.data.minCount, node.data.maxCount);
+                return self.dsHandler.createHtmlCardinality(node.data.minCount, node.data.maxCount);
               }
             }
           }]
@@ -21780,7 +18011,7 @@ class TreeRenderer {
       $otherButton.addClass('btn-vis-shadow');
       $button.off('click');
       this.addIframeClickEvent();
-      var dsClass = this.dsHandler.generateDsClass(this.browser.ds['@graph'][0], false, showOptional);
+      var dsClass = this.dsHandler.generateDsClass(this.browser.dsRootNode, false, showOptional);
       var jsTree = this.iFrameCW.$('#jsTree').jstree(true);
       jsTree.settings.core.data = dsClass;
       jsTree.refresh();
@@ -21791,7 +18022,7 @@ class TreeRenderer {
 
 module.exports = TreeRenderer;
 
-},{}],91:[function(require,module,exports){
+},{}],86:[function(require,module,exports){
 "use strict";
 
 function asyncGeneratorStep(gen, resolve, reject, _next, _throw, key, arg) { try { var info = gen[key](arg); var value = info.value; } catch (error) { reject(error); return; } if (info.done) { resolve(value); } else { Promise.resolve(value).then(_next, _throw); } }
@@ -21889,56 +18120,93 @@ class Util {
       return '<a' + group1 + 'href="' + group2 + '" style="' + style + '" target="_blank"';
     });
   }
-  /**
-   * Create an IRI with the current browser IRI and the given query parameter.
-   * The query parameter can be either set, overwritten, deleted or enhanced.
-   *
-   * @param {string} key - The query parameter key.
-   * @param {string} val - The query parameter values.
-   * @param {string|null} enhanceSymbol - TODO
-   * @returns {string} The resulting IRI.
-   */
 
+  createInternalLink(navigationChanges, text) {
+    text = this.escHtml(text);
+    var hrefLink = this.browser.locationControl ? this.createInternalHref(navigationChanges) : 'javascript:void(0)';
+    var htmlOnClick = this.browser.locationControl ? 'onclick="return false;"' : '';
+    var htmlState = 'data-state-changes="' + encodeURIComponent(JSON.stringify(navigationChanges)) + '"';
+    return "<a class=\"a-js-link\" href=\"".concat(hrefLink, "\" ").concat(htmlOnClick, " ").concat(htmlState, ">\n        ").concat(text, "</a>");
+  }
 
-  createIriWithQueryParam(key, val) {
-    var enhanceSymbol = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : null;
-    var searchParams = new URLSearchParams(window.location.search);
+  createInternalHref(navigationChanges) {
+    var htmlEscaped = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : true;
+    var navigationState = this.createNavigationState(navigationChanges);
+    var domain = window.location.protocol + '//' + (window.location.host ? window.location.host : '');
+    var url;
+    var urlParameterArray = [];
 
-    if (val && val !== '') {
-      var prevVal = searchParams.get(key);
+    if (navigationState.listId) {
+      // is list
+      url = domain + '/list/' + navigationState.listId;
 
-      if (prevVal !== null && enhanceSymbol) {
-        searchParams.set(key, prevVal + enhanceSymbol + val);
-      } else {
-        searchParams.set(key, val);
+      if (navigationState.dsId) {
+        urlParameterArray.push(['ds', navigationState.dsId]);
       }
     } else {
-      searchParams.delete(key);
+      // must be ds
+      url = domain + '/ds/' + navigationState.dsId;
     }
 
-    var queryString = searchParams.toString();
-    var origin = window.location.protocol + '//' + (window.location.host ? window.location.host : '');
-    return origin + window.location.pathname + (queryString !== '' ? '?' + queryString : '');
+    if (navigationState.path) {
+      urlParameterArray.push(['path', navigationState.path]);
+    }
+
+    if (navigationState.viewMode) {
+      urlParameterArray.push(['mode', navigationState.viewMode]);
+    }
+
+    if (navigationState.format) {
+      urlParameterArray.push(['format', navigationState.format]);
+    }
+
+    for (var i = 0; i < urlParameterArray.length; i++) {
+      var prefix = '&';
+
+      if (i === 0) {
+        prefix = '?';
+      }
+
+      url += prefix + urlParameterArray[i][0] + '=' + urlParameterArray[i][1];
+    }
+
+    return htmlEscaped ? this.escHtml(url) : url;
   }
-  /**
-   * Create a HTML JavaScript link that imitates a standard link with the current browser IRI and the given query
-   * parameter.
-   *
-   * @param {string} queryKey - The query parameter key.
-   * @param {string|null} queryVal - The query parameter value.
-   * @param {string|null} enhanceSymbol - TODO
-   * @param {string|null} text - The text of the link.
-   * @param {object|null} attr - The HTML attributes of the link.
-   * @returns {string} The resulting HTML.
-   */
 
+  createNavigationState(navigationChanges) {
+    var newState = {};
 
-  createJSLink(queryKey, queryVal) {
-    var text = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : null;
-    var attr = arguments.length > 3 && arguments[3] !== undefined ? arguments[3] : null;
-    var enhanceSymbol = arguments.length > 4 && arguments[4] !== undefined ? arguments[4] : null;
-    var iri = this.createIriWithQueryParam(queryKey, queryVal, enhanceSymbol);
-    return '' + '<a ' + 'class="a-js-link" ' + 'href="' + this.escHtml(iri) + '" ' + 'onclick="return false;"' + this.createHtmlAttr(attr) + '>' + (text ? this.escHtml(text) : this.escHtml(queryVal)) + '</a>';
+    if (navigationChanges.listId !== undefined) {
+      newState.listId = navigationChanges.listId;
+    } else {
+      newState.listId = this.browser.listId;
+    }
+
+    if (navigationChanges.dsId !== undefined) {
+      newState.dsId = navigationChanges.dsId;
+    } else {
+      newState.dsId = this.browser.dsId;
+    }
+
+    if (navigationChanges.path !== undefined) {
+      newState.path = navigationChanges.path;
+    } else {
+      newState.path = this.browser.path;
+    }
+
+    if (navigationChanges.viewMode !== undefined) {
+      newState.viewMode = navigationChanges.viewMode;
+    } else {
+      newState.viewMode = this.browser.viewMode;
+    }
+
+    if (navigationChanges.format !== undefined) {
+      newState.format = navigationChanges.format;
+    } else {
+      newState.format = this.browser.format;
+    }
+
+    return newState;
   }
   /**
    * Escape HTML characters.
@@ -21989,7 +18257,7 @@ class Util {
       if (!attr) {
         attr = {
           style: additionalStyles
-        };
+        }; // eslint-disable-next-line no-prototype-builtins
       } else if (!attr.hasOwnProperty('style')) {
         attr['style'] = additionalStyles;
       } else {
@@ -22010,7 +18278,7 @@ class Util {
 
 
   createExternalLinkStyle(iri) {
-    var style = '' + 'background-position: center right; ' + 'background-repeat: no-repeat; ' + 'background-size: 10px 10px; ' + 'padding-right: 13px; ';
+    var style = "background-position: center right; \n            background-repeat: no-repeat;\n            background-size: 10px 10px; \n            padding-right: 13px; ";
 
     if (/^https?:\/\/schema.org/.test(iri)) {
       style += 'background-image: url(https://raw.githubusercontent.com/semantifyit/ds-browser/main/images/external-link-icon-red.png);';
@@ -22019,6 +18287,10 @@ class Util {
     }
 
     return style;
+  }
+
+  createHtmlLoading() {
+    return "<div style=\"text-align: center\">\n            <img src=\"https://raw.githubusercontent.com/semantifyit/ds-browser/main/images/loading.gif\"\n             alt=\"Loading Animation\" style=\"margin-top: 100px;\">\n            </div>";
   }
   /**
    * Create a HTML table row with RDFa (https://en.wikipedia.org/wiki/RDFa) attributes.
@@ -22033,9 +18305,10 @@ class Util {
    */
 
 
-  createTableRow(rdfaTypeOf, rdfaResource, mainColRdfaProp, mainColLink, sideCols) {
+  createHtmlTableRow(rdfaTypeOf, rdfaResource, mainColRdfaProp, mainColLink, sideCols) {
     var mainColClass = arguments.length > 5 && arguments[5] !== undefined ? arguments[5] : null;
-    return '' + '<tr typeof="' + rdfaTypeOf + '" resource="' + rdfaResource + '">' + this.createMainCol(mainColRdfaProp, mainColLink, mainColClass) + sideCols + '</tr>';
+    var trContent = this.createMainCol(mainColRdfaProp, mainColLink, mainColClass) + sideCols;
+    return "<tr typeof=\"".concat(rdfaTypeOf, "\" resource=\"").concat(rdfaResource, "\">\n            ").concat(trContent, "\n            </tr>");
   }
   /**
    * Create a HTML main column for a table row with RDFa (https://en.wikipedia.org/wiki/RDFa) attributes.
@@ -22077,7 +18350,7 @@ class Util {
    */
 
 
-  createDefinitionTable(ths, trs) {
+  createHtmlDefinitionTable(ths, trs) {
     var tableAttr = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : null;
     var tbodyAttr = arguments.length > 3 && arguments[3] !== undefined ? arguments[3] : null;
 
@@ -22089,11 +18362,15 @@ class Util {
       trs = [trs];
     }
 
-    return '' + '<table class="definition-table"' + this.createHtmlAttr(tableAttr) + '>' + '<thead>' + '<tr>' + ths.map(th => {
+    var htmlTableAttr = this.createHtmlAttr(tableAttr);
+    var htmlTbodyAttr = this.createHtmlAttr(tbodyAttr);
+    var htmlTheadContent = ths.map(th => {
       return '<th>' + th + '</th>';
-    }).join('') + '</tr>' + '</thead>' + '<tbody' + this.createHtmlAttr(tbodyAttr) + '>' + (trs[0].startsWith('<tr') ? trs.join('') : trs.map(tr => {
+    }).join('');
+    var htmlTbodyContent = trs[0].startsWith('<tr') ? trs.join('') : trs.map(tr => {
       return '<tr>' + tr + '</tr>';
-    }).join('')) + '</tbody>' + '</table>';
+    }).join('');
+    return "<table class=\"definition-table\" ".concat(htmlTableAttr, ">\n            <thead><tr>").concat(htmlTheadContent, "</tr></thead>\n            <tbody ").concat(htmlTbodyAttr, ">\n            ").concat(htmlTbodyContent, "\n            </tbody></table>");
   }
   /**
    * Create a HTML div with the main content for the vocab browser element.
@@ -22104,15 +18381,15 @@ class Util {
    */
 
 
-  createMainContent(rdfaTypeOf, mainContent) {
+  createHtmlMainContent(rdfaTypeOf, mainContent) {
     return "\n            <div>\n                <div id=\"mainContent\" vocab=\"http://schema.org/\" typeof=\"".concat(rdfaTypeOf, "\" resource=\"").concat(window.location, "\">\n                    ").concat(mainContent, "\n                </div>\n            </div>");
   }
 
-  createExternalLinkLegend() {
+  createHtmlExternalLinkLegend() {
     var commonExtLinkStyle = 'margin-right: 3px; ';
     var extLinkStyleBlue = commonExtLinkStyle + this.createExternalLinkStyle('');
     var extLinkStyleRed = commonExtLinkStyle + this.createExternalLinkStyle('http://schema.org') + ' margin-left: 6px;';
-    return '' + '<p style="font-size: 12px; margin-top: 0">' + '(<span style="' + extLinkStyleBlue + '"></span>External link' + '<span style="' + extLinkStyleRed + '"></span>External link to schema.org )' + '</p>';
+    return '<p style="font-size: 12px; margin-top: 0">' + '(<span style="' + extLinkStyleBlue + '"></span>External link' + '<span style="' + extLinkStyleRed + '"></span>External link to schema.org )' + '</p>';
   }
 
   createTermLink(term) {
@@ -22159,11 +18436,17 @@ class Util {
       element.style.filter = 'alpha(opacity=' + op * 100 + ")";
       op += op * 0.05;
     }, 10);
+  } // Returns the rootnode of a DS
+
+
+  discoverDsRootNode(dsGraph) {
+    // Root node is the only with "@type": ["sh:NodeShape", "schema:CreativeWork"]
+    return dsGraph.find(e => Array.isArray(e['@type']) && e['@type'].includes('sh:NodeShape') && e['@type'].includes('schema:CreativeWork'));
   }
 
 }
 
 module.exports = Util;
 
-},{}]},{},[84])(84)
+},{}]},{},[78])(78)
 });

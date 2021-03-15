@@ -7,18 +7,19 @@ class TreeRenderer {
     }
 
     render() {
-        const mainContent = '' +
-            this.dsRenderer.createHeader() +
-            this.dsRenderer.createViewModeSelectors(this.dsRenderer.MODES.tree) +
-            '<div id="div-iframe">' + // needed for padding
-            '<iframe id="iframe-jsTree" frameborder="0" width="100%" scrolling="no"></iframe>' +
-            '</div>';
-        this.browser.elem.innerHTML = this.util.createMainContent('rdfs:Class', mainContent);
-
+        const htmlHeader = this.dsRenderer.createHtmlHeader();
+        const htmlViewModeSelector = this.dsRenderer.createViewModeSelectors(this.dsRenderer.MODES.tree);
+        // The div-iframe is needed for padding
+        const mainContent = `${htmlHeader}
+            ${htmlViewModeSelector}
+            <div id="div-iframe">
+            <iframe id="iframe-jsTree" frameborder="0" width="100%" scrolling="no"></iframe>
+            </div>`;
+        this.browser.targetElement.innerHTML = this.util.createHtmlMainContent('rdfs:Class', mainContent);
         this.initIFrameForJSTree();
     }
 
-    initIFrameForJSTree () {
+    initIFrameForJSTree() {
         this.iFrame = document.getElementById('iframe-jsTree');
         this.iFrameCW = this.iFrame.contentWindow;
         const doc = this.iFrameCW.document;
@@ -26,42 +27,36 @@ class TreeRenderer {
         doc.open();
         doc.write(jsTreeHtml);
         doc.close();
-
-        const dsClass = this.dsHandler.generateDsClass(this.browser.ds['@graph'][0], false, false);
+        const dsClass = this.dsHandler.generateDsClass(this.browser.dsRootNode, false, false);
         this.mapNodeForJSTree([dsClass]);
     }
 
     createJSTreeHTML() {
-        return '' +
-            '<head>' +
-            '<script src="https://code.jquery.com/jquery-3.5.1.min.js" ' +
-            '  integrity="sha256-9/aliU8dGd2tb6OSsuzixeV4y/faTqgFtohetphbbj0=" crossorigin="anonymous"></script>' +
-            '<script src="https://cdnjs.cloudflare.com/ajax/libs/jstree/3.3.10/jstree.min.js"></script>' +
-            '<script src="https://cdnjs.cloudflare.com/ajax/libs/jstreegrid/3.10.2/jstreegrid.min.js"></script>' +
-            '<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.1/css/bootstrap.min.css" />' +
-            '<link rel="stylesheet" ' +
-            '  href="https://cdnjs.cloudflare.com/ajax/libs/jstree/3.3.10/themes/default/style.min.css" />' +
-            this.createTreeStyle() +
-            '</head>' +
-            '<body>' +
-            this.dsRenderer.createVisBtnRow() +
-            '<div id="jsTree"></div>' +
-            '</body>';
+        const htmlVisBtnRow = this.dsRenderer.createVisBtnRow();
+        const htmlTreeStyle = this.createTreeStyle();
+        return `<head>
+            <script src="https://code.jquery.com/jquery-3.5.1.min.js" integrity="sha256-9/aliU8dGd2tb6OSsuzixeV4y/faTqgFtohetphbbj0=" crossorigin="anonymous"></script>
+            <script src="https://cdnjs.cloudflare.com/ajax/libs/jstree/3.3.10/jstree.min.js"></script>
+            <script src="https://cdnjs.cloudflare.com/ajax/libs/jstreegrid/3.10.2/jstreegrid.min.js"></script>
+            <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.1/css/bootstrap.min.css" />
+            <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/jstree/3.3.10/themes/default/style.min.css" />
+            ${htmlTreeStyle}
+            </head>
+            <body>${htmlVisBtnRow}<div id="jsTree"></div></body>`;
     }
 
     createTreeStyle() {
-        return '' +
-            '<style>' +
-            '.optional-property { color: #ffa517; }' +
-            '.mandatory-property { color: #00ce0c; }' +
-            '#btn-row { padding: 12px 0px 12px 5px; }' +
-            '.btn-vis { padding: 5px; }' +
-            '.btn-vis-shadow {' +
-            '    cursor: pointer;' +
-            '    webkit-box-shadow: 0 4px 5px 0 rgba(0, 0, 0, 0.14), 0 1px 10px 0 rgba(0, 0, 0, 0.12), 0 2px 4px -1px rgba(0, 0, 0, 0.2);' +
-            '    box-shadow: 0 4px 5px 0 rgba(0, 0, 0, 0.14), 0 1px 10px 0 rgba(0, 0, 0, 0.12), 0 2px 4px -1px rgba(0, 0, 0, 0.2);' +
-            '}' +
-            '</style>';
+        return `<style>
+            .optional-property { color: #ffa517; }
+            .mandatory-property { color: #00ce0c; }
+            #btn-row { padding: 12px 0px 12px 5px; }
+            .btn-vis { padding: 5px; }
+            .btn-vis-shadow {
+                cursor: pointer;
+                webkit-box-shadow: 0 4px 5px 0 rgba(0, 0, 0, 0.14), 0 1px 10px 0 rgba(0, 0, 0, 0.12), 0 2px 4px -1px rgba(0, 0, 0, 0.2);
+                box-shadow: 0 4px 5px 0 rgba(0, 0, 0, 0.14), 0 1px 10px 0 rgba(0, 0, 0, 0.12), 0 2px 4px -1px rgba(0, 0, 0, 0.2);
+            }
+            </style>`;
     }
 
     mapNodeForJSTree(data) {
@@ -82,29 +77,29 @@ class TreeRenderer {
                 grid: {
                     columns: [
                         {
-                            width:  '20%',
+                            width: '20%',
                             header: 'Class / Property'
                         },
                         {
                             header: 'Range / Type',
                             width: '20%',
-                            value: function (node) {
+                            value: function(node) {
                                 return (node.data.dsRange);
                             }
                         },
                         {
                             width: '40%',
                             header: 'Description',
-                            value: function (node) {
+                            value: function(node) {
                                 return (node.data.dsDescription);
                             }
                         },
                         {
                             width: '20%',
                             header: 'Cardinality',
-                            value: function (node) {
+                            value: function(node) {
                                 if (node.data.dsRange) {
-                                    return self.dsHandler.createCardinality(node.data.minCount, node.data.maxCount);
+                                    return self.dsHandler.createHtmlCardinality(node.data.minCount, node.data.maxCount);
                                 }
                             }
                         }
@@ -140,14 +135,12 @@ class TreeRenderer {
             $button.off('click');
             this.addIframeClickEvent();
 
-            const dsClass = this.dsHandler.generateDsClass(this.browser.ds['@graph'][0], false, showOptional);
+            const dsClass = this.dsHandler.generateDsClass(this.browser.dsRootNode, false, showOptional);
             const jsTree = this.iFrameCW.$('#jsTree').jstree(true);
             jsTree.settings.core.data = dsClass;
             jsTree.refresh();
-        })
+        });
     }
-
-
 }
 
 module.exports = TreeRenderer;

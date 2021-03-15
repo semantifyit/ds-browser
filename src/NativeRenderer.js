@@ -11,14 +11,14 @@ class NativeRenderer {
         this.dsNode = this.browser.dsNode;
         this.node = this.dsNode.node;
 
-        const mainContent = this.dsRenderer.createHeader() +
+        const mainContent = this.dsRenderer.createHtmlHeader() +
             this.dsRenderer.createViewModeSelectors(this.dsRenderer.MODES.native) +
-            (this.dsNode.type === 'Class' ? this.createClassPropertyTable() : this.createEnumerationMembers());
+            (this.dsNode.type === 'Class' ? this.createHtmlPropertiesTable() : this.createEnumerationMembers());
 
-        this.browser.elem.innerHTML = this.util.createMainContent('rdfs:Class', mainContent);
+        this.browser.targetElement.innerHTML = this.util.createHtmlMainContent('rdfs:Class', mainContent);
     }
 
-    createClassPropertyTable() {
+    createHtmlPropertiesTable() {
         let properties;
         if (!this.browser.path) {
             properties = this.node['sh:property'].slice(0);
@@ -29,7 +29,7 @@ class NativeRenderer {
         const trs = properties.map((p) => {
             return this.createClassProperty(p);
         }).join('');
-        return this.util.createDefinitionTable(
+        return this.util.createHtmlDefinitionTable(
             ['Property', 'Expected Type', 'Description', 'Cardinality'],
             trs,
             {'style': 'margin-top: 0px; border-top: none;'}
@@ -40,30 +40,31 @@ class NativeRenderer {
         const path = propertyNode['sh:path'];
         const property = this.browser.sdoAdapter.getProperty(path);
 
-        return this.util.createTableRow('rdf:Property',
+        return this.util.createHtmlTableRow('rdf:Property',
             property.getIRI(),
             'rdfs:label',
             this.util.createTermLink(path),
             this.createClassPropertySideCols(propertyNode),
             'prop-name'
-        )
+        );
     }
 
     createClassPropertySideCols(node) {
-        return '' +
-            '<td class="prop-ect">' + this.createExpectedTypes(node) + '</td>' +
-            '<td class="prop-desc">' + this.createClassPropertyDescText(node) + '</td>' +
-            '<td class="prop-ect">' +
-            this.dsHandler.createCardinality(node['sh:minCount'], node['sh:minCount']) +
-            '</td>';
+        const htmlExpectedTypes = this.createHtmlExpectedTypes(node);
+        const htmlPropertyDesc = this.createHtmlPropertyDescription(node);
+        const htmlCardinality = this.dsHandler.createHtmlCardinality(node['sh:minCount'], node['sh:minCount']);
+        return `<td class="prop-ect">${htmlExpectedTypes}</td>
+            <td class="prop-desc">${htmlPropertyDesc}</td>
+            <td class="prop-ect">${htmlCardinality}</td>`;
     }
 
-    createClassPropertyDescText(propertyNode) {
+    createHtmlPropertyDescription(propertyNode) {
         const name = this.util.prettyPrintIri(propertyNode['sh:path']);
-        let description = '';
+        let description;
         try {
             description = this.browser.sdoAdapter.getProperty(name).getDescription();
         } catch (e) {
+            description = '';
         }
         const dsDescription = (propertyNode['rdfs:comment'] ? propertyNode['rdfs:comment'] : '');
 
@@ -84,7 +85,7 @@ class NativeRenderer {
         return this.util.repairLinksInHTMLCode(descText);
     }
 
-    createExpectedTypes(propertyNode) {
+    createHtmlExpectedTypes(propertyNode) {
         const property = this.browser.sdoAdapter.getProperty(propertyNode['sh:path']);
         const propertyName = this.util.prettyPrintIri(property.getIRI(true));
         const expectedTypes = propertyNode['sh:or'];
@@ -101,15 +102,14 @@ class NativeRenderer {
             } else {
                 name = this.dsHandler.rangesToString(name);
                 if (expectedType['sh:node'] && expectedType['sh:node']['sh:property'].length !== 0) {
-                    const newPath = propertyName + '-' + name;
-                    return this.util.createJSLink('path', newPath, name, null, '-');
+                    const newPath = this.browser.path ? this.browser.path + "-" + propertyName + '-' + name : propertyName + '-' + name;
+                    return this.util.createInternalLink({path: newPath}, name);
                 } else {
                     return this.util.createTermLink(name);
                 }
             }
         }).join('<br>');
     }
-
 
     /**
      * Create HTML for the enumeration members of the Enumeration.
@@ -119,23 +119,33 @@ class NativeRenderer {
     createEnumerationMembers() {
         const enumMembers = this.browser.sdoAdapter.getTerm(this.node['sh:class']).getEnumerationMembers();
         if (enumMembers.length !== 0) {
-            return '' +
-                'An Enumeration with:<br>' +
-                '<b>' +
-                '<a id="enumbers" title="Link: #enumbers" href="#enumbers" class="clickableAnchor">' +
-                'Enumeration members' +
-                '</a>' +
-                '</b>' +
-                '<ul>' +
-                enumMembers.map((e) => {
-                    const enumMember = this.browser.sdoAdapter.getEnumerationMember(e);
-                    return '' +
-                        '<li>' +
-                        this.util.createLink(enumMember.getIRI(), e) +
-                        '</li>';
-                }).join('') +
-                '</ul>' +
-                '<br>';
+            const htmlListItems = enumMembers.map((e) => {
+                const enumMember = this.browser.sdoAdapter.getEnumerationMember(e);
+                return '' +
+                    '<li>' +
+                    this.util.createLink(enumMember.getIRI(), e) +
+                    '</li>';
+            }).join('');
+            return `An Enumeration with:<br>
+                <b><a id="enumbers" title="Link: #enumbers" href="#enumbers" class="clickableAnchor">Enumeration members</a></b>
+                <ul>${htmlListItems}</ul><br>`;
+            // return '' +
+            //     'An Enumeration with:<br>' +
+            //     '<b>' +
+            //     '<a id="enumbers" title="Link: #enumbers" href="#enumbers" class="clickableAnchor">' +
+            //     'Enumeration members' +
+            //     '</a>' +
+            //     '</b>' +
+            //     '<ul>' +
+            //     enumMembers.map((e) => {
+            //         const enumMember = this.browser.sdoAdapter.getEnumerationMember(e);
+            //         return '' +
+            //             '<li>' +
+            //             this.util.createLink(enumMember.getIRI(), e) +
+            //             '</li>';
+            //     }).join('') +
+            //     '</ul>' +
+            //     '<br>';
         } else {
             return '';
         }
