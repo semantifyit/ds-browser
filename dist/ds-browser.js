@@ -16722,6 +16722,10 @@ class DSBrowser {
   constructor(params) {
     var _this = this;
 
+    this.dsCache = {}; // cache for already fetched DS - if already opened DS is viewed, it has not to be fetched again
+
+    this.sdoCache = []; // cache for already created SDO Adapter - if already used vocabulary combination is needed, it has not to be initialized again
+
     this.util = new _Util.default(this);
     this.dsHandler = new _DSHandler.default(this);
     this.listRenderer = new _ListRenderer.default(this);
@@ -16819,10 +16823,34 @@ class DSBrowser {
     var _this5 = this;
 
     return _asyncToGenerator(function* () {
-      _this5.ds = yield _this5.util.parseToObject("https://semantify.it/ds/" + _this5.dsId);
-      _this5.sdoAdapter = new _schemaOrgAdapter.default();
-      var vocabUrls = yield _this5.getVocabUrlsForDS();
-      yield _this5.sdoAdapter.addVocabularies(vocabUrls);
+      if (_this5.dsCache[_this5.dsId]) {
+        _this5.ds = _this5.dsCache[_this5.dsId];
+      } else {
+        var ds = yield _this5.util.parseToObject("https://semantify.it/ds/" + _this5.dsId);
+        _this5.dsCache[_this5.dsId] = ds;
+        _this5.ds = ds;
+      }
+
+      if (!_this5.sdoAdapter) {
+        // create an empty sdo adapter at the start in order to create vocabulary URLs
+        _this5.sdoAdapter = new _schemaOrgAdapter.default();
+      }
+
+      var neededVocabUrls = yield _this5.getVocabUrlsForDS();
+
+      var sdoAdapterNeeded = _this5.util.getSdoAdapterFromCache(neededVocabUrls);
+
+      if (!sdoAdapterNeeded) {
+        sdoAdapterNeeded = new _schemaOrgAdapter.default();
+        yield sdoAdapterNeeded.addVocabularies(neededVocabUrls);
+
+        _this5.sdoCache.push({
+          vocabUrls: neededVocabUrls,
+          sdoAdapter: sdoAdapterNeeded
+        });
+      }
+
+      _this5.sdoAdapter = sdoAdapterNeeded;
     })();
   }
   /**
@@ -16844,7 +16872,7 @@ class DSBrowser {
       var dsRootNode = _this6.util.discoverDsRootNode(_this6.ds['@graph']);
 
       if (dsRootNode && Array.isArray(dsRootNode['ds:usedVocabularies'])) {
-        vocabs = dsRootNode['ds:usedVocabularies'];
+        vocabs = _this6.util.hardCopyJson(dsRootNode['ds:usedVocabularies']);
       }
 
       if (dsRootNode && dsRootNode['schema:schemaVersion']) {
@@ -16939,8 +16967,6 @@ class DSBrowser {
   }
 
   navigate(newState) {
-    console.log(newState);
-
     if (newState.listId !== undefined) {
       this.listId = newState.listId;
     }
@@ -18442,6 +18468,37 @@ class Util {
   discoverDsRootNode(dsGraph) {
     // Root node is the only with "@type": ["sh:NodeShape", "schema:CreativeWork"]
     return dsGraph.find(e => Array.isArray(e['@type']) && e['@type'].includes('sh:NodeShape') && e['@type'].includes('schema:CreativeWork'));
+  }
+
+  getSdoAdapterFromCache(vocabUrls) {
+    for (var sdoAdapterCacheEntry of this.browser.sdoCache) {
+      var match = true;
+
+      for (var voc1 of vocabUrls) {
+        if (!sdoAdapterCacheEntry.vocabUrls.includes(voc1)) {
+          match = false;
+          break;
+        }
+      }
+
+      for (var voc2 of sdoAdapterCacheEntry.vocabUrls) {
+        if (!vocabUrls.includes(voc2)) {
+          match = false;
+          break;
+        }
+      }
+
+      if (match) {
+        return sdoAdapterCacheEntry.sdoAdapter;
+      }
+    }
+
+    return null;
+  } // Creates a hard copy of a given JSON. undefined wont be copied
+
+
+  hardCopyJson(jsonInput) {
+    return JSON.parse(JSON.stringify(jsonInput));
   }
 
 }

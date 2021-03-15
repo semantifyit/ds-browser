@@ -12,6 +12,8 @@ import SHACLRenderer from './SHACLRenderer';
 
 class DSBrowser {
     constructor(params) {
+        this.dsCache = {}; // cache for already fetched DS - if already opened DS is viewed, it has not to be fetched again
+        this.sdoCache = []; // cache for already created SDO Adapter - if already used vocabulary combination is needed, it has not to be initialized again
         this.util = new Util(this);
         this.dsHandler = new DSHandler(this);
         this.listRenderer = new ListRenderer(this);
@@ -89,10 +91,28 @@ class DSBrowser {
     }
 
     async initDS() {
-        this.ds = await this.util.parseToObject("https://semantify.it/ds/" + this.dsId);
-        this.sdoAdapter = new SDOAdapter();
-        const vocabUrls = await this.getVocabUrlsForDS();
-        await this.sdoAdapter.addVocabularies(vocabUrls);
+        if (this.dsCache[this.dsId]) {
+            this.ds = this.dsCache[this.dsId];
+        } else {
+            let ds = await this.util.parseToObject("https://semantify.it/ds/" + this.dsId);
+            this.dsCache[this.dsId] = ds;
+            this.ds = ds;
+        }
+        if (!this.sdoAdapter) {
+            // create an empty sdo adapter at the start in order to create vocabulary URLs
+            this.sdoAdapter = new SDOAdapter();
+        }
+        const neededVocabUrls = await this.getVocabUrlsForDS();
+        let sdoAdapterNeeded = this.util.getSdoAdapterFromCache(neededVocabUrls);
+        if (!sdoAdapterNeeded) {
+            sdoAdapterNeeded = new SDOAdapter();
+            await sdoAdapterNeeded.addVocabularies(neededVocabUrls);
+            this.sdoCache.push({
+                vocabUrls: neededVocabUrls,
+                sdoAdapter: sdoAdapterNeeded
+            });
+        }
+        this.sdoAdapter = sdoAdapterNeeded;
     }
 
     /**
@@ -106,7 +126,7 @@ class DSBrowser {
         let vocabs = [];
         const dsRootNode = this.util.discoverDsRootNode(this.ds['@graph']);
         if (dsRootNode && Array.isArray(dsRootNode['ds:usedVocabularies'])) {
-            vocabs = dsRootNode['ds:usedVocabularies'];
+            vocabs = this.util.hardCopyJson(dsRootNode['ds:usedVocabularies']);
         }
         if (dsRootNode && dsRootNode['schema:schemaVersion']) {
             const sdoVersion = this.getSDOVersion(dsRootNode['schema:schemaVersion']);
@@ -176,7 +196,6 @@ class DSBrowser {
     }
 
     navigate(newState) {
-        console.log(newState);
         if (newState.listId !== undefined) {
             this.listId = newState.listId;
         }

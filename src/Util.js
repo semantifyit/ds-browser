@@ -395,6 +395,33 @@ class Util {
                 e['@type'].includes('schema:CreativeWork'),
         );
     }
+
+    getSdoAdapterFromCache(vocabUrls) {
+        for (const sdoAdapterCacheEntry of this.browser.sdoCache) {
+            let match = true;
+            for (const voc1 of vocabUrls) {
+                if (!sdoAdapterCacheEntry.vocabUrls.includes(voc1)) {
+                    match = false;
+                    break;
+                }
+            }
+            for (const voc2 of sdoAdapterCacheEntry.vocabUrls) {
+                if (!vocabUrls.includes(voc2)) {
+                    match = false;
+                    break;
+                }
+            }
+            if (match) {
+                return sdoAdapterCacheEntry.sdoAdapter;
+            }
+        }
+        return null;
+    }
+
+    // Creates a hard copy of a given JSON. undefined wont be copied
+    hardCopyJson(jsonInput) {
+        return JSON.parse(JSON.stringify(jsonInput));
+    }
 }
 
 module.exports = Util;
