@@ -17478,7 +17478,8 @@ class DSRenderer {
     }
 
     var listHtml = this.browser.list ? ' | from List: ' + this.util.createInternalLink({
-      dsId: null
+      dsId: null,
+      path: null
     }, this.browser.list['schema:name']) : '';
     return "<span style=\"float: right;\">(".concat(shaclLink).concat(listHtml, ")</span>");
   }

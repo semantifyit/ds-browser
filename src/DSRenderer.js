@@ -86,7 +86,7 @@ class DSRenderer {
         } else {
             shaclLink = `<a href="https://semantify.it/ds/${dsId}?format=shacl" target="_blank">SHACL serialization</a>`;
         }
-        const listHtml = this.browser.list ? ' | from List: ' + this.util.createInternalLink({dsId: null}, this.browser.list['schema:name']) : '';
+        const listHtml = this.browser.list ? ' | from List: ' + this.util.createInternalLink({dsId: null, path: null}, this.browser.list['schema:name']) : '';
         return `<span style="float: right;">(${shaclLink}${listHtml})</span>`;
     }
 
