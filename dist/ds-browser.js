@@ -16736,6 +16736,7 @@ class DSBrowser {
     this.shaclRenderer = new _SHACLRenderer.default(this);
     this.targetElement = params.targetElement;
     this.locationControl = params.locationControl !== false;
+    this.selfFileHost = params.selfFileHost === true; // if this is true, the list and ds files are being fetched from the same host where the ds browser is being served (e.g. to make localhost/staging work). Makes only sense if locationControl = true
 
     if (this.locationControl) {
       // if locationControl is true -> read parameters from URL - the ds browser is assumed to be at the domain level of a url (not inside a path /something/ ) and have complete control over the routes /ds/* and /list/*
@@ -16815,7 +16816,7 @@ class DSBrowser {
     var _this4 = this;
 
     return _asyncToGenerator(function* () {
-      _this4.list = yield _this4.util.parseToObject("https://semantify.it/list/" + _this4.listId + "?representation=lean");
+      _this4.list = yield _this4.util.parseToObject(_this4.util.getFileHost() + "/list/" + _this4.listId + "?representation=lean");
     })();
   }
 
@@ -16826,7 +16827,7 @@ class DSBrowser {
       if (_this5.dsCache[_this5.dsId]) {
         _this5.ds = _this5.dsCache[_this5.dsId];
       } else {
-        var ds = yield _this5.util.parseToObject("https://semantify.it/ds/" + _this5.dsId);
+        var ds = yield _this5.util.parseToObject(_this5.util.getFileHost() + "/ds/" + _this5.dsId);
         _this5.dsCache[_this5.dsId] = ds;
         _this5.ds = ds;
       }
@@ -18499,6 +18500,14 @@ class Util {
 
   hardCopyJson(jsonInput) {
     return JSON.parse(JSON.stringify(jsonInput));
+  }
+
+  getFileHost() {
+    if (this.browser.selfFileHost) {
+      return window.location.host;
+    } else {
+      return "https://semantify.it";
+    }
   }
 
 }

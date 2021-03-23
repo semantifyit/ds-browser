@@ -25,6 +25,7 @@ class DSBrowser {
 
         this.targetElement = params.targetElement;
         this.locationControl = params.locationControl !== false;
+        this.selfFileHost = params.selfFileHost === true; // if this is true, the list and ds files are being fetched from the same host where the ds browser is being served (e.g. to make localhost/staging work). Makes only sense if locationControl = true
         if (this.locationControl) {
             // if locationControl is true -> read parameters from URL - the ds browser is assumed to be at the domain level of a url (not inside a path /something/ ) and have complete control over the routes /ds/* and /list/*
             this.readStateFromUrl();
@@ -87,14 +88,14 @@ class DSBrowser {
     }
 
     async initList() {
-        this.list = await this.util.parseToObject("https://semantify.it/list/" + this.listId + "?representation=lean");
+        this.list = await this.util.parseToObject(this.util.getFileHost() + "/list/" + this.listId + "?representation=lean");
     }
 
     async initDS() {
         if (this.dsCache[this.dsId]) {
             this.ds = this.dsCache[this.dsId];
         } else {
-            let ds = await this.util.parseToObject("https://semantify.it/ds/" + this.dsId);
+            let ds = await this.util.parseToObject(this.util.getFileHost() + "/ds/" + this.dsId);
             this.dsCache[this.dsId] = ds;
             this.ds = ds;
         }

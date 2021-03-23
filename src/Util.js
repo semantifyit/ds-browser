@@ -422,6 +422,14 @@ class Util {
     hardCopyJson(jsonInput) {
         return JSON.parse(JSON.stringify(jsonInput));
     }
+
+    getFileHost() {
+        if (this.browser.selfFileHost) {
+            return window.location.host;
+        } else {
+            return "https://semantify.it";
+        }
+    }
 }
 
 module.exports = Util;
