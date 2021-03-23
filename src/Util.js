@@ -425,7 +425,7 @@ class Util {
 
     getFileHost() {
         if (this.browser.selfFileHost) {
-            return window.location.host;
+            return window.location.origin;
         } else {
             return "https://semantify.it";
         }
