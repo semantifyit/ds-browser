@@ -18450,7 +18450,7 @@ class Util {
 
     if (vocabURLs) {
       for (var vocabURL of vocabURLs) {
-        if (/http(s)?:\/\/(staging\.)?semantify\.it\/voc\//.test(vocabURL)) {
+        if (/http(s)?:\/\/.*?\/voc\//.test(vocabURL)) {
           href = vocabURL + '?term=' + term;
           break;
         }
