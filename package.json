@@ -1,6 +1,6 @@
 {
   "name": "ds-browser",
-  "version": "0.0.1",
+  "version": "1.0.0",
   "description": "Browser for Domain Specifications",
   "main": "src/DSBrowser.js",
   "repository": {
@@ -13,7 +13,7 @@
     "SHACL",
     "semantic web"
   ],
-  "author": "Jan Schlenker for STI Innsbruck",
+  "author": "Jan Schlenker and Omar Holzknecht for STI Innsbruck",
   "license": "MIT",
   "bugs": {
     "url": "https://github.com/semantifyit/ds-browser/issues"

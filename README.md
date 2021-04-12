@@ -11,6 +11,13 @@ Add the CSS and the bundled CDN file to your website:
 <script src="https://cdn.jsdelivr.net/gh/semantifyit/ds-browser@76f4c55/dist/ds-browser.min.js">
 ```
 
+You can of course add the latest version instead, with the risk/benefit of using the latest changes:
+
+``` html
+<link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/gh/semantifyit/ds-browser@latest/ds-browser.css" />
+<script src="https://cdn.jsdelivr.net/gh/semantifyit/ds-browser@latest/dist/ds-browser.min.js">
+```
+
 ## Usage
 
 Use the function `DSBrowser(parametersObject)` to initialize a new DS Browser instance with your wished parameters, then use the function .render() of your created instance to build the DS browser UI in the given target HTML element. 
