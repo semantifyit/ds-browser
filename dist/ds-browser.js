@@ -17610,8 +17610,8 @@ class NativeRenderer {
   createClassPropertySideCols(node) {
     var htmlExpectedTypes = this.createHtmlExpectedTypes(node);
     var htmlPropertyDesc = this.createHtmlPropertyDescription(node);
-    var htmlCardinality = this.dsHandler.createHtmlCardinality(node['sh:minCount'], node['sh:minCount']);
-    return "<td class=\"prop-ect\">".concat(htmlExpectedTypes, "</td>\n            <td class=\"prop-desc\">").concat(htmlPropertyDesc, "</td>\n            <td class=\"prop-ect\">").concat(htmlCardinality, "</td>");
+    var htmlCardinality = this.dsHandler.createHtmlCardinality(node['sh:minCount'], node['sh:maxCount']);
+    return "<td class=\"prop-ect\">".concat(htmlExpectedTypes, "</td>\n            <td class=\"prop-desc\">").concat(htmlPropertyDesc, "</td>\n            <td class=\"prop-ect\" style=\"text-align: center\">").concat(htmlCardinality, "</td>");
   }
 
   createHtmlPropertyDescription(propertyNode) {
