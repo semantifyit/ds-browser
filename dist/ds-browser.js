@@ -18139,14 +18139,36 @@ class Util {
   }
 
   repairLinksInHTMLCode(htmlCode) {
-    return htmlCode.replace(/<a(.*?)href="(.*?)"/g, (match, group1, group2) => {
+    var result = htmlCode; // relative links of schema.org
+
+    result = result.replace(/<a(.*?)href="(.*?)"/g, (match, group1, group2) => {
       if (group2.startsWith('/')) {
         group2 = 'http://schema.org' + group2;
       }
 
       var style = this.createExternalLinkStyle(group2);
       return '<a' + group1 + 'href="' + group2 + '" style="' + style + '" target="_blank"';
+    }); // markdown for relative links of schema.org
+
+    result = result.replace(/\[\[(.*?)]]/g, (match, group1) => {
+      var URL = 'http://schema.org/' + group1;
+      var style = this.createExternalLinkStyle(URL);
+      return '<a href="' + URL + '" style="' + style + '" target="_blank">' + group1 + '</a>';
+    }); // markdown for outgoing link
+
+    result = result.replace(/\[(.*?)]\((.*?)\)/g, (match, group1, group2) => {
+      var style = this.createExternalLinkStyle(group2);
+      return '<a href="' + group2 + '" style="' + style + '" target="_blank">' + group1 + '</a>';
+    }); // new line
+
+    result = result.replace(/\\n/g, (match, group1, group2) => {
+      return "</br>";
+    }); // bold
+
+    result = result.replace(/__(.*?)__/g, (match, group1, group2) => {
+      return "<b>group1</b>";
     });
+    return result;
   }
 
   createInternalLink(navigationChanges, text) {
