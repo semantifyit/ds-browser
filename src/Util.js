@@ -95,7 +95,7 @@ class Util {
         });
         // bold
         result = result.replace(/__(.*?)__/g, (match, group1, group2) => {
-            return "<b>group1</b>";
+            return "<b>"+group1+"</b>";
         });
         return result;
     }

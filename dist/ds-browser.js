@@ -17638,12 +17638,21 @@ class NativeRenderer {
       } else {
         name = this.dsHandler.rangesToString(name);
 
-        if (expectedType['sh:node'] && expectedType['sh:node']['sh:property'].length !== 0) {
+        if (expectedType['sh:node'] && Array.isArray(expectedType['sh:node']['sh:property']) && expectedType['sh:node']['sh:property'].length !== 0) {
+          // Case: Range is a Restricted Class
           var newPath = this.browser.path ? this.browser.path + "-" + propertyName + '-' + name : propertyName + '-' + name;
           return this.util.createInternalLink({
             path: newPath
           }, name);
+        } else if (expectedType['sh:class'] && Array.isArray(expectedType['sh:in'])) {
+          // Case: Range is a Restricted Enumeration
+          var _newPath = this.browser.path ? this.browser.path + "-" + propertyName + '-' + name : propertyName + '-' + name;
+
+          return this.util.createInternalLink({
+            path: _newPath
+          }, name);
         } else {
+          // Case: Anything else
           return this.util.createTermLink(name);
         }
       }
@@ -18166,7 +18175,7 @@ class Util {
     }); // bold
 
     result = result.replace(/__(.*?)__/g, (match, group1, group2) => {
-      return "<b>group1</b>";
+      return "<b>" + group1 + "</b>";
     });
     return result;
   }

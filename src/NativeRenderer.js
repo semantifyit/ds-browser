@@ -101,10 +101,16 @@ class NativeRenderer {
                 return this.util.createLink(mappedDataType);
             } else {
                 name = this.dsHandler.rangesToString(name);
-                if (expectedType['sh:node'] && expectedType['sh:node']['sh:property'].length !== 0) {
+                if (expectedType['sh:node'] && Array.isArray(expectedType['sh:node']['sh:property']) && expectedType['sh:node']['sh:property'].length !== 0) {
+                    // Case: Range is a Restricted Class
+                    const newPath = this.browser.path ? this.browser.path + "-" + propertyName + '-' + name : propertyName + '-' + name;
+                    return this.util.createInternalLink({path: newPath}, name);
+                } else if (expectedType['sh:class'] && Array.isArray(expectedType['sh:in'])){
+                    // Case: Range is a Restricted Enumeration
                     const newPath = this.browser.path ? this.browser.path + "-" + propertyName + '-' + name : propertyName + '-' + name;
                     return this.util.createInternalLink({path: newPath}, name);
                 } else {
+                    // Case: Anything else
                     return this.util.createTermLink(name);
                 }
             }
