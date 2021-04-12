@@ -17552,8 +17552,29 @@ class NativeRenderer {
     // Cannot be in constructor, cause at this time the node is not initialized
     this.dsNode = this.browser.dsNode;
     this.node = this.dsNode.node;
-    var mainContent = this.dsRenderer.createHtmlHeader() + this.dsRenderer.createViewModeSelectors(this.dsRenderer.MODES.native) + (this.dsNode.type === 'Class' ? this.createHtmlPropertiesTable() : this.createEnumerationMembers());
+    var mainContent = this.dsRenderer.createHtmlHeader() + this.dsRenderer.createViewModeSelectors(this.dsRenderer.MODES.native) + (this.dsNode.type === 'Class' ? this.createHtmlPropertiesTable() : this.createHTMLEnumerationMembersTable());
     this.browser.targetElement.innerHTML = this.util.createHtmlMainContent('rdfs:Class', mainContent);
+  }
+
+  createHTMLEnumerationMembersTable() {
+    console.log(this.node);
+    var enumerationValues = this.node["sh:in"].slice(0);
+    var trs = enumerationValues.map(ev => {
+      return this.createHTMLEnumerationMemberRow(ev);
+    }).join('');
+    return this.util.createHtmlDefinitionTable(['Enumeration Member', 'Description'], trs, {
+      'style': 'margin-top: 0px; border-top: none;'
+    });
+  }
+
+  createHTMLEnumerationMemberRow(ev) {
+    var evObj = this.browser.sdoAdapter.getEnumerationMember(ev["@id"]);
+    return this.util.createHtmlTableRow('rdfs:Class', evObj.getIRI(), 'rdfs:label', this.util.createTermLink(ev["@id"]), this.createHTMLEnumerationMemberDescription(evObj));
+  }
+
+  createHTMLEnumerationMemberDescription(evObj) {
+    var htmlDesc = this.util.repairLinksInHTMLCode(evObj.getDescription());
+    return "<td className=\"prop-desc\">".concat(htmlDesc, "</td>");
   }
 
   createHtmlPropertiesTable() {
@@ -17657,42 +17678,6 @@ class NativeRenderer {
         }
       }
     }).join('<br>');
-  }
-  /**
-   * Create HTML for the enumeration members of the Enumeration.
-   *
-   * @returns {string} The resulting HTML.
-   */
-
-
-  createEnumerationMembers() {
-    var enumMembers = this.browser.sdoAdapter.getTerm(this.node['sh:class']).getEnumerationMembers();
-
-    if (enumMembers.length !== 0) {
-      var htmlListItems = enumMembers.map(e => {
-        var enumMember = this.browser.sdoAdapter.getEnumerationMember(e);
-        return '' + '<li>' + this.util.createLink(enumMember.getIRI(), e) + '</li>';
-      }).join('');
-      return "An Enumeration with:<br>\n                <b><a id=\"enumbers\" title=\"Link: #enumbers\" href=\"#enumbers\" class=\"clickableAnchor\">Enumeration members</a></b>\n                <ul>".concat(htmlListItems, "</ul><br>"); // return '' +
-      //     'An Enumeration with:<br>' +
-      //     '<b>' +
-      //     '<a id="enumbers" title="Link: #enumbers" href="#enumbers" class="clickableAnchor">' +
-      //     'Enumeration members' +
-      //     '</a>' +
-      //     '</b>' +
-      //     '<ul>' +
-      //     enumMembers.map((e) => {
-      //         const enumMember = this.browser.sdoAdapter.getEnumerationMember(e);
-      //         return '' +
-      //             '<li>' +
-      //             this.util.createLink(enumMember.getIRI(), e) +
-      //             '</li>';
-      //     }).join('') +
-      //     '</ul>' +
-      //     '<br>';
-    } else {
-      return '';
-    }
   }
 
 }
