@@ -214,7 +214,7 @@ class Util {
      */
     createLink(href, text = null, attr = null) {
         const urlObj = new URL(href);
-        if (window.location.hostname !== urlObj.hostname) {
+        if (window.location.hostname !== urlObj.hostname || href.includes("/voc/")) {
             let additionalStyles = ' ' + this.createExternalLinkStyle(href);
 
             if (!attr) {

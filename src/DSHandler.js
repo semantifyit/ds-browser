@@ -19,7 +19,13 @@ class DSHandler {
                     if (pathSteps[i] === "") {
                         continue;
                     }
-                    if (pathSteps[i].charAt(0).toUpperCase() === pathSteps[i].charAt(0)) {
+                    let currPathStepWithoutIndicator;
+                    if (pathSteps[i].indexOf(":") >= 0) {
+                        currPathStepWithoutIndicator = pathSteps[i].substring(pathSteps[i].indexOf(":") + 1);
+                    } else {
+                        currPathStepWithoutIndicator = pathSteps[i];
+                    }
+                    if (currPathStepWithoutIndicator.charAt(0).toUpperCase() === currPathStepWithoutIndicator.charAt(0)) {
                         // Is uppercase -> class or Enum
                         if (currentNode !== null) {
                             currentNode = this.getClass(currentNode['sh:or'], pathSteps[i]);

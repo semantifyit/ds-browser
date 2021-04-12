@@ -19,7 +19,6 @@ class NativeRenderer {
     }
 
     createHTMLEnumerationMembersTable() {
-        console.log(this.node);
         let enumerationValues = this.node["sh:in"].slice(0);
         const trs = enumerationValues.map((ev) => {
             return this.createHTMLEnumerationMemberRow(ev);

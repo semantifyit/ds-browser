@@ -17036,7 +17036,15 @@ class DSHandler {
             continue;
           }
 
-          if (pathSteps[i].charAt(0).toUpperCase() === pathSteps[i].charAt(0)) {
+          var currPathStepWithoutIndicator = void 0;
+
+          if (pathSteps[i].indexOf(":") >= 0) {
+            currPathStepWithoutIndicator = pathSteps[i].substring(pathSteps[i].indexOf(":") + 1);
+          } else {
+            currPathStepWithoutIndicator = pathSteps[i];
+          }
+
+          if (currPathStepWithoutIndicator.charAt(0).toUpperCase() === currPathStepWithoutIndicator.charAt(0)) {
             // Is uppercase -> class or Enum
             if (currentNode !== null) {
               currentNode = this.getClass(currentNode['sh:or'], pathSteps[i]);
@@ -17557,7 +17565,6 @@ class NativeRenderer {
   }
 
   createHTMLEnumerationMembersTable() {
-    console.log(this.node);
     var enumerationValues = this.node["sh:in"].slice(0);
     var trs = enumerationValues.map(ev => {
       return this.createHTMLEnumerationMemberRow(ev);
@@ -18295,7 +18302,7 @@ class Util {
     var attr = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : null;
     var urlObj = new URL(href);
 
-    if (window.location.hostname !== urlObj.hostname) {
+    if (window.location.hostname !== urlObj.hostname || href.includes("/voc/")) {
       var additionalStyles = ' ' + this.createExternalLinkStyle(href);
 
       if (!attr) {
