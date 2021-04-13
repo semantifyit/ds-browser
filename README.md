@@ -4,9 +4,10 @@
 
 ### Installation via CDN
 
-Add the CSS and the bundled CDN file to your website:
+Add the CSS (If you want a schema.org style you can import their CSS), and the bundled CDN file to your website:
 
 ``` html
+<link rel="stylesheet" type="text/css" href="https://schema.org/docs/schemaorg.css"/>
 <link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/gh/semantifyit/ds-browser@76f4c55/ds-browser.css" />
 <script src="https://cdn.jsdelivr.net/gh/semantifyit/ds-browser@76f4c55/dist/ds-browser.min.js">
 ```
@@ -14,6 +15,7 @@ Add the CSS and the bundled CDN file to your website:
 You can of course add the latest version instead, with the risk/benefit of using the latest changes:
 
 ``` html
+<link rel="stylesheet" type="text/css" href="https://schema.org/docs/schemaorg.css"/>
 <link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/gh/semantifyit/ds-browser@latest/ds-browser.css" />
 <script src="https://cdn.jsdelivr.net/gh/semantifyit/ds-browser@latest/dist/ds-browser.min.js">
 ```

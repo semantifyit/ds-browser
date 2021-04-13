@@ -18391,7 +18391,7 @@ class Util {
     return '' + '<code' + this.createHtmlAttr(codeAttr) + '>' + link + '</code>';
   }
   /**
-   * Create a HTML table with class 'definition-table'.
+   * Create a HTML table with class 'definition-table' and 'table'.
    *
    * @param {string|string[]} ths - The table header cell/s. Must include <th> tags.
    * @param {string|string[]} trs - The table body row/s. Can already include <tr> tags to be more flexible.
@@ -18421,7 +18421,7 @@ class Util {
     var htmlTbodyContent = trs[0].startsWith('<tr') ? trs.join('') : trs.map(tr => {
       return '<tr>' + tr + '</tr>';
     }).join('');
-    return "<table class=\"definition-table\" ".concat(htmlTableAttr, ">\n            <thead><tr>").concat(htmlTheadContent, "</tr></thead>\n            <tbody ").concat(htmlTbodyAttr, ">\n            ").concat(htmlTbodyContent, "\n            </tbody></table>");
+    return "<table class=\"definition-table table\" ".concat(htmlTableAttr, ">\n            <thead><tr>").concat(htmlTheadContent, "</tr></thead>\n            <tbody ").concat(htmlTbodyAttr, ">\n            ").concat(htmlTbodyContent, "\n            </tbody></table>");
   }
   /**
    * Create a HTML div with the main content for the vocab browser element.
