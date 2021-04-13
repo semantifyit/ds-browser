@@ -18168,6 +18168,10 @@ class Util {
 
     result = result.replace(/__(.*?)__/g, (match, group1, group2) => {
       return "<b>" + group1 + "</b>";
+    }); // code
+
+    result = result.replace(/```(.*?)```/g, (match, group1) => {
+      return "<code>" + group1 + "</code>";
     });
     return result;
   }
