@@ -13,7 +13,7 @@ class DSRenderer {
 
     createViewModeSelectors(selected = this.MODES.native) {
         return '' +
-            '<div class="ds-selector-tabs ds-selector">' +
+            '<div class="ds-selector-tabs ds-selector" style="padding-bottom: 0 !important;">' +
             '<div class="selectors">' +
             (selected === this.MODES.native ? '<a class="selected">Native View</a>' :
                 this.util.createInternalLink({viewMode: null}, 'Native View')) +

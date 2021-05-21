@@ -17415,7 +17415,7 @@ class DSRenderer {
 
   createViewModeSelectors() {
     var selected = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : this.MODES.native;
-    return '' + '<div class="ds-selector-tabs ds-selector">' + '<div class="selectors">' + (selected === this.MODES.native ? '<a class="selected">Native View</a>' : this.util.createInternalLink({
+    return '' + '<div class="ds-selector-tabs ds-selector" style="padding-bottom: 0 !important;">' + '<div class="selectors">' + (selected === this.MODES.native ? '<a class="selected">Native View</a>' : this.util.createInternalLink({
       viewMode: null
     }, 'Native View')) + (selected === this.MODES.tree ? '<a class="selected">Tree View</a>' : this.util.createInternalLink({
       viewMode: 'tree'
