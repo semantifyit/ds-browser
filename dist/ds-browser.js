@@ -16990,13 +16990,13 @@ class DSHandler {
 
           if (currPathStepWithoutIndicator.charAt(0).toUpperCase() === currPathStepWithoutIndicator.charAt(0)) {
             // Is uppercase -> class or Enum
-            if (currentNode !== null) {
+            if (currentNode) {
               currentNode = this.getClass(currentNode['sh:or'], pathSteps[i]);
             }
           } else {
             // Property should not be the last part of an URL, skip to show containing class!
             // Although the redirectCheck() would fire before this function
-            if (currentNode !== null && i !== pathSteps.length - 1) {
+            if (currentNode && i !== pathSteps.length - 1) {
               currentNode = this.getProperty(currentNode['sh:property'], pathSteps[i]);
             }
           }
@@ -17028,12 +17028,12 @@ class DSHandler {
 
 
   getClass(DSNode, name) {
-    return DSNode.find(el => el["sh:node"] && el["sh:node"]["sh:class"] && this.rangesToString(el["sh:node"]["sh:class"]) === name)["sh:node"] || null;
+    return DSNode.find(el => el["sh:node"] && el["sh:node"]["sh:class"] && this.rangesToString(el["sh:node"]["sh:class"]) === name)["sh:node"];
   } // Get the property with that name
 
 
   getProperty(propertyArray, name) {
-    return propertyArray.find(el => this.rangesToString(el["sh:path"]) === name) || null;
+    return propertyArray.find(el => this.rangesToString(el["sh:path"]) === name);
   } // Get the corresponding SDO datatype from a given SHACL XSD datatype
 
 
