@@ -77,12 +77,12 @@ class DSBrowser {
             await this.initList();
         }
         // Init DS
-        if (this.dsId && (!this.ds || !this.ds["@id"].endsWith(this.dsId))) {
+        if (this.dsId && (!this.ds || !this.util.getDSRootNode(this.ds)["@id"].endsWith(this.dsId))) {
             await this.initDS();
             // Init DS Node
         }
         if (this.ds) {
-            this.dsRootNode = this.util.discoverDsRootNode(this.ds['@graph']);
+            this.dsRootNode = this.util.getDSRootNode(this.ds);
             this.dsNode = this.dsHandler.getDSNodeForPath();
         }
     }
@@ -96,17 +96,23 @@ class DSBrowser {
             this.ds = this.dsCache[this.dsId];
         } else {
             let ds = await this.util.parseToObject(this.util.getFileHost() + "/ds/" + this.dsId);
+            if (ds && ds["@graph"] && ds["@graph"][0] && !ds["@graph"][0]["ds:version"]) {
+                ds = await this.util.parseToObject(this.util.getFileHost() + "/api/v2/domainspecifications/dsv7/" + this.dsId);
+            }
             this.dsCache[this.dsId] = ds;
             this.ds = ds;
         }
         if (!this.sdoAdapter) {
             // create an empty sdo adapter at the start in order to create vocabulary URLs
-            this.sdoAdapter = new SDOAdapter();
+            this.sdoAdapter = new SDOAdapter({httpsSchema: true});
         }
         const neededVocabUrls = await this.getVocabUrlsForDS();
         let sdoAdapterNeeded = this.util.getSdoAdapterFromCache(neededVocabUrls);
         if (!sdoAdapterNeeded) {
-            sdoAdapterNeeded = new SDOAdapter();
+            sdoAdapterNeeded = new SDOAdapter({
+                httpsSchema: true,
+                equateVocabularyProtocols: true
+            });
             await sdoAdapterNeeded.addVocabularies(neededVocabUrls);
             this.sdoCache.push({
                 vocabUrls: neededVocabUrls,
@@ -125,9 +131,9 @@ class DSBrowser {
             return [];
         }
         let vocabs = [];
-        const dsRootNode = this.util.discoverDsRootNode(this.ds['@graph']);
-        if (dsRootNode && Array.isArray(dsRootNode['ds:usedVocabularies'])) {
-            vocabs = this.util.hardCopyJson(dsRootNode['ds:usedVocabularies']);
+        const dsRootNode = this.util.getDSRootNode(this.ds);
+        if (dsRootNode && Array.isArray(dsRootNode['ds:usedVocabulary'])) {
+            vocabs = this.util.hardCopyJson(dsRootNode['ds:usedVocabulary']);
         }
         if (dsRootNode && dsRootNode['schema:schemaVersion']) {
             const sdoVersion = this.getSDOVersion(dsRootNode['schema:schemaVersion']);
@@ -136,10 +142,15 @@ class DSBrowser {
         return vocabs;
     }
 
-    getSDOVersion(schemaVersion) {
-        let versionRegex = /.*schema\.org\/version\/([0-9.]+)\//g;
-        let match = versionRegex.exec(schemaVersion);
-        return match[1];
+    getSDOVersion(schemaVersionValue) {
+        if (schemaVersionValue.startsWith("http")) {
+            let versionRegex = /.*schema\.org\/version\/([0-9.]+)\//g;
+            let match = versionRegex.exec(schemaVersionValue);
+            if (match && match[1]) {
+                return match[1];
+            }
+        }
+        return schemaVersionValue;
     }
 
     /**

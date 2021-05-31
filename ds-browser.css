@@ -1,7 +1,7 @@
 /* Schema.org */
 #mainContent {
-    border-bottom: none;
-    max-width: 90%
+    border-bottom: none !important;
+    max-width: 1440px !important;
 }
 
 /* Glyphicon */
@@ -19,10 +19,14 @@
     position: relative;
     top: 1px;
     display: inline-block;
-    font: normal normal 16px/1 'Glyphicons Halflings';
+    font-family: 'Glyphicons Halflings';
+    font-style: normal;
+    font-weight: 400;
+    line-height: 1;
     -moz-osx-font-smoothing: grayscale;
     -webkit-font-smoothing: antialiased;
     margin-right: 4px;
+    font-size: 15px;
 }
 
 .glyphicon-tag:before {
@@ -38,18 +42,18 @@
 .optional-property { color: #ffa517; }
 .mandatory-property { color: #00ce0c; }
 
-table.definition-table { border: 1px solid #98A0A6 }
+table.definition-table { border: 1px solid #98A0A6; width: 100%;}
 
 .ds-selector {
-    padding: 0px;
+    padding: 0 !important;
 }
 .ds-selector-tabs .selectors {
-    border-bottom: 1px solid #98A0A6;
+    border-bottom: 1px solid #98A0A6 !important;
 }
 .ds-selector-tabs .selectors a:first-child { margin-left: 0px; }
 
 .ds-selector-tabs .selectors a.selected {
-    border: 1px solid #98A0A6;
+    border: 1px solid #98A0A6 !important;
 }
 
 #btn-row { padding: 12px 0px 12px 5px; }
@@ -147,4 +151,8 @@ table.definition-table { border: 1px solid #98A0A6 }
 
 #table-view .rmBorderBottom {
     border-bottom: none !important;
+}
+
+.jstree-grid-wrapper {
+    display: inline-table !important;
 }

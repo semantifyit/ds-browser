@@ -13,7 +13,7 @@ class DSRenderer {
 
     createViewModeSelectors(selected = this.MODES.native) {
         return '' +
-            '<div class="ds-selector-tabs ds-selector" style="padding-bottom: 0 !important;">' +
+            '<div class="ds-selector-tabs ds-selector">' +
             '<div class="selectors">' +
             (selected === this.MODES.native ? '<a class="selected">Native View</a>' :
                 this.util.createInternalLink({viewMode: null}, 'Native View')) +
@@ -32,8 +32,8 @@ class DSRenderer {
         let name, description, breadcrumbs = '';
         if (!this.browser.path) {
             const graph = this.browser.ds['@graph'][0];
-            name = graph['schema:name'] || 'Domain Specification';
-            description = graph['schema:description'] || '';
+            name = this.util.getLanguageString(graph['schema:name']) || 'Domain Specification';
+            description = this.util.getLanguageString(graph['schema:description']) || '';
         } else {
             const nodeClass = this.node['sh:class'];
             name = this.dsHandler.rangesToString(nodeClass);
@@ -64,7 +64,7 @@ class DSRenderer {
     }
 
     createBreadcrumbs() {
-        const htmlFirstBreadcrumb = this.util.createInternalLink({path: null}, this.browser.dsRootNode['schema:name'] || 'Domain Specification');
+        const htmlFirstBreadcrumb = this.util.createInternalLink({path: null}, this.util.getLanguageString(this.browser.dsRootNode['schema:name']) || 'Domain Specification');
         const htmlBreadcrumbs = this.browser.path.split('-').map((term, index, pathSplit) => {
             if (index % 2 === 0) {
                 return term;
@@ -91,11 +91,11 @@ class DSRenderer {
     }
 
     createVisBtnRow() {
-        return `<div id="btn-row">Show: 
-            <span id="btn-opt" class="btn-vis btn-vis-shadow" style="margin-left: 10px;">
+        return `<div id="btn-row" style="padding: 12px 0px 12px 5px; font-size: 14px; line-height: 1.42857143; color: #333;">Show: 
+            <span id="btn-opt" class="btn-vis btn-vis-shadow" style="margin-left: 10px; padding: 5px;">
                 <img src="" class="glyphicon glyphicon-tag optional-property"> optional
             </span>
-            <span id="btn-man" class="btn-vis" style="margin-left: 10px;">
+            <span id="btn-man" class="btn-vis" style="margin-left: 10px; padding: 5px;">
                 <img src="" class="glyphicon glyphicon-tag mandatory-property"> mandatory
             </span></div>`;
     }
