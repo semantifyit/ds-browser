@@ -49,8 +49,6 @@ class TreeRenderer {
         return `<style>
             .optional-property { color: #ffa517; }
             .mandatory-property { color: #00ce0c; }
-            #btn-row { padding: 12px 0px 12px 5px; }
-            .btn-vis { padding: 5px; }
             .btn-vis-shadow {
                 cursor: pointer;
                 webkit-box-shadow: 0 4px 5px 0 rgba(0, 0, 0, 0.14), 0 1px 10px 0 rgba(0, 0, 0, 0.12), 0 2px 4px -1px rgba(0, 0, 0, 0.2);
@@ -88,25 +86,24 @@ class TreeRenderer {
                             }
                         },
                         {
-                            width: '40%',
-                            header: 'Description',
-                            value: function(node) {
-                                return (node.data.dsDescription);
-                            }
-                        },
-                        {
-                            width: '20%',
+                            width: '17%',
                             header: 'Cardinality',
                             value: function(node) {
                                 if (node.data.dsRange) {
-                                    return self.dsHandler.createHtmlCardinality(node.data.minCount, node.data.maxCount);
+                                    return '<p style="width: 100%; margin: 0; text-align: center; padding-right: 7px;">'+self.dsHandler.createHtmlCardinality(node.data.minCount, node.data.maxCount)+'</p>';
                                 }
+                            }
+                        },
+                        {
+                            width: '50%',
+                            header: 'Description',
+                            value: function(node) {
+                                return '<p style="width: 100%; overflow: hidden; margin: 0; text-overflow: ellipsis;">'+(node.data.dsDescription.replaceAll("</br>"," " ))+'</p>';
                             }
                         }
                     ],
                 }
             }).bind('ready.jstree after_open.jstree after_close.jstree refresh.jstree', self.adaptIframe.bind(self));
-
             self.addIframeClickEvent();
         });
     }

@@ -95,11 +95,11 @@ class Util {
         });
         // bold
         result = result.replace(/__(.*?)__/g, (match, group1, group2) => {
-            return "<b>"+group1+"</b>";
+            return "<b>" + group1 + "</b>";
         });
         // code
         result = result.replace(/```(.*?)```/g, (match, group1) => {
-            return "<code>"+group1+"</code>";
+            return "<code>" + group1 + "</code>";
         });
         return result;
     }
@@ -410,17 +410,6 @@ class Util {
         }, 10);
     }
 
-    // Returns the rootnode of a DS
-    discoverDsRootNode(dsGraph) {
-        // Root node is the only with "@type": ["sh:NodeShape", "schema:CreativeWork"]
-        return dsGraph.find(
-            (e) =>
-                Array.isArray(e['@type']) &&
-                e['@type'].includes('sh:NodeShape') &&
-                e['@type'].includes('schema:CreativeWork'),
-        );
-    }
-
     getSdoAdapterFromCache(vocabUrls) {
         for (const sdoAdapterCacheEntry of this.browser.sdoCache) {
             let match = true;
@@ -454,6 +443,32 @@ class Util {
         } else {
             return "https://semantify.it";
         }
+    }
+
+    // Returns a string for a meta-data value. This value is expected to have different language-tagged strings. If not, it is expected to be a string, which is returned.
+    getLanguageString(value, preferableLanguage = "en") {
+        if (Array.isArray(value)) {
+            if (value.length === 0) {
+                return null;
+            }
+            let match = value.find(el => el["@language"] === preferableLanguage);
+            if (!match) {
+                match = value[0]; // Take value at first position
+            }
+            return match["@value"];
+        }
+        return value;
+    }
+
+    // Returns the root node of a given DS, returns null if it couldn't be found
+    getDSRootNode(ds) {
+        if (ds && Array.isArray(ds["@graph"])) {
+            const rootNode = ds["@graph"].find(el => el["@type"] === "ds:DomainSpecification");
+            if (rootNode) {
+                return rootNode;
+            }
+        }
+        return null;
     }
 }
 

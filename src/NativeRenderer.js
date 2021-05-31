@@ -7,7 +7,7 @@ class NativeRenderer {
     }
 
     render() {
-        // Cannot be in constructor, cause at this time the node is not initialized
+        // cannot be in constructor, cause at this time the node is not initialized
         this.dsNode = this.browser.dsNode;
         this.node = this.dsNode.node;
 
@@ -47,12 +47,7 @@ class NativeRenderer {
 
     createHtmlPropertiesTable() {
         let properties;
-        if (!this.browser.path) {
-            properties = this.node['sh:property'].slice(0);
-        } else {
-            properties = this.node['sh:node']['sh:property'].slice(0);
-        }
-
+        properties = this.node['sh:property'].slice(0);
         const trs = properties.map((p) => {
             return this.createClassProperty(p);
         }).join('');
@@ -93,7 +88,7 @@ class NativeRenderer {
         } catch (e) {
             description = '';
         }
-        const dsDescription = (propertyNode['rdfs:comment'] ? propertyNode['rdfs:comment'] : '');
+        const dsDescription = (propertyNode['rdfs:comment'] ? this.util.getLanguageString(propertyNode['rdfs:comment']) : '');
 
         let descText = '';
         if (description !== '') {
@@ -115,24 +110,23 @@ class NativeRenderer {
     createHtmlExpectedTypes(propertyNode) {
         const property = this.browser.sdoAdapter.getProperty(propertyNode['sh:path']);
         const propertyName = this.util.prettyPrintIri(property.getIRI(true));
-        const expectedTypes = propertyNode['sh:or'];
-        return expectedTypes.map((expectedType) => {
+        return propertyNode['sh:or'].map((rangeNode) => {
             let name;
-            if (expectedType['sh:datatype']) {
-                name = expectedType['sh:datatype'];
-            } else if (expectedType['sh:class']) {
-                name = expectedType['sh:class'];
+            if (rangeNode['sh:datatype']) {
+                name = rangeNode['sh:datatype'];
+            } else if (rangeNode["sh:node"] && rangeNode["sh:node"]['sh:class']) {
+                name = rangeNode["sh:node"]['sh:class'];
             }
             const mappedDataType = this.dsHandler.dataTypeMapperFromSHACL(name);
             if (mappedDataType !== null) {
                 return this.util.createLink(mappedDataType);
             } else {
                 name = this.dsHandler.rangesToString(name);
-                if (expectedType['sh:node'] && Array.isArray(expectedType['sh:node']['sh:property']) && expectedType['sh:node']['sh:property'].length !== 0) {
+                if (rangeNode['sh:node'] && Array.isArray(rangeNode['sh:node']['sh:property']) && rangeNode['sh:node']['sh:property'].length !== 0) {
                     // Case: Range is a Restricted Class
                     const newPath = this.browser.path ? this.browser.path + "-" + propertyName + '-' + name : propertyName + '-' + name;
                     return this.util.createInternalLink({path: newPath}, name);
-                } else if (expectedType['sh:class'] && Array.isArray(expectedType['sh:in'])) {
+                } else if (rangeNode['sh:node'] && rangeNode['sh:node']['sh:class'] && Array.isArray(rangeNode['sh:node']['sh:in'])) {
                     // Case: Range is a Restricted Enumeration
                     const newPath = this.browser.path ? this.browser.path + "-" + propertyName + '-' + name : propertyName + '-' + name;
                     return this.util.createInternalLink({path: newPath}, name);

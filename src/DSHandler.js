@@ -34,25 +34,19 @@ class DSHandler {
                         // Property should not be the last part of an URL, skip to show containing class!
                         // Although the redirectCheck() would fire before this function
                         if (currentNode !== null && i !== pathSteps.length - 1) {
-                            if (currentNode["sh:targetClass"] !== undefined) {
-                                // Root node
-                                currentNode = this.getProperty(currentNode['sh:property'], pathSteps[i]);
-                            } else {
-                                // Nested nodes
-                                currentNode = this.getProperty(currentNode["sh:node"]['sh:property'], pathSteps[i]);
-                            }
+                            currentNode = this.getProperty(currentNode['sh:property'], pathSteps[i]);
                         }
                     }
                 }
-                if (currentNode && currentNode["sh:class"] && !Array.isArray(currentNode["sh:class"])) {
-                    try {
-                        this.browser.sdoAdapter.getEnumeration(currentNode["sh:class"]);
+                try {
+                    this.browser.sdoAdapter.getTerm(currentNode["sh:class"][0]);
+                    if (this.browser.sdoAdapter.getTerm(currentNode["sh:class"][0]).getTermType() === "schema:Enumeration") {
                         result.type = "Enumeration";
-                    } catch (e) {
+                    } else {
                         result.type = "Class";
                     }
-                } else {
-                    result.type = "Class";
+                } catch (e) {
+                    result.type = "error";
                 }
             } else {
                 // Root class
@@ -68,7 +62,7 @@ class DSHandler {
 
     // Get the class or enumeration with that name
     getClass(DSNode, name) {
-        return DSNode.find(el => (el["sh:class"] && this.rangesToString(el["sh:class"]) === name)) || null;
+        return DSNode.find(el => (el["sh:node"] && el["sh:node"]["sh:class"] && this.rangesToString(el["sh:node"]["sh:class"]) === name))["sh:node"] || null;
     }
 
     // Get the property with that name
@@ -80,23 +74,25 @@ class DSHandler {
     dataTypeMapperFromSHACL(dataType) {
         switch (dataType) {
             case 'xsd:string':
-                return 'http://schema.org/Text';
+                return 'https://schema.org/Text';
+            case 'rdf:langString':
+                return 'https://schema.org/Text';
             case 'xsd:boolean' :
-                return 'http://schema.org/Boolean';
+                return 'https://schema.org/Boolean';
             case 'xsd:date' :
-                return 'http://schema.org/Date';
+                return 'https://schema.org/Date';
             case 'xsd:dateTime':
-                return 'http://schema.org/DateTime';
+                return 'https://schema.org/DateTime';
             case 'xsd:time':
-                return 'http://schema.org/Time';
+                return 'https://schema.org/Time';
             case 'xsd:double':
-                return 'http://schema.org/Number';
+                return 'https://schema.org/Number';
             case 'xsd:float':
-                return 'http://schema.org/Float';
+                return 'https://schema.org/Float';
             case  'xsd:integer':
-                return 'http://schema.org/Integer';
+                return 'https://schema.org/Integer';
             case 'xsd:anyURI':
-                return 'http://schema.org/URL';
+                return 'https://schema.org/URL';
         }
         return null; // If no match
     }
@@ -140,21 +136,18 @@ class DSHandler {
         return `<span title="${title}">${cardinality}</span>`;
     }
 
-    generateDsClass(dsvClass, closed, showOptional) {
+    generateDsClass(classNode, closed, showOptional) {
         let dsClass = {};
-        const targetClass = dsvClass['sh:targetClass'];
-        dsClass.text = (targetClass ? this.util.prettyPrintClassDefinition(targetClass) :
-            this.util.prettyPrintClassDefinition(dsvClass['sh:class']));
-
+        const targetClass = classNode['sh:targetClass'] || classNode['sh:class'];
+        dsClass.text = targetClass ? this.util.prettyPrintClassDefinition(targetClass) : "";
         dsClass.icon = 'glyphicon glyphicon-list-alt';
         if (!closed) {
             dsClass.state = {'opened': true};
         }
-
         let description;
         try {
             if (dsClass.text.indexOf(',') === -1) {
-                description = this.browser.sdoAdapter.getClass(dsClass.text).getDescription();
+                description = this.util.repairLinksInHTMLCode(this.browser.sdoAdapter.getClass(dsClass.text).getDescription());
             } else {
                 description = 'No description found.';
             }
@@ -163,27 +156,16 @@ class DSHandler {
         }
         dsClass.data = {};
         dsClass.data.dsDescription = description;
-
-        if (dsvClass['rdfs:comment']) { // Was dsv:justification
-            dsClass.justification = dsvClass['rdfs:comment'];
-        }
-        dsClass.children = this.processChildren(dsvClass, showOptional);
+        dsClass.children = this.processChildren(classNode, showOptional);
         return dsClass;
     }
 
-    processChildren(dsvClass, showOptional) {
+    processChildren(classNode, showOptional) {
         const children = [];
-        let dsvProperties;
-        const shProperty = dsvClass['sh:property'];
-        const shNode = dsvClass['sh:node'];
-        if (shProperty) {
-            dsvProperties = shProperty;
-        } else if (shNode && shNode['sh:property']) {
-            dsvProperties = shNode['sh:property'];
-        }
-        if (dsvProperties !== undefined) {
-            dsvProperties.forEach((dsvProperty) => {
-                const dsProperty = this.generateDsProperty(dsvProperty, showOptional);
+        let propertyNodes = classNode['sh:property'];
+        if (propertyNodes) {
+            propertyNodes.forEach((propertyNode) => {
+                const dsProperty = this.generateDsProperty(propertyNode, showOptional);
                 if (dsProperty) {
                     children.push(dsProperty);
                 }
@@ -194,7 +176,7 @@ class DSHandler {
 
     generateDsProperty(propertyObj, showOptional) {
         const dsProperty = {};
-        dsProperty.justification = propertyObj['rdfs:comment'];
+        dsProperty.justification = this.util.getLanguageString(propertyObj['rdfs:comment']);
         dsProperty.text = this.util.prettyPrintIri(propertyObj['sh:path']);
         dsProperty.data = {};
         dsProperty.data.minCount = propertyObj['sh:minCount'];
@@ -203,7 +185,7 @@ class DSHandler {
 
         this.processEnum(dsProperty, propertyObj['sh:or'][0]);
         this.processVisibility(dsProperty, propertyObj['sh:minCount']);
-        this.processExpectedTypes(dsProperty, propertyObj['sh:or'], showOptional);
+        this.processRanges(dsProperty, propertyObj['sh:or'], showOptional);
 
         if (showOptional) {
             // return -> show property anyway (mandatory and optional)
@@ -277,12 +259,11 @@ class DSHandler {
         }
     }
 
-    processExpectedTypes(dsProperty, dsvExpectedTypes, showOptional) {
+    processRanges(dsProperty, rangeNodes, showOptional) {
         let isOpened = false;
-        if (dsvExpectedTypes) {
-            const dsRange = this.generateDsRange(dsvExpectedTypes);
+        if (rangeNodes) {
+            const dsRange = this.generateDsRange(rangeNodes);
             dsProperty.data.dsRange = dsRange.rangeAsString;
-            dsProperty.data.rangeJustification = dsRange.rangeJustification;
 
             try {
                 const description = this.browser.sdoAdapter.getProperty(dsProperty.text).getDescription();
@@ -291,10 +272,10 @@ class DSHandler {
                 dsProperty.data.dsDescription = 'No description found.';
             }
 
-            dsvExpectedTypes.forEach((dsvExpectedType) => {
-                if (dsvExpectedType['sh:node']) { // Was dsv:restrictedClass
+            rangeNodes.forEach((rangeNode) => {
+                if (rangeNode['sh:node'] && rangeNode['sh:node']["sh:class"]) {
                     isOpened = true;
-                    const dsClass = this.generateDsClass(dsvExpectedType, true, showOptional);
+                    const dsClass = this.generateDsClass(rangeNode['sh:node'], true, showOptional);
                     dsProperty.children.push(dsClass);
                 }
             });
@@ -304,20 +285,18 @@ class DSHandler {
         }
     }
 
-    generateDsRange(dsvExpectedTypes) {
+    generateDsRange(rangeNodes) {
         let returnObj = {
-            rangeAsString: '',
-            rangeJustification: []
+            rangeAsString: ''
         };
-        returnObj.rangeAsString = dsvExpectedTypes.map((dsvExpectedType) => {
-            let justification = {};
+        returnObj.rangeAsString = rangeNodes.map((rangeNode) => {
             let name, rangePart;
-            const datatype = dsvExpectedType['sh:datatype'];
-            const shClass = dsvExpectedType['sh:class'];
+            const datatype = rangeNode['sh:datatype'];
+            const shClass = (rangeNode['sh:node'] && rangeNode['sh:node']['sh:class']) ? rangeNode['sh:node']['sh:class'] : null;
             if (datatype) { // Datatype
                 name = this.util.prettyPrintIri(this.dataTypeMapperFromSHACL(datatype));
                 rangePart = name;
-            } else if (dsvExpectedType['sh:node']) { // Restricted class
+            } else if (rangeNode['sh:node'] && rangeNode['sh:node']['sh:property']) { // Restricted class
                 name = this.util.prettyPrintClassDefinition(shClass);
                 rangePart = '<strong>' + name + '</strong>';
             } else {
@@ -326,10 +305,6 @@ class DSHandler {
                 name = this.util.prettyPrintClassDefinition(shClass);
                 rangePart = name;
             }
-
-            justification.name = name;
-            justification.justification = dsvExpectedType['rdfs:comment']; // Was dsv:justification
-            returnObj.rangeJustification.push(justification);
             return rangePart;
         }).join(' or ');
 
