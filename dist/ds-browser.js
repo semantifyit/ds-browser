@@ -17367,8 +17367,10 @@ class DSRenderer {
   }
 
   createNodeDescription(nodeClass) {
-    if (this.util.isString(nodeClass)) {
-      return this.browser.sdoAdapter.getTerm(nodeClass).getDescription();
+    if (!nodeClass) {
+      return "";
+    } else if (nodeClass.length === 1) {
+      return this.browser.sdoAdapter.getTerm(nodeClass[0]).getDescription();
     } else {
       return nodeClass.map(c => {
         return '' + '<b>' + this.util.prettyPrintIri(c) + ':</b> ' + this.browser.sdoAdapter.getTerm(c).getDescription();

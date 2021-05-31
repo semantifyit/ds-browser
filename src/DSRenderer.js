@@ -52,8 +52,10 @@ class DSRenderer {
     }
 
     createNodeDescription(nodeClass) {
-        if (this.util.isString(nodeClass)) {
-            return this.browser.sdoAdapter.getTerm(nodeClass).getDescription();
+        if (!nodeClass) {
+            return "";
+        } else if (nodeClass.length === 1) {
+            return this.browser.sdoAdapter.getTerm(nodeClass[0]).getDescription();
         } else {
             return nodeClass.map((c) => {
                 return '' +
@@ -86,7 +88,10 @@ class DSRenderer {
         } else {
             shaclLink = `<a href="https://semantify.it/ds/${dsId}?format=shacl" target="_blank">SHACL serialization</a>`;
         }
-        const listHtml = this.browser.list ? ' | from List: ' + this.util.createInternalLink({dsId: null, path: null}, this.browser.list['schema:name']) : '';
+        const listHtml = this.browser.list ? ' | from List: ' + this.util.createInternalLink({
+            dsId: null,
+            path: null
+        }, this.browser.list['schema:name']) : '';
         return `<span style="float: right;">(${shaclLink}${listHtml})</span>`;
     }
 
