@@ -104,13 +104,13 @@ class DSBrowser {
         }
         if (!this.sdoAdapter) {
             // create an empty sdo adapter at the start in order to create vocabulary URLs
-            this.sdoAdapter = new SDOAdapter({httpsSchema: true});
+            this.sdoAdapter = new SDOAdapter({schemaHttps: true});
         }
         const neededVocabUrls = await this.getVocabUrlsForDS();
         let sdoAdapterNeeded = this.util.getSdoAdapterFromCache(neededVocabUrls);
         if (!sdoAdapterNeeded) {
             sdoAdapterNeeded = new SDOAdapter({
-                httpsSchema: true,
+                schemaHttps: true,
                 equateVocabularyProtocols: true
             });
             await sdoAdapterNeeded.addVocabularies(neededVocabUrls);

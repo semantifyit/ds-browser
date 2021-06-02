@@ -16767,7 +16767,7 @@ class DSBrowser {
       if (!_this5.sdoAdapter) {
         // create an empty sdo adapter at the start in order to create vocabulary URLs
         _this5.sdoAdapter = new _schemaOrgAdapter.default({
-          httpsSchema: true
+          schemaHttps: true
         });
       }
 
@@ -16777,7 +16777,7 @@ class DSBrowser {
 
       if (!sdoAdapterNeeded) {
         sdoAdapterNeeded = new _schemaOrgAdapter.default({
-          httpsSchema: true,
+          schemaHttps: true,
           equateVocabularyProtocols: true
         });
         yield sdoAdapterNeeded.addVocabularies(neededVocabUrls);
