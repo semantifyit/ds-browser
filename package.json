@@ -1,6 +1,6 @@
 {
   "name": "ds-browser",
-  "version": "2.0.1",
+  "version": "2.1.0",
   "description": "Browser for Domain Specifications",
   "main": "src/DSBrowser.js",
   "repository": {
@@ -24,6 +24,7 @@
     "build": "browserify src/DSBrowser.js -s DSBrowser > dist/ds-browser.js",
     "buildMinified": "browserify src/DSBrowser.js -s DSBrowser -g [uglifyify] > dist/ds-browser.min.js",
     "eslint:check": "eslint src/*",
+    "eslint:fix": "eslint --fix src/*",
     "test-localhost": "node test/test-app.js"
   },
   "dependencies": {

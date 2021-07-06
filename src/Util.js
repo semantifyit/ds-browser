@@ -90,11 +90,11 @@ class Util {
             return '<a href="' + group2 + '" style="' + style + '" target="_blank">' + group1 + '</a>';
         });
         // new line
-        result = result.replace(/\\n/g, (match, group1, group2) => {
+        result = result.replace(/\\n/g, () => {
             return "</br>";
         });
         // bold
-        result = result.replace(/__(.*?)__/g, (match, group1, group2) => {
+        result = result.replace(/__(.*?)__/g, (match, group1) => {
             return "<b>" + group1 + "</b>";
         });
         // code
@@ -469,6 +469,26 @@ class Util {
             }
         }
         return null;
+    }
+
+    // Returns the referenced node shape
+    getReferencedNode(id) {
+        if (this.browser.ds && Array.isArray(this.browser.ds["@graph"])) {
+            return this.browser.ds["@graph"].find(el => el["@id"] === id) || null;
+        }
+        return null;
+    }
+
+    // Returns the node shape of the actual range, if the range has a node shape
+    getClassNodeIfExists(rangeNode) {
+        if (rangeNode["sh:node"] && rangeNode["sh:node"]["@id"] && Object.keys(rangeNode["sh:node"]).length === 1) {
+            // is referenced node
+            return this.getReferencedNode(rangeNode["sh:node"]["@id"]);
+        } else if (rangeNode["sh:node"] && rangeNode["sh:node"]['sh:class']) {
+            // is not referenced node
+            return rangeNode["sh:node"];
+        }
+        return undefined;
     }
 }
 

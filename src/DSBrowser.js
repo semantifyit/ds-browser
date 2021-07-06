@@ -95,9 +95,9 @@ class DSBrowser {
         if (this.dsCache[this.dsId]) {
             this.ds = this.dsCache[this.dsId];
         } else {
-            let ds = await this.util.parseToObject(this.util.getFileHost() + "/ds/" + this.dsId);
+            let ds = await this.util.parseToObject(this.util.getFileHost() + "/ds/" + this.dsId + "?populate=true");
             if (ds && ds["@graph"] && ds["@graph"][0] && !ds["@graph"][0]["ds:version"]) {
-                ds = await this.util.parseToObject(this.util.getFileHost() + "/api/v2/domainspecifications/dsv7/" + this.dsId);
+                ds = await this.util.parseToObject(this.util.getFileHost() + "/api/v2/domainspecifications/dsv7/" + this.dsId + "?populate=true");
             }
             this.dsCache[this.dsId] = ds;
             this.ds = ds;

@@ -62,7 +62,16 @@ class DSHandler {
 
     // Get the class or enumeration with that name
     getClass(DSNode, name) {
-        return DSNode.find(el => (el["sh:node"] && el["sh:node"]["sh:class"] && this.rangesToString(el["sh:node"]["sh:class"]) === name))["sh:node"];
+        for (const orRange of DSNode) {
+            if (!orRange["sh:node"]) {
+                continue;
+            }
+            let classNode = this.util.getClassNodeIfExists(orRange);
+            if (classNode["sh:class"] && this.rangesToString(classNode["sh:class"]) === name) {
+                return classNode;
+            }
+        }
+        return null;
     }
 
     // Get the property with that name
@@ -136,7 +145,7 @@ class DSHandler {
         return `<span title="${title}">${cardinality}</span>`;
     }
 
-    generateDsClass(classNode, closed, showOptional) {
+    generateDsClass(classNode, closed, showOptional, depth = 0) {
         let dsClass = {};
         const targetClass = classNode['sh:targetClass'] || classNode['sh:class'];
         dsClass.text = targetClass ? this.util.prettyPrintClassDefinition(targetClass) : "";
@@ -156,16 +165,16 @@ class DSHandler {
         }
         dsClass.data = {};
         dsClass.data.dsDescription = description;
-        dsClass.children = this.processChildren(classNode, showOptional);
+        dsClass.children = this.processChildren(classNode, showOptional, depth + 1);
         return dsClass;
     }
 
-    processChildren(classNode, showOptional) {
+    processChildren(classNode, showOptional, depth) {
         const children = [];
         let propertyNodes = classNode['sh:property'];
         if (propertyNodes) {
             propertyNodes.forEach((propertyNode) => {
-                const dsProperty = this.generateDsProperty(propertyNode, showOptional);
+                const dsProperty = this.generateDsProperty(propertyNode, showOptional, depth);
                 if (dsProperty) {
                     children.push(dsProperty);
                 }
@@ -174,7 +183,7 @@ class DSHandler {
         return children;
     }
 
-    generateDsProperty(propertyObj, showOptional) {
+    generateDsProperty(propertyObj, showOptional, depth) {
         const dsProperty = {};
         dsProperty.justification = this.util.getLanguageString(propertyObj['rdfs:comment']);
         dsProperty.text = this.util.prettyPrintIri(propertyObj['sh:path']);
@@ -185,7 +194,7 @@ class DSHandler {
 
         this.processEnum(dsProperty, propertyObj['sh:or'][0]);
         this.processVisibility(dsProperty, propertyObj['sh:minCount']);
-        this.processRanges(dsProperty, propertyObj['sh:or'], showOptional);
+        this.processRanges(dsProperty, propertyObj['sh:or'], showOptional, depth);
 
         if (showOptional) {
             // return -> show property anyway (mandatory and optional)
@@ -259,7 +268,7 @@ class DSHandler {
         }
     }
 
-    processRanges(dsProperty, rangeNodes, showOptional) {
+    processRanges(dsProperty, rangeNodes, showOptional, depth) {
         let isOpened = false;
         if (rangeNodes) {
             const dsRange = this.generateDsRange(rangeNodes);
@@ -273,10 +282,13 @@ class DSHandler {
             }
 
             rangeNodes.forEach((rangeNode) => {
-                if (rangeNode['sh:node'] && rangeNode['sh:node']["sh:class"]) {
+                const nodeShape = this.util.getClassNodeIfExists(rangeNode);
+                if (nodeShape && nodeShape["sh:class"]) {
                     isOpened = true;
-                    const dsClass = this.generateDsClass(rangeNode['sh:node'], true, showOptional);
-                    dsProperty.children.push(dsClass);
+                    // render children only if we are not too deep already
+                    if (depth < 8) {
+                        dsProperty.children.push(this.generateDsClass(nodeShape, true, showOptional, depth));
+                    }
                 }
             });
         }
@@ -292,11 +304,12 @@ class DSHandler {
         returnObj.rangeAsString = rangeNodes.map((rangeNode) => {
             let name, rangePart;
             const datatype = rangeNode['sh:datatype'];
-            const shClass = (rangeNode['sh:node'] && rangeNode['sh:node']['sh:class']) ? rangeNode['sh:node']['sh:class'] : null;
+            const nodeShape = this.util.getClassNodeIfExists(rangeNode);
+            const shClass = (nodeShape && nodeShape['sh:class']) ? nodeShape['sh:class'] : null;
             if (datatype) { // Datatype
                 name = this.util.prettyPrintIri(this.dataTypeMapperFromSHACL(datatype));
                 rangePart = name;
-            } else if (rangeNode['sh:node'] && rangeNode['sh:node']['sh:property']) { // Restricted class
+            } else if (nodeShape && nodeShape['sh:property']) { // Restricted class
                 name = this.util.prettyPrintClassDefinition(shClass);
                 rangePart = '<strong>' + name + '</strong>';
             } else {

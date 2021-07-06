@@ -112,21 +112,22 @@ class NativeRenderer {
         const propertyName = this.util.prettyPrintIri(property.getIRI(true));
         return propertyNode['sh:or'].map((rangeNode) => {
             let name;
+            let classNode = this.util.getClassNodeIfExists(rangeNode);
             if (rangeNode['sh:datatype']) {
                 name = rangeNode['sh:datatype'];
-            } else if (rangeNode["sh:node"] && rangeNode["sh:node"]['sh:class']) {
-                name = rangeNode["sh:node"]['sh:class'];
+            } else if (classNode && classNode['sh:class']) {
+                name = classNode['sh:class'];
             }
             const mappedDataType = this.dsHandler.dataTypeMapperFromSHACL(name);
             if (mappedDataType !== null) {
                 return this.util.createLink(mappedDataType);
             } else {
                 name = this.dsHandler.rangesToString(name);
-                if (rangeNode['sh:node'] && Array.isArray(rangeNode['sh:node']['sh:property']) && rangeNode['sh:node']['sh:property'].length !== 0) {
+                if (classNode && Array.isArray(classNode['sh:property']) && classNode['sh:property'].length !== 0) {
                     // Case: Range is a Restricted Class
                     const newPath = this.browser.path ? this.browser.path + "-" + propertyName + '-' + name : propertyName + '-' + name;
                     return this.util.createInternalLink({path: newPath}, name);
-                } else if (rangeNode['sh:node'] && rangeNode['sh:node']['sh:class'] && Array.isArray(rangeNode['sh:node']['sh:in'])) {
+                } else if (classNode && classNode['sh:class'] && Array.isArray(classNode['sh:in'])) {
                     // Case: Range is a Restricted Enumeration
                     const newPath = this.browser.path ? this.browser.path + "-" + propertyName + '-' + name : propertyName + '-' + name;
                     return this.util.createInternalLink({path: newPath}, name);

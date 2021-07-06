@@ -16754,10 +16754,10 @@ class DSBrowser {
       if (_this5.dsCache[_this5.dsId]) {
         _this5.ds = _this5.dsCache[_this5.dsId];
       } else {
-        var ds = yield _this5.util.parseToObject(_this5.util.getFileHost() + "/ds/" + _this5.dsId);
+        var ds = yield _this5.util.parseToObject(_this5.util.getFileHost() + "/ds/" + _this5.dsId + "?populate=true");
 
         if (ds && ds["@graph"] && ds["@graph"][0] && !ds["@graph"][0]["ds:version"]) {
-          ds = yield _this5.util.parseToObject(_this5.util.getFileHost() + "/api/v2/domainspecifications/dsv7/" + _this5.dsId);
+          ds = yield _this5.util.parseToObject(_this5.util.getFileHost() + "/api/v2/domainspecifications/dsv7/" + _this5.dsId + "?populate=true");
         }
 
         _this5.dsCache[_this5.dsId] = ds;
@@ -17028,7 +17028,19 @@ class DSHandler {
 
 
   getClass(DSNode, name) {
-    return DSNode.find(el => el["sh:node"] && el["sh:node"]["sh:class"] && this.rangesToString(el["sh:node"]["sh:class"]) === name)["sh:node"];
+    for (var orRange of DSNode) {
+      if (!orRange["sh:node"]) {
+        continue;
+      }
+
+      var classNode = this.util.getClassNodeIfExists(orRange);
+
+      if (classNode["sh:class"] && this.rangesToString(classNode["sh:class"]) === name) {
+        return classNode;
+      }
+    }
+
+    return null;
   } // Get the property with that name
 
 
@@ -17115,6 +17127,7 @@ class DSHandler {
   }
 
   generateDsClass(classNode, closed, showOptional) {
+    var depth = arguments.length > 3 && arguments[3] !== undefined ? arguments[3] : 0;
     var dsClass = {};
     var targetClass = classNode['sh:targetClass'] || classNode['sh:class'];
     dsClass.text = targetClass ? this.util.prettyPrintClassDefinition(targetClass) : "";
@@ -17140,17 +17153,17 @@ class DSHandler {
 
     dsClass.data = {};
     dsClass.data.dsDescription = description;
-    dsClass.children = this.processChildren(classNode, showOptional);
+    dsClass.children = this.processChildren(classNode, showOptional, depth + 1);
     return dsClass;
   }
 
-  processChildren(classNode, showOptional) {
+  processChildren(classNode, showOptional, depth) {
     var children = [];
     var propertyNodes = classNode['sh:property'];
 
     if (propertyNodes) {
       propertyNodes.forEach(propertyNode => {
-        var dsProperty = this.generateDsProperty(propertyNode, showOptional);
+        var dsProperty = this.generateDsProperty(propertyNode, showOptional, depth);
 
         if (dsProperty) {
           children.push(dsProperty);
@@ -17161,7 +17174,7 @@ class DSHandler {
     return children;
   }
 
-  generateDsProperty(propertyObj, showOptional) {
+  generateDsProperty(propertyObj, showOptional, depth) {
     var dsProperty = {};
     dsProperty.justification = this.util.getLanguageString(propertyObj['rdfs:comment']);
     dsProperty.text = this.util.prettyPrintIri(propertyObj['sh:path']);
@@ -17171,7 +17184,7 @@ class DSHandler {
     dsProperty.children = [];
     this.processEnum(dsProperty, propertyObj['sh:or'][0]);
     this.processVisibility(dsProperty, propertyObj['sh:minCount']);
-    this.processRanges(dsProperty, propertyObj['sh:or'], showOptional);
+    this.processRanges(dsProperty, propertyObj['sh:or'], showOptional, depth);
 
     if (showOptional) {
       // return -> show property anyway (mandatory and optional)
@@ -17252,7 +17265,7 @@ class DSHandler {
     }
   }
 
-  processRanges(dsProperty, rangeNodes, showOptional) {
+  processRanges(dsProperty, rangeNodes, showOptional, depth) {
     var isOpened = false;
 
     if (rangeNodes) {
@@ -17267,10 +17280,14 @@ class DSHandler {
       }
 
       rangeNodes.forEach(rangeNode => {
-        if (rangeNode['sh:node'] && rangeNode['sh:node']["sh:class"]) {
-          isOpened = true;
-          var dsClass = this.generateDsClass(rangeNode['sh:node'], true, showOptional);
-          dsProperty.children.push(dsClass);
+        var nodeShape = this.util.getClassNodeIfExists(rangeNode);
+
+        if (nodeShape && nodeShape["sh:class"]) {
+          isOpened = true; // render children only if we are not too deep already
+
+          if (depth < 8) {
+            dsProperty.children.push(this.generateDsClass(nodeShape, true, showOptional, depth));
+          }
         }
       });
     }
@@ -17289,13 +17306,14 @@ class DSHandler {
     returnObj.rangeAsString = rangeNodes.map(rangeNode => {
       var name, rangePart;
       var datatype = rangeNode['sh:datatype'];
-      var shClass = rangeNode['sh:node'] && rangeNode['sh:node']['sh:class'] ? rangeNode['sh:node']['sh:class'] : null;
+      var nodeShape = this.util.getClassNodeIfExists(rangeNode);
+      var shClass = nodeShape && nodeShape['sh:class'] ? nodeShape['sh:class'] : null;
 
       if (datatype) {
         // Datatype
         name = this.util.prettyPrintIri(this.dataTypeMapperFromSHACL(datatype));
         rangePart = name;
-      } else if (rangeNode['sh:node'] && rangeNode['sh:node']['sh:property']) {
+      } else if (nodeShape && nodeShape['sh:property']) {
         // Restricted class
         name = this.util.prettyPrintClassDefinition(shClass);
         rangePart = '<strong>' + name + '</strong>';
@@ -17567,11 +17585,12 @@ class NativeRenderer {
     var propertyName = this.util.prettyPrintIri(property.getIRI(true));
     return propertyNode['sh:or'].map(rangeNode => {
       var name;
+      var classNode = this.util.getClassNodeIfExists(rangeNode);
 
       if (rangeNode['sh:datatype']) {
         name = rangeNode['sh:datatype'];
-      } else if (rangeNode["sh:node"] && rangeNode["sh:node"]['sh:class']) {
-        name = rangeNode["sh:node"]['sh:class'];
+      } else if (classNode && classNode['sh:class']) {
+        name = classNode['sh:class'];
       }
 
       var mappedDataType = this.dsHandler.dataTypeMapperFromSHACL(name);
@@ -17581,13 +17600,13 @@ class NativeRenderer {
       } else {
         name = this.dsHandler.rangesToString(name);
 
-        if (rangeNode['sh:node'] && Array.isArray(rangeNode['sh:node']['sh:property']) && rangeNode['sh:node']['sh:property'].length !== 0) {
+        if (classNode && Array.isArray(classNode['sh:property']) && classNode['sh:property'].length !== 0) {
           // Case: Range is a Restricted Class
           var newPath = this.browser.path ? this.browser.path + "-" + propertyName + '-' + name : propertyName + '-' + name;
           return this.util.createInternalLink({
             path: newPath
           }, name);
-        } else if (rangeNode['sh:node'] && rangeNode['sh:node']['sh:class'] && Array.isArray(rangeNode['sh:node']['sh:in'])) {
+        } else if (classNode && classNode['sh:class'] && Array.isArray(classNode['sh:in'])) {
           // Case: Range is a Restricted Enumeration
           var _newPath = this.browser.path ? this.browser.path + "-" + propertyName + '-' + name : propertyName + '-' + name;
 
@@ -18077,11 +18096,11 @@ class Util {
       return '<a href="' + group2 + '" style="' + style + '" target="_blank">' + group1 + '</a>';
     }); // new line
 
-    result = result.replace(/\\n/g, (match, group1, group2) => {
+    result = result.replace(/\\n/g, () => {
       return "</br>";
     }); // bold
 
-    result = result.replace(/__(.*?)__/g, (match, group1, group2) => {
+    result = result.replace(/__(.*?)__/g, (match, group1) => {
       return "<b>" + group1 + "</b>";
     }); // code
 
@@ -18479,6 +18498,28 @@ class Util {
     }
 
     return null;
+  } // Returns the referenced node shape
+
+
+  getReferencedNode(id) {
+    if (this.browser.ds && Array.isArray(this.browser.ds["@graph"])) {
+      return this.browser.ds["@graph"].find(el => el["@id"] === id) || null;
+    }
+
+    return null;
+  } // Returns the node shape of the actual range, if the range has a node shape
+
+
+  getClassNodeIfExists(rangeNode) {
+    if (rangeNode["sh:node"] && rangeNode["sh:node"]["@id"] && Object.keys(rangeNode["sh:node"]).length === 1) {
+      // is referenced node
+      return this.getReferencedNode(rangeNode["sh:node"]["@id"]);
+    } else if (rangeNode["sh:node"] && rangeNode["sh:node"]['sh:class']) {
+      // is not referenced node
+      return rangeNode["sh:node"];
+    }
+
+    return undefined;
   }
 
 }
