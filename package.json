@@ -1,6 +1,6 @@
 {
   "name": "ds-browser",
-  "version": "2.1.1",
+  "version": "2.1.2",
   "description": "Browser for Domain Specifications",
   "main": "src/DSBrowser.js",
   "repository": {

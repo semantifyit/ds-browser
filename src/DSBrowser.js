@@ -179,6 +179,10 @@ class DSBrowser {
     readStateFromUrl() {
         const searchParams = new URLSearchParams(window.location.search);
         this.path = searchParams.get('path') || null;
+        // fix for MTE path in url -> " + " is written as "%20+%20" which is not correctly returned by the URLSearchParams class
+        if (this.path && this.path.includes("   ")) {
+            this.path = this.path.replace(new RegExp(" {3}", "g"), " + ");
+        }
         this.format = searchParams.get('format') || null;
         this.viewMode = searchParams.get('mode') || null;
         if (window.location.pathname.includes("/ds/")) {
