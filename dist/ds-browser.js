@@ -16635,8 +16635,6 @@ var _NativeRenderer = _interopRequireDefault(require("./NativeRenderer"));
 
 var _TreeRenderer = _interopRequireDefault(require("./TreeRenderer"));
 
-var _TableRenderer = _interopRequireDefault(require("./TableRenderer"));
-
 var _SHACLRenderer = _interopRequireDefault(require("./SHACLRenderer"));
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
@@ -16659,7 +16657,6 @@ class DSBrowser {
     this.dsRenderer = new _DSRenderer.default(this);
     this.nativeRenderer = new _NativeRenderer.default(this);
     this.treeRenderer = new _TreeRenderer.default(this);
-    this.tableRenderer = new _TableRenderer.default(this);
     this.shaclRenderer = new _SHACLRenderer.default(this);
     this.targetElement = params.targetElement;
     this.locationControl = params.locationControl !== false;
@@ -16702,9 +16699,6 @@ class DSBrowser {
       } else if (_this2.dsId && _this2.viewMode === "tree") {
         // render DS with tree view
         _this2.treeRenderer.render();
-      } else if (_this2.dsId && _this2.viewMode === "table") {
-        // render DS with table view
-        _this2.tableRenderer.render();
       } else if (_this2.listId) {
         // render List as table
         _this2.listRenderer.render();
@@ -16959,7 +16953,7 @@ class DSBrowser {
 
 module.exports = DSBrowser;
 
-},{"./DSHandler":79,"./DSRenderer":80,"./ListRenderer":81,"./NativeRenderer":82,"./SHACLRenderer":83,"./TableRenderer":84,"./TreeRenderer":85,"./Util":86,"schema-org-adapter":71}],79:[function(require,module,exports){
+},{"./DSHandler":79,"./DSRenderer":80,"./ListRenderer":81,"./NativeRenderer":82,"./SHACLRenderer":83,"./TreeRenderer":84,"./Util":85,"schema-org-adapter":71}],79:[function(require,module,exports){
 "use strict";
 
 class DSHandler {
@@ -17362,9 +17356,7 @@ class DSRenderer {
       viewMode: null
     }, 'Native View')) + (selected === this.MODES.tree ? '<a class="selected">Tree View</a>' : this.util.createInternalLink({
       viewMode: 'tree'
-    }, 'Tree View')) + (selected === this.MODES.table ? '<a class="selected">Table View</a>' : this.util.createInternalLink({
-      viewMode: 'table'
-    }, 'Table View')) + '</div>' + '</div>';
+    }, 'Tree View')) + '</div>' + '</div>';
   }
 
   createHtmlHeader() {
@@ -17654,221 +17646,6 @@ module.exports = SHACLRenderer;
 },{}],84:[function(require,module,exports){
 "use strict";
 
-class TableRenderer {
-  constructor(browser) {
-    this.browser = browser;
-    this.util = browser.util;
-    this.dsHandler = browser.dsHandler;
-    this.dsRenderer = browser.dsRenderer;
-    this.clickHandler = null; // see: https://stackoverflow.com/questions/33859113/javascript-removeeventlistener-not-working-inside-a-class
-
-    this.changeInnerDSHandler = null;
-  }
-
-  render() {
-    var rootClass = this.dsHandler.generateDsClass(this.browser.dsRootNode, false, false);
-    var htmlTableContent = this.createHtmlTableContent(rootClass);
-    var htmlHeader = this.dsRenderer.createHtmlHeader();
-    var htmlVisBtnRow = this.dsRenderer.createVisBtnRow();
-    var htmlViewModeSelector = this.dsRenderer.createViewModeSelectors(this.dsRenderer.MODES.table);
-    var mainContent = "".concat(htmlHeader).concat(htmlViewModeSelector, "\n            <div id=\"table-view\"> \n            ").concat(htmlVisBtnRow, "\n            <div id=\"table-wrapper\">\n            <table id=\"table-ds\">").concat(htmlTableContent, "</table>\n            </div></div>");
-    this.browser.targetElement.innerHTML = this.util.createHtmlMainContent('rdfs:Class', mainContent);
-    this.addClickEvent();
-    this.addChangeInnerDSEventListener();
-  }
-
-  createHtmlTableContent(rootClass) {
-    var rootClassName = rootClass.text;
-    var dsDescription = rootClass.data.dsDescription;
-    var htmlProperties = this.createHtmlProperties(rootClass.children, 0);
-    return "<tr class=\"first-row-ds\">\n            <td><div class=\"align-items\"><img src=\"\" class=\"glyphicon glyphicon-list-alt\">".concat(rootClassName, "</div></td>\n            <td colspan=\"2\">").concat(dsDescription, "</td>\n            <td><b>Cardinality</b></td></tr>\n            ").concat(htmlProperties);
-  }
-
-  createHtmlProperties(properties, depth, innerDSIndex, hasMultipleClasses) {
-    return properties.map((property, i) => {
-      if (property.children && property.children.length !== 0 && !property.isEnum) {
-        return this.createHtmlPropertyWithChildren(property, depth, innerDSIndex);
-      } else {
-        return this.createHtmlPropertyWithNoChildren(property, depth, innerDSIndex, hasMultipleClasses, properties.length === i + 1);
-      }
-    }).join('');
-  }
-
-  createHtmlPropertyWithChildren(property, depth) {
-    var csClass,
-        html = '';
-    depth++;
-
-    if (depth < 4) {
-      csClass = 'depth' + depth + ' innerTable';
-      var terms = property.data.dsRange.split(' or ');
-      var hasMultipleClasses = this.hasMultipleClasses(terms);
-      var dsRange = this.createDSRange(property, depth, terms, hasMultipleClasses);
-      var properties = property.children;
-      html += '' + '<tr>' + this.createHtmlPropertyTdTag(property) + '<td colspan="2" class="' + csClass + '">' + '<table>' + this.createInnerTableHeader(dsRange, property) + properties.map((p, i) => this.createHtmlProperties(p.children, depth, i, hasMultipleClasses)).join('') + // show first class defaultly, can be changed via click
-      '</table>' + '</td>' + '<td class="cardinality">' + this.dsHandler.createHtmlCardinality(property.data.minCount, property.data.maxCount) + '</td>' + '</tr>';
-    } else {
-      console.log('To many levels for table view. Level: ' + depth);
-    }
-
-    return html;
-  }
-
-  hasMultipleClasses(terms) {
-    var classCount = 0;
-
-    for (var term of terms) {
-      if (this.isClass(term)) {
-        classCount++;
-
-        if (classCount === 2) {
-          return true;
-        }
-      }
-    }
-
-    return false;
-  }
-
-  isClass(term) {
-    var cleanTerm = this.cleanTerm(term);
-    return !['Text', 'Number', 'URL', 'Boolean'].includes(cleanTerm);
-  }
-
-  createDSRange(property, level, terms) {
-    var otherClassExists = false;
-    return '' + terms.map((aTerm, i) => {
-      var cleanTerm = this.cleanTerm(aTerm);
-      var isClass = this.isClass(cleanTerm);
-      var or = i + 1 < terms.length ? '&nbsp;or  <br>' : '';
-      var classes = otherClassExists && isClass ? ' class="change-to-class"' : '';
-
-      if (isClass) {
-        otherClassExists = true;
-        return '' + '<span class="align-items">' + '<img src="" class="glyphicon glyphicon-list-alt">' + '<b' + classes + ' data-innerdsindex="' + i + '">' + cleanTerm + '</b>' + or + '</span>';
-      } else {
-        return cleanTerm + or;
-      }
-    }).join('');
-  }
-
-  cleanTerm(term) {
-    return term.replace('<strong>', '').replace('</strong>', '').replace(/ /g, '');
-  }
-
-  createHtmlPropertyTdTag(property) {
-    var rmBorderBottom = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : '';
-    var glyphiconClass = property.data.isOptional ? 'optional' : 'mandatory';
-    var propertyName = property.text;
-    return "<td".concat(rmBorderBottom, "><div class=\"align-items\">\n            <img class=\"glyphicon glyphicon-tag ").concat(glyphiconClass, "-property\" src=\"\" />").concat(propertyName, "</div>\n            </td>");
-  }
-
-  createInnerTableHeader(dsRange, property) {
-    var dsDescription = property.data.dsDescription;
-    return "<tr><td data-innerdsindex=\"0\">".concat(dsRange, "</td>\n            <td colspan=\"2\">").concat(dsDescription, "</td>\n            <td><b>Cardinality</b></td></tr>");
-  }
-
-  createHtmlPropertyWithNoChildren(property, level, innerDSIndex, hasMultipleClasses, isLastProperty) {
-    var cardinality = this.dsHandler.createHtmlCardinality(property.data.minCount, property.data.maxCount);
-    var displayNone = innerDSIndex !== 0 && hasMultipleClasses ? ' style="display: none;"' : '';
-    var rmBorderBottom = isLastProperty ? ' style="border-bottom: none !important;"' : '';
-    var htmlPropertyTdTag = this.createHtmlPropertyTdTag(property, rmBorderBottom);
-    var htmlRange = property.isEnum ? this.createHtmlEnum(property, level, rmBorderBottom) : this.createHtmlSimpleType(property, rmBorderBottom);
-    return "<tr data-innerdsindex=\"".concat(innerDSIndex, "\" ").concat(displayNone, ">\n            ").concat(htmlPropertyTdTag).concat(htmlRange, "\n            <td class=\"cardinality\" ").concat(rmBorderBottom, ">").concat(cardinality, "</td></tr>");
-  }
-
-  createHtmlEnum(property, depth, rmBorderBottom) {
-    var dsRange = property.data.dsRange;
-    var dsDescription = property.data.dsDescription;
-    var htmlEnumMembers = property.data.enuMembers ? this.createHtmlEnumMembers(property.data.enuMembers) : '';
-    depth++;
-    return "<td colspan=\"2\" class=\"depth".concat(depth, " innerTable\" ").concat(rmBorderBottom, ">\n            <table class=\"enumTable\"><tr>\n            <td class=\"enumTd\"><b>").concat(dsRange, "</b></td>\n            <td class=\"enumTd\">").concat(dsDescription, "</td>\n            </tr>").concat(htmlEnumMembers, "</table></td>");
-  }
-
-  createHtmlEnumMembers(enuMemberArray) {
-    return enuMemberArray.map(enuMember => {
-      var enuMemberName = enuMember.name;
-      var enuMemberDescription = enuMember.description;
-      return "<tr>\n                <td class=\"enumTd\">".concat(enuMemberName, "</td>\n                <td class=\"enumTd\">").concat(enuMemberDescription, "</td>\n                </tr>");
-    }).join('');
-  }
-
-  createHtmlSimpleType(property, rmBorderBottom) {
-    var rangeType = property.data.dsRange;
-    var propertyDescription = property.data.dsDescription;
-    return "<td ".concat(rmBorderBottom, ">").concat(rangeType, "</td>\n            <td ").concat(rmBorderBottom, ">").concat(propertyDescription, "</td>");
-  }
-
-  addClickEvent() {
-    var divTableView = document.getElementById('table-view');
-    var button = divTableView.getElementsByClassName('btn-vis-shadow')[0];
-    this.clickHandler = this.clickEvent.bind(this);
-    button.addEventListener('click', this.clickHandler, true);
-  }
-
-  clickEvent(event) {
-    var button = event.target;
-    button.removeEventListener('click', this.clickHandler, true);
-    button.classList.remove('btn-vis-shadow');
-    var otherButton, showOptional;
-
-    if (button.id === 'btn-opt') {
-      otherButton = document.getElementById('btn-man');
-      showOptional = true;
-    } else {
-      otherButton = document.getElementById('btn-opt');
-      showOptional = false;
-    }
-
-    otherButton.classList.add('btn-vis-shadow');
-    var rootClass = this.dsHandler.generateDsClass(this.browser.dsRootNode, false, showOptional);
-    var table = document.getElementById('table-ds');
-    table.innerHTML = this.createHtmlTableContent(rootClass);
-    this.util.fade(table);
-    this.addClickEvent();
-    this.addChangeInnerDSEventListener();
-  }
-
-  addChangeInnerDSEventListener() {
-    var divTableView = document.getElementById('table-view');
-    var buttons = divTableView.getElementsByClassName('change-to-class');
-    this.changeInnerDSHandler = this.changeInnerDSEvent.bind(this);
-
-    for (var button of buttons) {
-      button.addEventListener('click', this.changeInnerDSHandler, true);
-    }
-  }
-
-  changeInnerDSEvent(event) {
-    var button = event.target;
-    var tr = button.closest('tr');
-    var newIndex = button.dataset.innerdsindex;
-
-    while (tr.nextSibling) {
-      tr = tr.nextSibling;
-
-      if (tr.dataset.innerdsindex === newIndex) {
-        tr.style.display = 'table-row';
-        this.util.fade(tr);
-      } else {
-        tr.style.display = 'none';
-      }
-    }
-
-    var otherButton = button.closest('td').querySelector('b:not(.change-to-class)');
-    otherButton.classList.add('change-to-class');
-    otherButton.addEventListener('click', this.changeInnerDSHandler, true);
-    button.classList.remove('change-to-class');
-    button.removeEventListener('click', this.changeInnerDSHandler, true);
-  }
-
-}
-
-module.exports = TableRenderer;
-
-},{}],85:[function(require,module,exports){
-"use strict";
-
 class TreeRenderer {
   constructor(browser) {
     this.browser = browser;
@@ -17990,7 +17767,7 @@ class TreeRenderer {
 
 module.exports = TreeRenderer;
 
-},{}],86:[function(require,module,exports){
+},{}],85:[function(require,module,exports){
 "use strict";
 
 function asyncGeneratorStep(gen, resolve, reject, _next, _throw, key, arg) { try { var info = gen[key](arg); var value = info.value; } catch (error) { reject(error); return; } if (info.done) { resolve(value); } else { Promise.resolve(value).then(_next, _throw); } }

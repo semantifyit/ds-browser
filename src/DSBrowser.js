@@ -7,7 +7,6 @@ import ListRenderer from './ListRenderer';
 import DSRenderer from './DSRenderer';
 import NativeRenderer from './NativeRenderer';
 import TreeRenderer from './TreeRenderer';
-import TableRenderer from './TableRenderer';
 import SHACLRenderer from './SHACLRenderer';
 
 class DSBrowser {
@@ -20,7 +19,6 @@ class DSBrowser {
         this.dsRenderer = new DSRenderer(this);
         this.nativeRenderer = new NativeRenderer(this);
         this.treeRenderer = new TreeRenderer(this);
-        this.tableRenderer = new TableRenderer(this);
         this.shaclRenderer = new SHACLRenderer(this);
 
         this.targetElement = params.targetElement;
@@ -58,9 +56,6 @@ class DSBrowser {
         } else if (this.dsId && this.viewMode === "tree") {
             // render DS with tree view
             this.treeRenderer.render();
-        } else if (this.dsId && this.viewMode === "table") {
-            // render DS with table view
-            this.tableRenderer.render();
         } else if (this.listId) {
             // render List as table
             this.listRenderer.render();

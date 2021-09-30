@@ -19,8 +19,6 @@ class DSRenderer {
                 this.util.createInternalLink({viewMode: null}, 'Native View')) +
             (selected === this.MODES.tree ? '<a class="selected">Tree View</a>' :
                 this.util.createInternalLink({viewMode: 'tree'}, 'Tree View')) +
-            (selected === this.MODES.table ? '<a class="selected">Table View</a>' :
-                this.util.createInternalLink({viewMode: 'table'}, 'Table View')) +
             '</div>' +
             '</div>';
     }
