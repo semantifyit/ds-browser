@@ -10,56 +10,51 @@
   "keywords": [
     "schema.org",
     "Domain Specification",
+    "Domain Specification Browser",
     "SHACL",
     "semantic web"
   ],
-  "author": "Jan Schlenker and Omar Holzknecht for STI Innsbruck",
-  "license": "MIT",
+  "author": "Omar J. A. Holzknecht",
+  "license": "Apache-2.0",
   "bugs": {
     "url": "https://github.com/semantifyit/ds-browser/issues"
   },
   "homepage": "https://github.com/semantifyit/ds-browser#readme",
   "scripts": {
-    "buildAll": "npm run-script build && npm run-script buildMinified",
+    "build-all": "npm run-script prebuild && npm run-script build && npm run-script build-minified",
+    "prebuild": "node scripts/buildCSS.js",
     "build": "browserify src/DSBrowser.js -s DSBrowser > dist/ds-browser.js",
-    "buildMinified": "browserify src/DSBrowser.js -s DSBrowser -g [uglifyify] > dist/ds-browser.min.js",
-    "eslint:check": "eslint src/*",
-    "eslint:fix": "eslint --fix src/*",
+    "build-minified": "browserify src/DSBrowser.js -s DSBrowser -g [uglifyify] > dist/ds-browser.min.js",
+    "build-watch": "watchify src/DSBrowser.js -s DSBrowser -o dist/ds-browser.js",
+    "eslint-check": "eslint src/*",
+    "eslint-fix": "eslint --fix src/*",
+    "prettier-check": "prettier --check src/*",
+    "prettier-repair": "prettier --write src/*",
     "test-localhost": "node test/test-app.js"
   },
-  "dependencies": {
-    "schema-org-adapter": "^4.1.0"
-  },
   "devDependencies": {
-    "@babel/core": "^7.12.3",
-    "@babel/preset-env": "^7.12.1",
-    "babel-eslint": "^10.1.0",
-    "babelify": "^10.0.0",
     "browserify": "^17.0.0",
+    "ds-utilities": "github:semantifyit/ds-utilities",
     "eslint": "^7.21.0",
+    "eslint-config-prettier": "^8.3.0",
+    "eslint-plugin-markdown": "^2.2.1",
+    "eslint-plugin-node": "^11.1.0",
+    "eslint-plugin-prettier": "^4.0.0",
     "express": "^4.17.1",
-    "uglifyify": "^5.0.2"
+    "json-format-highlight": "^1.0.4",
+    "prettier": "^2.4.1",
+    "schema-org-adapter": "^4.3.0",
+    "uglifyify": "^5.0.2",
+    "watchify": "^4.0.0"
   },
-  "browserify": {
-    "transform": [
-      [
-        "babelify",
-        {
-          "presets": [
-            [
-              "@babel/preset-env",
-              {
-                "targets": {
-                  "esmodules": true
-                }
-              }
-            ]
-          ],
-          "plugins": [
-            "@babel/plugin-proposal-class-properties"
-          ]
-        }
-      ]
-    ]
-  }
+  "engines": {
+    "node": ">=10.0.0",
+    "npm": ">=6.0.0"
+  },
+  "files": [
+    "dist/**/*",
+    "README.md",
+    "LICENSE",
+    "package.json"
+  ]
 }

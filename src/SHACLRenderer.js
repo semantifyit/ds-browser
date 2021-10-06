@@ -1,30 +1,37 @@
+const formatHighlight = require("json-format-highlight");
+
+// Renders the DS directly as JSON-LD (raw object). Some custom CSS added to increase the readability
 class SHACLRenderer {
-    constructor(browser) {
-        this.browser = browser;
-    }
+  constructor(browser) {
+    this.browser = browser;
+  }
 
-    renderSHACL() {
-        this.browser.targetElement.innerHTML = this.createHtmlShacl(
-            JSON.stringify(this.browser.ds, null, 2)
-        );
-    }
-
-    createHtmlShacl(dsJson) {
-        const preStyle = `font-size: medium; /* Overwrite schema.org CSS */
-            background: none;
+  render() {
+    const preStyle = `font-size: large;
             text-align: left;
             width: auto;
-            padding: 0;
+            padding: 10px 20px;
+            margin: 20px; 
             overflow: visible;
-            color: rgb(0, 0, 0);
             line-height: normal;
-            display: block;     /* Defaults for pre https://www.w3schools.com/cssref/css_default_values.asp */
+            display: block;
             font-family: monospace;
-            margin: 1em 0;
-            word-wrap: break-word;  /* From Browser when loading SHACL file */
+            word-wrap: break-word;
             white-space: pre-wrap;`;
-        return `<pre style="` + preStyle + `">${dsJson}</pre>`;
-    }
+    const customColorOptions = {
+      keyColor: "black",
+      numberColor: "#3A01DC",
+      stringColor: "#DF0002",
+      trueColor: "#C801A4",
+      falseColor: "#C801A4",
+      nullColor: "cornflowerblue",
+    };
+    // replace the iFrame since this view is expected to be a whole-pager anyway (there is little sense in having this SHACL output rendered in an iFrame. If location-control is not active, then the SHACL view is a new tab redirecting to the semantify SHACL view
+    this.browser.targetElement.innerHTML =
+      `<pre style="` +
+      preStyle +
+      `">${formatHighlight(this.browser.ds, customColorOptions)}</pre>`;
+  }
 }
 
 module.exports = SHACLRenderer;

@@ -10,10 +10,6 @@ app.use((req, res, next) => {
 });
 
 // serve files
-app.get('/css.css', function(req, res) {
-    return res.sendFile(path.join(__dirname, '../', 'ds-browser.css'));
-});
-
 app.get('/ds-browser.js', function(req, res) {
     return res.sendFile(path.join(__dirname, '../dist/', 'ds-browser.js'));
 });
