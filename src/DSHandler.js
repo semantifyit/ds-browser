@@ -5,16 +5,16 @@ class DSHandler {
     }
 
     getDSNodeForPath() {
-        // DSNode is then the corresponding node from the domain specification
+    // DSNode is then the corresponding node from the domain specification
         let currentNode = this.browser.dsRootNode;
         let result = {
-            'type': '',
-            'node': {}
+            "type": "",
+            "node": {}
         };
         // Check if DS provided
         if (currentNode) {
             if (this.browser.path) {
-                let pathSteps = this.browser.path.split('-');
+                let pathSteps = this.browser.path.split("-");
                 for (let i = 0; i < pathSteps.length; i++) {
                     if (pathSteps[i] === "") {
                         continue;
@@ -28,13 +28,13 @@ class DSHandler {
                     if (currPathStepWithoutIndicator.charAt(0).toUpperCase() === currPathStepWithoutIndicator.charAt(0)) {
                         // Is uppercase -> class or Enum
                         if (currentNode) {
-                            currentNode = this.getClass(currentNode['sh:or'], pathSteps[i]);
+                            currentNode = this.getClass(currentNode["sh:or"], pathSteps[i]);
                         }
                     } else {
                         // Property should not be the last part of an URL, skip to show containing class!
                         // Although the redirectCheck() would fire before this function
                         if (currentNode && i !== pathSteps.length - 1) {
-                            currentNode = this.getProperty(currentNode['sh:property'], pathSteps[i]);
+                            currentNode = this.getProperty(currentNode["sh:property"], pathSteps[i]);
                         }
                     }
                 }
@@ -82,26 +82,28 @@ class DSHandler {
     // Get the corresponding SDO datatype from a given SHACL XSD datatype
     dataTypeMapperFromSHACL(dataType) {
         switch (dataType) {
-            case 'xsd:string':
-                return 'https://schema.org/Text';
-            case 'rdf:langString':
-                return 'https://schema.org/Text';
-            case 'xsd:boolean' :
-                return 'https://schema.org/Boolean';
-            case 'xsd:date' :
-                return 'https://schema.org/Date';
-            case 'xsd:dateTime':
-                return 'https://schema.org/DateTime';
-            case 'xsd:time':
-                return 'https://schema.org/Time';
-            case 'xsd:double':
-                return 'https://schema.org/Number';
-            case 'xsd:float':
-                return 'https://schema.org/Float';
-            case  'xsd:integer':
-                return 'https://schema.org/Integer';
-            case 'xsd:anyURI':
-                return 'https://schema.org/URL';
+            case "xsd:string":
+                return "https://schema.org/Text";
+            case "rdf:HTML":
+                return "https://schema.org/Text";
+            case "rdf:langString":
+                return "https://schema.org/Text";
+            case "xsd:boolean" :
+                return "https://schema.org/Boolean";
+            case "xsd:date" :
+                return "https://schema.org/Date";
+            case "xsd:dateTime":
+                return "https://schema.org/DateTime";
+            case "xsd:time":
+                return "https://schema.org/Time";
+            case "xsd:double":
+                return "https://schema.org/Number";
+            case "xsd:float":
+                return "https://schema.org/Float";
+            case  "xsd:integer":
+                return "https://schema.org/Integer";
+            case "xsd:anyURI":
+                return "https://schema.org/URL";
         }
         return null; // If no match
     }
@@ -111,35 +113,35 @@ class DSHandler {
         if (Array.isArray(ranges)) {
             return ranges.map((range) => {
                 return this.util.prettyPrintIri(range);
-            }).join(' + ');
+            }).join(" + ");
         } else {
             return this.util.prettyPrintIri(ranges); // Is already string
         }
     }
 
     createHtmlCardinality(minCount, maxCount) {
-        let title, cardinality = '';
+        let title, cardinality = "";
         if (minCount && minCount !== 0) {
             if (maxCount && maxCount !== 0) {
                 if (minCount !== maxCount) {
-                    title = 'This property is required. It must have between ' + minCount + ' and ' + maxCount +
-                        ' value(s).';
-                    cardinality = minCount + '..' + maxCount;
+                    title = "This property is required. It must have between " + minCount + " and " + maxCount +
+            " value(s).";
+                    cardinality = minCount + ".." + maxCount;
                 } else {
-                    title = 'This property is required. It must have ' + minCount + ' value(s).';
+                    title = "This property is required. It must have " + minCount + " value(s).";
                     cardinality = minCount;
                 }
             } else {
-                title = 'This property is required. It must have at least ' + minCount + ' value(s).';
-                cardinality = minCount + '..N';
+                title = "This property is required. It must have at least " + minCount + " value(s).";
+                cardinality = minCount + "..N";
             }
         } else {
             if (maxCount && maxCount !== 0) {
-                title = 'This property is optional. It must have at most ' + maxCount + ' value(s).';
-                cardinality = '0..' + maxCount;
+                title = "This property is optional. It must have at most " + maxCount + " value(s).";
+                cardinality = "0.." + maxCount;
             } else {
-                title = 'This property is optional. It may have any amount of values.';
-                cardinality = '0..N';
+                title = "This property is optional. It may have any amount of values.";
+                cardinality = "0..N";
             }
         }
         return `<span title="${title}">${cardinality}</span>`;
@@ -147,21 +149,21 @@ class DSHandler {
 
     generateDsClass(classNode, closed, showOptional, depth = 0) {
         let dsClass = {};
-        const targetClass = classNode['sh:targetClass'] || classNode['sh:class'];
+        const targetClass = classNode["sh:targetClass"] || classNode["sh:class"];
         dsClass.text = targetClass ? this.util.prettyPrintClassDefinition(targetClass) : "";
-        dsClass.icon = 'glyphicon glyphicon-list-alt';
+        dsClass.icon = "glyphicon glyphicon-list-alt";
         if (!closed) {
-            dsClass.state = {'opened': true};
+            dsClass.state = { "opened": true };
         }
         let description;
         try {
-            if (dsClass.text.indexOf(',') === -1) {
+            if (dsClass.text.indexOf(",") === -1) {
                 description = this.util.repairLinksInHTMLCode(this.browser.sdoAdapter.getClass(dsClass.text).getDescription());
             } else {
-                description = 'No description found.';
+                description = "No description found.";
             }
         } catch (e) {
-            description = 'No description found.';
+            description = "No description found.";
         }
         dsClass.data = {};
         dsClass.data.dsDescription = description;
@@ -171,7 +173,7 @@ class DSHandler {
 
     processChildren(classNode, showOptional, depth) {
         const children = [];
-        let propertyNodes = classNode['sh:property'];
+        let propertyNodes = classNode["sh:property"];
         if (propertyNodes) {
             propertyNodes.forEach((propertyNode) => {
                 const dsProperty = this.generateDsProperty(propertyNode, showOptional, depth);
@@ -185,16 +187,16 @@ class DSHandler {
 
     generateDsProperty(propertyObj, showOptional, depth) {
         const dsProperty = {};
-        dsProperty.justification = this.util.getLanguageString(propertyObj['rdfs:comment']);
-        dsProperty.text = this.util.prettyPrintIri(propertyObj['sh:path']);
+        dsProperty.justification = this.util.getLanguageString(propertyObj["rdfs:comment"]);
+        dsProperty.text = this.util.prettyPrintIri(propertyObj["sh:path"]);
         dsProperty.data = {};
-        dsProperty.data.minCount = propertyObj['sh:minCount'];
-        dsProperty.data.maxCount = propertyObj['sh:maxCount'];
+        dsProperty.data.minCount = propertyObj["sh:minCount"];
+        dsProperty.data.maxCount = propertyObj["sh:maxCount"];
         dsProperty.children = [];
 
-        this.processEnum(dsProperty, propertyObj['sh:or'][0]);
-        this.processVisibility(dsProperty, propertyObj['sh:minCount']);
-        this.processRanges(dsProperty, propertyObj['sh:or'], showOptional, depth);
+        this.processEnum(dsProperty, propertyObj["sh:or"][0]);
+        this.processVisibility(dsProperty, propertyObj["sh:minCount"]);
+        this.processRanges(dsProperty, propertyObj["sh:or"], showOptional, depth);
 
         if (showOptional) {
             // return -> show property anyway (mandatory and optional)
@@ -208,18 +210,18 @@ class DSHandler {
         }
     }
 
-    processEnum(dsProperty, shOr,) {
+    processEnum(dsProperty, shOr) {
         dsProperty.isEnum = false;
         let enuWithSdo;
         try {
-            const rangeOfProp = shOr['sh:class'];
+            const rangeOfProp = shOr["sh:class"];
             enuWithSdo = this.browser.sdoAdapter.getEnumeration(rangeOfProp);
             dsProperty.isEnum = true;
         } catch (e) { /* Ignore */
         }
 
         if (dsProperty.isEnum) {
-            const enuMembersArray = this.getEnumMemberArray(shOr['sh:in'], enuWithSdo);
+            const enuMembersArray = this.getEnumMemberArray(shOr["sh:in"], enuWithSdo);
 
             // Get description
             enuMembersArray.forEach((eachMember) => {
@@ -232,11 +234,11 @@ class DSHandler {
                 return {
                     children: [],
                     data: {
-                        dsRange: '',
+                        dsRange: "",
                         dsDescription: this.util.repairLinksInHTMLCode(enuMem.description)
                     },
-                    icon: 'glyphicon glyphicon-chevron-right',
-                    text: enuMem.name,
+                    icon: "glyphicon glyphicon-chevron-right",
+                    text: enuMem.name
                 };
             });
         }
@@ -245,25 +247,25 @@ class DSHandler {
     getEnumMemberArray(shIn, enuWithSdo) {
         if (shIn) { // Objects
             return shIn.map((enuMember) => {
-                let enuMemberName = enuMember['@id'];
-                enuMemberName = enuMemberName.replace('schema:', '');
-                return {name: enuMemberName};
+                let enuMemberName = enuMember["@id"];
+                enuMemberName = enuMemberName.replace("schema:", "");
+                return { name: enuMemberName };
             });
         } else { // Strings
             const enuMembersArrayString = enuWithSdo.getEnumerationMembers();
             return enuMembersArrayString.map((enuMemName) => {
-                return {name: enuMemName};
+                return { name: enuMemName };
             });
         }
     }
 
     processVisibility(dsProperty, minCount) {
-        dsProperty.icon = 'glyphicon glyphicon-tag';
+        dsProperty.icon = "glyphicon glyphicon-tag";
         if (!minCount > 0) {
-            dsProperty.icon += ' optional-property';
+            dsProperty.icon += " optional-property";
             dsProperty.data.isOptional = true;
         } else {
-            dsProperty.icon += ' mandatory-property';
+            dsProperty.icon += " mandatory-property";
             dsProperty.data.isOptional = false;
         }
     }
@@ -278,7 +280,7 @@ class DSHandler {
                 const description = this.browser.sdoAdapter.getProperty(dsProperty.text).getDescription();
                 dsProperty.data.dsDescription = this.util.repairLinksInHTMLCode(description);
             } catch (e) {
-                dsProperty.data.dsDescription = 'No description found.';
+                dsProperty.data.dsDescription = "No description found.";
             }
 
             rangeNodes.forEach((rangeNode) => {
@@ -293,25 +295,31 @@ class DSHandler {
             });
         }
         if (isOpened) {
-            dsProperty.state = {'opened': true};
+            dsProperty.state = { "opened": true };
         }
     }
 
     generateDsRange(rangeNodes) {
         let returnObj = {
-            rangeAsString: ''
+            rangeAsString: ""
         };
         returnObj.rangeAsString = rangeNodes.map((rangeNode) => {
             let name, rangePart;
-            const datatype = rangeNode['sh:datatype'];
+            const datatype = rangeNode["sh:datatype"];
             const nodeShape = this.util.getClassNodeIfExists(rangeNode);
-            const shClass = (nodeShape && nodeShape['sh:class']) ? nodeShape['sh:class'] : null;
+            const shClass = (nodeShape && nodeShape["sh:class"]) ? nodeShape["sh:class"] : null;
             if (datatype) { // Datatype
                 name = this.util.prettyPrintIri(this.dataTypeMapperFromSHACL(datatype));
-                rangePart = name;
-            } else if (nodeShape && nodeShape['sh:property']) { // Restricted class
+                if (datatype === "rdf:langString") {
+                    rangePart = "Localized Text";
+                } else if (datatype === "rdf:HTML") {
+                    rangePart = "HTML Text";
+                } else {
+                    rangePart = name;
+                }
+            } else if (nodeShape && nodeShape["sh:property"]) { // Restricted class
                 name = this.util.prettyPrintClassDefinition(shClass);
-                rangePart = '<strong>' + name + '</strong>';
+                rangePart = "<strong>" + name + "</strong>";
             } else {
                 // Enumeration
                 // Standard class
@@ -319,7 +327,7 @@ class DSHandler {
                 rangePart = name;
             }
             return rangePart;
-        }).join(' or ');
+        }).join(" or ");
 
         return returnObj;
     }
