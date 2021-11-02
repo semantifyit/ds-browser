@@ -70,62 +70,62 @@ class Util {
 
   repairLinksInHTMLCode(htmlCode) {
     let result = htmlCode;
-    // relative links of schema.org
-    result = result.replace(/<a(.*?)href="(.*?)"/g, (match, group1, group2) => {
-      if (group2.startsWith("/")) {
-        group2 = "http://schema.org" + group2;
+    // absolute links for schema.org - e.g. https://schema.org/gtin13
+    result = result.replace(/https?:\/\/schema.org\/([^,.\s]*)/g, (match) => {
+      const style = this.createExternalLinkStyle(match);
+      return `<a href="${match}" style="${style}" target="_blank">${match}</a>`;
+    });
+    // html links (including relative links of schema.org) - e.g. <a class="xyz" href="/Text"> ...
+    result = result.replace(
+      /<a(.*?)href="(.*?)"/g,
+      (match, otherLinkAttributes, url) => {
+        if (url.startsWith("/")) {
+          url = "http://schema.org" + url;
+        }
+        const style = this.createExternalLinkStyle(url);
+        return `<a ${otherLinkAttributes} href="${url}" style="${style}" target="_blank"`;
       }
-      const style = this.createExternalLinkStyle(group2);
-      return (
-        "<a" +
-        group1 +
-        'href="' +
-        group2 +
-        '" style="' +
-        style +
-        '" target="_blank"'
-      );
+    );
+    // markdown for relative links of schema.org without label - e.g. [[ImageObject]]
+    result = result.replace(/\[\[(.*?)]]/g, (match, term) => {
+      const url = "http://schema.org/" + term;
+      const style = this.createExternalLinkStyle(url);
+      return `<a href="${url}" style="${style}" target="_blank">${term}</a>`;
     });
-    // markdown for relative links of schema.org
-    result = result.replace(/\[\[(.*?)]]/g, (match, group1) => {
-      const URL = "http://schema.org/" + group1;
-      const style = this.createExternalLinkStyle(URL);
-      return (
-        '<a href="' +
-        URL +
-        '" style="' +
-        style +
-        '" target="_blank">' +
-        group1 +
-        "</a>"
-      );
-    });
-    // markdown for outgoing link
-    result = result.replace(/\[(.*?)]\((.*?)\)/g, (match, group1, group2) => {
-      const style = this.createExternalLinkStyle(group2);
-      return (
-        '<a href="' +
-        group2 +
-        '" style="' +
-        style +
-        '" target="_blank">' +
-        group1 +
-        "</a>"
-      );
+    // markdown for links (including relative schema.org) with label - e.g. [background notes](/docs/datamodel.html#identifierBg) or [WGS 84](https://en.wikipedia.org/wiki/World_Geodetic_System)
+    result = result.replace(/\[(.*?)]\((.*?)\)/g, (match, label, url) => {
+      if (url.startsWith("/")) {
+        url = "http://schema.org/" + url;
+      }
+      const style = this.createExternalLinkStyle(url);
+      return `<a href="${url}" style="${style}" target="_blank">${label}</a>`;
     });
     // new line
     result = result.replace(/\\n/g, () => {
       return "</br>";
     });
-    // bold
-    result = result.replace(/__(.*?)__/g, (match, group1) => {
-      return "<b>" + group1 + "</b>";
+    // markdown for bold
+    result = result.replace(/__(.*?)__/g, (match, text) => {
+      return `<b>${text}</b>`;
     });
-    // code
-    result = result.replace(/```(.*?)```/g, (match, group1) => {
-      return "<code>" + group1 + "</code>";
+    // markdown for code
+    result = result.replace(/```(.*?)```/g, (match, code) => {
+      return `<code>${code}</code>`;
     });
     return result;
+  }
+
+  // returns following attributes for internal links: href, onclick, data-state-changes
+  // internal links MUST have the class a-js-link
+  createInternalLinkAttributes(navigationChanges) {
+    const hrefLink = this.browser.locationControl
+      ? this.createInternalHref(navigationChanges)
+      : "javascript:void(0)";
+    const htmlOnClick = this.browser.locationControl
+      ? 'onclick="return false;"'
+      : "";
+    const htmlState = encodeURIComponent(JSON.stringify(navigationChanges));
+    return `href="${hrefLink}" ${htmlOnClick} data-state-changes="${htmlState}"`;
   }
 
   createInternalLink(navigationChanges, text) {
@@ -181,32 +181,16 @@ class Util {
     return htmlEscaped ? this.escHtml(url) : url;
   }
 
+  // creates an object with the navigation "coordinates" constructed from the actual navigation position and a given object containing navigation changes
   createNavigationState(navigationChanges) {
+    const parameters = ["listId", "dsId", "path", "viewMode", "format"];
     let newState = {};
-    if (navigationChanges.listId !== undefined) {
-      newState.listId = navigationChanges.listId;
-    } else {
-      newState.listId = this.browser.listId;
-    }
-    if (navigationChanges.dsId !== undefined) {
-      newState.dsId = navigationChanges.dsId;
-    } else {
-      newState.dsId = this.browser.dsId;
-    }
-    if (navigationChanges.path !== undefined) {
-      newState.path = navigationChanges.path;
-    } else {
-      newState.path = this.browser.path;
-    }
-    if (navigationChanges.viewMode !== undefined) {
-      newState.viewMode = navigationChanges.viewMode;
-    } else {
-      newState.viewMode = this.browser.viewMode;
-    }
-    if (navigationChanges.format !== undefined) {
-      newState.format = navigationChanges.format;
-    } else {
-      newState.format = this.browser.format;
+    for (const p of parameters) {
+      if (navigationChanges[p] !== undefined) {
+        newState[p] = navigationChanges[p];
+      } else {
+        newState[p] = this.browser[p];
+      }
     }
     return newState;
   }
@@ -304,141 +288,11 @@ class Util {
   }
 
   createHtmlLoading() {
-    return `<div class="text-center" style="margin-top: 100px;"><div class="spinner-border text-danger" style="width: 4rem; height: 4rem;" role="status">
-              <span class="visually-hidden">Loading...</span>
-            </div></div>`;
-  }
-
-  /**
-   * Create a HTML table row with RDFa (https://en.wikipedia.org/wiki/RDFa) attributes.
-   *
-   * @param {string} rdfaTypeOf - The RDFa type of the table row.
-   * @param {string} rdfaResource - The RDFa resource.
-   * @param {string} mainColRdfaProp - The RDFa property of the main column.
-   * @param {string} mainColLink - The link of the main column.
-   * @param {string} sideCols - The HTML of the side columns.
-   * @param {string|null} mainColClass - The CSS class of the main column.
-   * @returns {string} The resulting HTML.
-   */
-  createHtmlTableRow(
-    rdfaTypeOf,
-    rdfaResource,
-    mainColRdfaProp,
-    mainColLink,
-    sideCols,
-    mainColClass = null
-  ) {
-    const trContent =
-      this.createMainCol(mainColRdfaProp, mainColLink, mainColClass) + sideCols;
-    return `<tr typeof="${rdfaTypeOf}" resource="${rdfaResource}">
-            ${trContent}
-            </tr>`;
-  }
-
-  /**
-   * Create a HTML main column for a table row with RDFa (https://en.wikipedia.org/wiki/RDFa) attributes.
-   *
-   * @param {string} rdfaProp - The RDFa property of the column.
-   * @param {string} link - The link of the column.
-   * @param {string|null} className -  The CSS class of the column.
-   * @returns {string} The resulting HTML.
-   */
-  createMainCol(rdfaProp, link, className = null) {
-    return (
-      "" +
-      "<th" +
-      (className ? ' class="' + className + '"' : "") +
-      ' scope="row">' +
-      this.createCodeLink(link, { property: rdfaProp }) +
-      "</th>"
-    );
-  }
-
-  /**
-   * Create a HTML code element with a link inside it.
-   *
-   * @param {string} link - The link.
-   * @param {object|null} codeAttr - The HTML attributes of the code element.
-   * @returns {string} The resulting HTML.
-   */
-  createCodeLink(link, codeAttr = null) {
-    return (
-      "" + "<code" + this.createHtmlAttr(codeAttr) + ">" + link + "</code>"
-    );
-  }
-
-  /**
-   * Create a HTML table with class 'definition-table' and 'table'.
-   *
-   * @param {string|string[]} ths - The table header cell/s. Must include <th> tags.
-   * @param {string|string[]} trs - The table body row/s. Can already include <tr> tags to be more flexible.
-   * @param {object|null} tableAttr - The HTML attributes of the table.
-   * @param {object|null} tbodyAttr - The HTML attributes of the table body.
-   * @returns {string} The resulting HTML.
-   */
-  createHtmlDefinitionTable(ths, trs, tableAttr = null, tbodyAttr = null) {
-    if (!Array.isArray(ths)) {
-      ths = [ths];
-    }
-    if (!Array.isArray(trs)) {
-      trs = [trs];
-    }
-    const htmlTableAttr = this.createHtmlAttr(tableAttr);
-    const htmlTbodyAttr = this.createHtmlAttr(tbodyAttr);
-    const htmlTheadContent = ths
-      .map((th) => {
-        return "<th>" + th + "</th>";
-      })
-      .join("");
-    const htmlTbodyContent = trs[0].startsWith("<tr")
-      ? trs.join("")
-      : trs
-          .map((tr) => {
-            return "<tr>" + tr + "</tr>";
-          })
-          .join("");
-    return `<table class="definition-table table" ${htmlTableAttr}>
-            <thead><tr>${htmlTheadContent}</tr></thead>
-            <tbody ${htmlTbodyAttr}>
-            ${htmlTbodyContent}
-            </tbody></table>`;
-  }
-
-  /**
-   * Create a HTML div with the main content for the vocab browser element.
-   *
-   * @param {string} rdfaTypeOf - The RDFa type of the main content.
-   * @param {string} mainContent - The HTML of the main content.
-   * @returns {string} The resulting HTML.
-   */
-  createHtmlMainContent(rdfaTypeOf, mainContent) {
-    return `
-            <div>
-                <div id="mainContent" vocab="http://schema.org/" typeof="${rdfaTypeOf}" resource="${window.location}">
-                    ${mainContent}
-                </div>
+    return `<div class="d-flex align-items-center justify-content-center" style="height: 100%;">
+              <div class="spinner-border text-primary" style="width: 4rem; height: 4rem;" role="status">
+                <span class="visually-hidden">Loading...</span>
+              </div>
             </div>`;
-  }
-
-  createHtmlExternalLinkLegend() {
-    const commonExtLinkStyle = "margin-right: 3px; ";
-    const extLinkStyleBlue =
-      commonExtLinkStyle + this.createExternalLinkStyle("");
-    const extLinkStyleRed =
-      commonExtLinkStyle +
-      this.createExternalLinkStyle("http://schema.org") +
-      " margin-left: 6px;";
-
-    return (
-      '<p style="font-size: 12px; margin-top: 0">' +
-      '(<span style="' +
-      extLinkStyleBlue +
-      '"></span>External link' +
-      '<span style="' +
-      extLinkStyleRed +
-      '"></span>External link to schema.org )' +
-      "</p>"
-    );
   }
 
   createTermLink(term) {
@@ -473,18 +327,6 @@ class Util {
     }
   }
 
-  fade(element) {
-    let op = 0.05; // initial opacity
-    const timer = setInterval(() => {
-      if (op >= 1) {
-        clearInterval(timer);
-      }
-      element.style.opacity = op;
-      element.style.filter = "alpha(opacity=" + op * 100 + ")";
-      op += op * 0.05;
-    }, 10);
-  }
-
   getSdoAdapterFromCache(vocabUrls) {
     for (const sdoAdapterCacheEntry of this.browser.sdoCache) {
       let match = true;
@@ -507,9 +349,12 @@ class Util {
     return null;
   }
 
-  // Creates a hard copy of a given JSON. undefined wont be copied
-  hardCopyJson(jsonInput) {
-    return JSON.parse(JSON.stringify(jsonInput));
+  // creates a clone of the given JSON input (without reference to the original input)
+  cloneJson(input) {
+    if (input === undefined) {
+      return undefined;
+    }
+    return JSON.parse(JSON.stringify(input));
   }
 
   getFileHost() {

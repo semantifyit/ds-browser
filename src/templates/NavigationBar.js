@@ -1,11 +1,11 @@
 const NavigationBar = `
 <!-- Navbar-->
-<nav class="navbar navbar-expand-lg navbar-light bg-light">
+<nav class="navbar navbar-expand-lg navbar-light bg-light fixed-top">
   <div class="container-xl justify-content-between">
     <!-- Left elements -->
     <ul class="navbar-nav flex-row d-flex" style="min-width: 100px;">
         <li class="nav-item me-3 me-lg-1">
-           <a id="nav-list-button" class="nav-link {{listBtnClass}}" href="{{listBtnHref}}">
+           <a id="nav-list-button" class="nav-link a-js-link {{listBtnClass}}" {{listBtnAttributes}}">
             <span><i class="far fa-list-alt fa-sm"></i></span>
             <span id="nav-list-button-text">{{listName}}</span>
           </a>
@@ -16,17 +16,17 @@ const NavigationBar = `
     <!-- Center elements -->
     <ul class="navbar-nav flex-row d-flex">
       <li class="nav-item me-3 me-lg-1">
-        <a class="nav-link active" href="#">
+        <a class="nav-link a-js-link {{nativeViewBtnClass}}" {{nativeViewBtnAttributes}}>
          Native view
         </a>
       </li>
       <li class="nav-item me-3 me-lg-1">
-        <a class="nav-link" href="#">
+        <a class="nav-link a-js-link {{treeViewBtnClass}}" {{treeViewBtnAttributes}}>
           Tree view
         </a>
       </li>
       <li class="nav-item me-3 me-lg-1">
-        <a class="nav-link" href="#">
+        <a class="nav-link a-js-link" href="#">
           Hierarchy view
         </a>
       </li>
@@ -36,13 +36,7 @@ const NavigationBar = `
     <!-- Right elements -->
     <ul class="navbar-nav flex-row" style="min-width: 100px;">
       <li class="nav-item me-3 me-lg-1">
-        <a class="nav-link {{editDsClass}}" href="{{editDsHref}}">
-          <span><i class="fas fa-edit fa-sm"></i></span>
-          <span>Edit DS</span>
-        </a>
-      </li>
-      <li class="nav-item me-3 me-lg-1">
-        <a class="nav-link d-sm-flex align-items-sm-center" href="#">
+        <a class="nav-link align-items-sm-center a-js-link {{shaclViewBtnClass}}" {{shaclViewBtnAttributes}}">
          <span><i class="far fa-file-code fa-sm me-1"></i></span>
            <span>SHACL</span>
         </a>

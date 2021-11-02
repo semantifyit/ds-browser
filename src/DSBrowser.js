@@ -3,25 +3,25 @@ const DsUtilities = require("ds-utilities");
 const DSBrowserIFrameContent = require("./templates/DSBrowserIFrameContent.js");
 const Util = require("./Util");
 const DSHandler = require("./DSHandler");
-const ListRenderer = require("./ListRenderer");
-const DSRenderer = require("./DSRenderer");
-const NativeRenderer = require("./NativeRenderer");
-const TreeRenderer = require("./TreeRenderer");
-const SHACLRenderer = require("./SHACLRenderer");
-const NavigationBar = require("./components/NavigationBarRenderer.js");
+
+const SharedFunctions = require("./SharedFunctions.js");
+const ListView = require("./views/ListView.js");
+const SHACLView = require("./views/SHACLView.js");
+const NativeView = require("./views/NativeView.js");
+const TreeView = require("./views/TreeView.js");
 
 class DSBrowser {
   constructor(params) {
     this.dsCache = {}; // cache for already fetched DS - if already opened DS is viewed, it has not to be fetched again
     this.sdoCache = []; // cache for already created SDO Adapter - if already used vocabulary combination is needed, it has not to be initialized again
     this.util = new Util(this);
-    this.navigationBar = new NavigationBar(this);
     this.dsHandler = new DSHandler(this);
-    this.listRenderer = new ListRenderer(this);
-    this.dsRenderer = new DSRenderer(this);
-    this.nativeRenderer = new NativeRenderer(this);
-    this.treeRenderer = new TreeRenderer(this);
-    this.shaclRenderer = new SHACLRenderer(this);
+
+    this.sharedFunctions = new SharedFunctions(this);
+    this.listView = new ListView(this);
+    this.shaclView = new SHACLView(this);
+    this.nativeView = new NativeView(this);
+    this.treeView = new TreeView(this);
 
     this.editFunction = params.editFunction;
     this.targetElement = params.targetElement;
@@ -39,6 +39,11 @@ class DSBrowser {
       this.format = params.format || null;
     }
 
+    // the desired size of the iFrame -> the standard height for the iFrame is given by the containing element, if any (must be a set height property). Else the standard height of 100% of the viewport is assumed
+    this.frameSize = this.targetElement.style.height
+      ? this.targetElement.style.height
+      : "100vh";
+
     if (this.locationControl) {
       window.addEventListener("popstate", async () => {
         this.readStateFromUrl();
@@ -52,6 +57,7 @@ class DSBrowser {
   async initIFrame() {
     this.targetElement.innerHTML = this.frame();
     this.dsbFrame = document.getElementById("ds-browser-iframe");
+    this.dsbFrame.style.height = this.frameSize;
     this.dsbContext = this.dsbFrame.contentWindow.document;
     this.dsbContext.open();
     this.dsbContext.write(DSBrowserIFrameContent);
@@ -70,37 +76,28 @@ class DSBrowser {
 
   // returns the html frame for this element, which is required to be rendered in a later point of the process
   frame() {
-    return `<div><iframe id="ds-browser-iframe" width="100%" frameborder="0" scrolling="no" style="min-height: 99vh;"></iframe></div>`;
-  }
-
-  fixFrameSize() {
-    const frameBody = this.dsbContext.body;
-    this.dsbFrame.style.height = frameBody.scrollHeight + "px";
-    console.log("size adaption");
+    return `<div><iframe id="ds-browser-iframe" width="100%" frameborder="0" scrolling="no"></iframe></div>`;
   }
 
   async render() {
     this.dsbContainer.innerHTML = this.util.createHtmlLoading();
-    this.fixFrameSize();
     await this.renderInit();
     if (this.format === "shacl") {
       // render raw SHACL of DS
-      this.shaclRenderer.render();
+      this.shaclView.render();
     } else if (
       this.dsId &&
       this.viewMode !== "tree" &&
       this.viewMode !== "table"
     ) {
       // render DS with native view
-      this.nativeRenderer.render();
+      this.nativeView.render();
     } else if (this.dsId && this.viewMode === "tree") {
       // render DS with tree view
-      this.treeRenderer.render();
-      this.fixFrameSize();
+      this.treeView.render();
     } else if (this.listId) {
       // render List as table
-      this.listRenderer.render();
-      this.fixFrameSize();
+      this.listView.render();
     } else {
       throw new Error("Input parameters invalid.");
     }
@@ -138,26 +135,33 @@ class DSBrowser {
 
   async initDS() {
     if (this.dsCache[this.dsId]) {
-      this.ds = this.dsCache[this.dsId];
+      this.ds = this.dsCache[this.dsId].populated;
+      this.dsUnpopulated = this.dsCache[this.dsId].unpopulated;
     } else {
       let ds = await this.util.parseToObject(
         this.util.getFileHost() + "/ds/" + this.dsId + "?populate=true"
       );
-      if (
-        ds &&
-        ds["@graph"] &&
-        ds["@graph"][0] &&
-        !ds["@graph"][0]["ds:version"]
-      ) {
+
+      let dsUnpopulated;
+      const myDsUtil = DsUtilities.getDsUtilitiesForDs(ds);
+      if (myDsUtil.getDsSpecificationVersion(ds) === "5.0") {
         ds = await this.util.parseToObject(
           this.util.getFileHost() +
             "/api/v2/domainspecifications/dsv7/" +
             this.dsId +
             "?populate=true"
         );
+        this.dsUnpopulated = null;
+      } else {
+        dsUnpopulated = await this.util.parseToObject(
+          this.util.getFileHost() + "/ds/" + this.dsId + "?populate=false"
+        );
       }
-      this.dsCache[this.dsId] = ds;
+      this.dsCache[this.dsId] = {};
+      this.dsCache[this.dsId].populated = ds;
+      this.dsCache[this.dsId].unpopulated = dsUnpopulated;
       this.ds = ds;
+      this.dsUnpopulated = dsUnpopulated;
     }
     if (!this.sdoAdapter) {
       // create an empty sdo adapter at the start in order to create vocabulary URLs
@@ -191,7 +195,7 @@ class DSBrowser {
     let vocabs = [];
     const dsRootNode = this.util.getDSRootNode(this.ds);
     if (dsRootNode && Array.isArray(dsRootNode["ds:usedVocabulary"])) {
-      vocabs = this.util.hardCopyJson(dsRootNode["ds:usedVocabulary"]);
+      vocabs = this.util.cloneJson(dsRootNode["ds:usedVocabulary"]);
     }
     if (dsRootNode && dsRootNode["schema:schemaVersion"]) {
       const sdoVersion = this.getSDOVersion(dsRootNode["schema:schemaVersion"]);
@@ -216,9 +220,9 @@ class DSBrowser {
    * Depending on the user action, the link will either open a new window or trigger the 'render' method.
    */
   addJSLinkEventListener() {
-    const aJSLinks = this.targetElement.getElementsByClassName("a-js-link");
+    const aJSLinks = this.dsbContext.getElementsByClassName("a-js-link");
     for (const aJSLink of aJSLinks) {
-      // forEach() not possible ootb for HTMLCollections
+      // forEach() not possible for HTMLCollections
       aJSLink.addEventListener("click", async (event) => {
         if (this.locationControl) {
           if (event.ctrlKey) {
@@ -258,6 +262,7 @@ class DSBrowser {
       if (this.dsId !== dsId) {
         this.dsId = dsId;
         this.ds = null;
+        this.dsUnpopulated = null;
       }
     } else if (window.location.pathname.includes("/list/")) {
       let listId = window.location.pathname.substring("/list/".length);
@@ -269,12 +274,14 @@ class DSBrowser {
       if (this.dsId !== dsId) {
         this.dsId = dsId;
         this.ds = null;
+        this.dsUnpopulated = null;
       }
     } else {
       this.listId = null;
       this.list = null;
       this.dsId = null;
       this.ds = null;
+      this.dsUnpopulated = null;
     }
   }
 
@@ -301,6 +308,7 @@ class DSBrowser {
     // If there is no dsId, there shall be no ds
     if (this.dsId === null) {
       this.ds = undefined;
+      this.dsUnpopulated = undefined;
     }
     // If there is no ds, there shall be no path
     if (!this.ds) {

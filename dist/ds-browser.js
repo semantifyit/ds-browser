@@ -18628,25 +18628,25 @@ const DsUtilities = require("ds-utilities");
 const DSBrowserIFrameContent = require("./templates/DSBrowserIFrameContent.js");
 const Util = require("./Util");
 const DSHandler = require("./DSHandler");
-const ListRenderer = require("./ListRenderer");
-const DSRenderer = require("./DSRenderer");
-const NativeRenderer = require("./NativeRenderer");
-const TreeRenderer = require("./TreeRenderer");
-const SHACLRenderer = require("./SHACLRenderer");
-const NavigationBar = require("./components/NavigationBarRenderer.js");
+
+const SharedFunctions = require("./SharedFunctions.js");
+const ListView = require("./views/ListView.js");
+const SHACLView = require("./views/SHACLView.js");
+const NativeView = require("./views/NativeView.js");
+const TreeView = require("./views/TreeView.js");
 
 class DSBrowser {
   constructor(params) {
     this.dsCache = {}; // cache for already fetched DS - if already opened DS is viewed, it has not to be fetched again
     this.sdoCache = []; // cache for already created SDO Adapter - if already used vocabulary combination is needed, it has not to be initialized again
     this.util = new Util(this);
-    this.navigationBar = new NavigationBar(this);
     this.dsHandler = new DSHandler(this);
-    this.listRenderer = new ListRenderer(this);
-    this.dsRenderer = new DSRenderer(this);
-    this.nativeRenderer = new NativeRenderer(this);
-    this.treeRenderer = new TreeRenderer(this);
-    this.shaclRenderer = new SHACLRenderer(this);
+
+    this.sharedFunctions = new SharedFunctions(this);
+    this.listView = new ListView(this);
+    this.shaclView = new SHACLView(this);
+    this.nativeView = new NativeView(this);
+    this.treeView = new TreeView(this);
 
     this.editFunction = params.editFunction;
     this.targetElement = params.targetElement;
@@ -18664,6 +18664,11 @@ class DSBrowser {
       this.format = params.format || null;
     }
 
+    // the desired size of the iFrame -> the standard height for the iFrame is given by the containing element, if any (must be a set height property). Else the standard height of 100% of the viewport is assumed
+    this.frameSize = this.targetElement.style.height
+      ? this.targetElement.style.height
+      : "100vh";
+
     if (this.locationControl) {
       window.addEventListener("popstate", async () => {
         this.readStateFromUrl();
@@ -18677,6 +18682,7 @@ class DSBrowser {
   async initIFrame() {
     this.targetElement.innerHTML = this.frame();
     this.dsbFrame = document.getElementById("ds-browser-iframe");
+    this.dsbFrame.style.height = this.frameSize;
     this.dsbContext = this.dsbFrame.contentWindow.document;
     this.dsbContext.open();
     this.dsbContext.write(DSBrowserIFrameContent);
@@ -18695,37 +18701,28 @@ class DSBrowser {
 
   // returns the html frame for this element, which is required to be rendered in a later point of the process
   frame() {
-    return `<div><iframe id="ds-browser-iframe" width="100%" frameborder="0" scrolling="no" style="min-height: 99vh;"></iframe></div>`;
-  }
-
-  fixFrameSize() {
-    const frameBody = this.dsbContext.body;
-    this.dsbFrame.style.height = frameBody.scrollHeight + "px";
-    console.log("size adaption");
+    return `<div><iframe id="ds-browser-iframe" width="100%" frameborder="0" scrolling="no"></iframe></div>`;
   }
 
   async render() {
     this.dsbContainer.innerHTML = this.util.createHtmlLoading();
-    this.fixFrameSize();
     await this.renderInit();
     if (this.format === "shacl") {
       // render raw SHACL of DS
-      this.shaclRenderer.render();
+      this.shaclView.render();
     } else if (
       this.dsId &&
       this.viewMode !== "tree" &&
       this.viewMode !== "table"
     ) {
       // render DS with native view
-      this.nativeRenderer.render();
+      this.nativeView.render();
     } else if (this.dsId && this.viewMode === "tree") {
       // render DS with tree view
-      this.treeRenderer.render();
-      this.fixFrameSize();
+      this.treeView.render();
     } else if (this.listId) {
       // render List as table
-      this.listRenderer.render();
-      this.fixFrameSize();
+      this.listView.render();
     } else {
       throw new Error("Input parameters invalid.");
     }
@@ -18763,26 +18760,33 @@ class DSBrowser {
 
   async initDS() {
     if (this.dsCache[this.dsId]) {
-      this.ds = this.dsCache[this.dsId];
+      this.ds = this.dsCache[this.dsId].populated;
+      this.dsUnpopulated = this.dsCache[this.dsId].unpopulated;
     } else {
       let ds = await this.util.parseToObject(
         this.util.getFileHost() + "/ds/" + this.dsId + "?populate=true"
       );
-      if (
-        ds &&
-        ds["@graph"] &&
-        ds["@graph"][0] &&
-        !ds["@graph"][0]["ds:version"]
-      ) {
+
+      let dsUnpopulated;
+      const myDsUtil = DsUtilities.getDsUtilitiesForDs(ds);
+      if (myDsUtil.getDsSpecificationVersion(ds) === "5.0") {
         ds = await this.util.parseToObject(
           this.util.getFileHost() +
             "/api/v2/domainspecifications/dsv7/" +
             this.dsId +
             "?populate=true"
         );
+        this.dsUnpopulated = null;
+      } else {
+        dsUnpopulated = await this.util.parseToObject(
+          this.util.getFileHost() + "/ds/" + this.dsId + "?populate=false"
+        );
       }
-      this.dsCache[this.dsId] = ds;
+      this.dsCache[this.dsId] = {};
+      this.dsCache[this.dsId].populated = ds;
+      this.dsCache[this.dsId].unpopulated = dsUnpopulated;
       this.ds = ds;
+      this.dsUnpopulated = dsUnpopulated;
     }
     if (!this.sdoAdapter) {
       // create an empty sdo adapter at the start in order to create vocabulary URLs
@@ -18816,7 +18820,7 @@ class DSBrowser {
     let vocabs = [];
     const dsRootNode = this.util.getDSRootNode(this.ds);
     if (dsRootNode && Array.isArray(dsRootNode["ds:usedVocabulary"])) {
-      vocabs = this.util.hardCopyJson(dsRootNode["ds:usedVocabulary"]);
+      vocabs = this.util.cloneJson(dsRootNode["ds:usedVocabulary"]);
     }
     if (dsRootNode && dsRootNode["schema:schemaVersion"]) {
       const sdoVersion = this.getSDOVersion(dsRootNode["schema:schemaVersion"]);
@@ -18841,9 +18845,9 @@ class DSBrowser {
    * Depending on the user action, the link will either open a new window or trigger the 'render' method.
    */
   addJSLinkEventListener() {
-    const aJSLinks = this.targetElement.getElementsByClassName("a-js-link");
+    const aJSLinks = this.dsbContext.getElementsByClassName("a-js-link");
     for (const aJSLink of aJSLinks) {
-      // forEach() not possible ootb for HTMLCollections
+      // forEach() not possible for HTMLCollections
       aJSLink.addEventListener("click", async (event) => {
         if (this.locationControl) {
           if (event.ctrlKey) {
@@ -18883,6 +18887,7 @@ class DSBrowser {
       if (this.dsId !== dsId) {
         this.dsId = dsId;
         this.ds = null;
+        this.dsUnpopulated = null;
       }
     } else if (window.location.pathname.includes("/list/")) {
       let listId = window.location.pathname.substring("/list/".length);
@@ -18894,12 +18899,14 @@ class DSBrowser {
       if (this.dsId !== dsId) {
         this.dsId = dsId;
         this.ds = null;
+        this.dsUnpopulated = null;
       }
     } else {
       this.listId = null;
       this.list = null;
       this.dsId = null;
       this.ds = null;
+      this.dsUnpopulated = null;
     }
   }
 
@@ -18926,6 +18933,7 @@ class DSBrowser {
     // If there is no dsId, there shall be no ds
     if (this.dsId === null) {
       this.ds = undefined;
+      this.dsUnpopulated = undefined;
     }
     // If there is no ds, there shall be no path
     if (!this.ds) {
@@ -18937,7 +18945,7 @@ class DSBrowser {
 
 module.exports = DSBrowser;
 
-},{"./DSHandler":94,"./DSRenderer":95,"./ListRenderer":96,"./NativeRenderer":97,"./SHACLRenderer":98,"./TreeRenderer":99,"./Util":100,"./components/NavigationBarRenderer.js":101,"./templates/DSBrowserIFrameContent.js":103,"ds-utilities":33,"schema-org-adapter":86}],94:[function(require,module,exports){
+},{"./DSHandler":94,"./SharedFunctions.js":95,"./Util":96,"./templates/DSBrowserIFrameContent.js":98,"./views/ListView.js":106,"./views/NativeView.js":107,"./views/SHACLView.js":108,"./views/TreeView.js":109,"ds-utilities":33,"schema-org-adapter":86}],94:[function(require,module,exports){
 class DSHandler {
   constructor(browser) {
     this.browser = browser;
@@ -19042,6 +19050,8 @@ class DSHandler {
       case "xsd:string":
         return "https://schema.org/Text";
       case "rdf:langString":
+        return "https://schema.org/Text";
+      case "rdf:HTML":
         return "https://schema.org/Text";
       case "xsd:boolean":
         return "https://schema.org/Boolean";
@@ -19333,606 +19343,123 @@ class DSHandler {
 module.exports = DSHandler;
 
 },{}],95:[function(require,module,exports){
-class DSRenderer {
-  constructor(browser) {
-    this.browser = browser;
-    this.util = browser.util;
-    this.dsHandler = browser.dsHandler;
-    this.MODES = {
-      native: "native",
-      tree: "tree",
-    };
+const NavigationBar = require("./templates/NavigationBar.js");
+
+class SharedFunctions {
+  constructor(dsBrowser) {
+    this.b = dsBrowser;
   }
 
-  createViewModeSelectors(selected = this.MODES.native) {
-    return (
-      "" +
-      '<div class="ds-selector-tabs ds-selector">' +
-      '<div class="selectors">' +
-      (selected === this.MODES.native
-        ? '<a class="selected">Native View</a>'
-        : this.util.createInternalLink({ viewMode: null }, "Native View")) +
-      (selected === this.MODES.tree
-        ? '<a class="selected">Tree View</a>'
-        : this.util.createInternalLink({ viewMode: "tree" }, "Tree View")) +
-      "</div>" +
-      "</div>"
-    );
-  }
-
-  createHtmlHeader() {
-    this.dsNode = this.browser.dsNode;
-    this.node = this.dsNode.node;
-
-    let name,
-      description,
-      breadcrumbs = "";
-    if (!this.browser.path) {
-      const graph = this.browser.ds["@graph"][0];
-      name =
-        this.util.getLanguageString(graph["schema:name"]) ||
-        "Domain Specification";
-      description =
-        this.util.getLanguageString(graph["schema:description"]) || "";
+  // creates the HTML code for the navigation bar
+  getNavigationBarHTML() {
+    // List button (show only if a list exists and a DS is currently being shown)
+    let listName, listBtnClass, listBtnAttributes;
+    if (this.b.listId && this.b.dsId) {
+      listBtnClass = "";
+      if (this.b.list) {
+        listName = this.b.list["schema:name"] || "List";
+      }
+      listBtnAttributes = this.b.util.createInternalLinkAttributes({
+        dsId: null,
+      });
     } else {
-      const nodeClass = this.node["sh:class"];
-      name = this.dsHandler.rangesToString(nodeClass);
-      description = this.createNodeDescription(nodeClass);
-      breadcrumbs = this.createBreadcrumbs();
+      listBtnClass = "d-none";
+      listBtnAttributes = "";
     }
-    description = this.util.repairLinksInHTMLCode(description);
-
-    return (
-      "" +
-      this.createNavigation() +
-      '<h1 property="schema:name">' +
-      name +
-      "</h1>" +
-      this.util.createHtmlExternalLinkLegend() +
-      breadcrumbs +
-      '<div property="schema:description">' +
-      description +
-      "<br><br></div>"
-    );
-  }
-
-  createNodeDescription(nodeClass) {
-    if (!nodeClass) {
-      return "";
-    } else if (nodeClass.length === 1) {
-      return this.browser.sdoAdapter.getTerm(nodeClass[0]).getDescription();
+    // View buttons
+    let nativeViewBtnAttributes, nativeViewBtnClass;
+    let treeViewBtnAttributes, treeViewBtnClass;
+    let shaclViewBtnAttributes, shaclViewBtnClass;
+    if (this.b.dsId) {
+      nativeViewBtnClass = treeViewBtnClass = "";
+      shaclViewBtnClass = "d-sm-flex";
+      nativeViewBtnAttributes = this.b.util.createInternalLinkAttributes({
+        viewMode: null,
+      });
+      treeViewBtnAttributes = this.b.util.createInternalLinkAttributes({
+        viewMode: "tree",
+      });
+      shaclViewBtnAttributes = this.b.util.createInternalLinkAttributes({
+        format: "shacl",
+      });
     } else {
-      return nodeClass
-        .map((c) => {
-          return (
-            "" +
-            "<b>" +
-            this.util.prettyPrintIri(c) +
-            ":</b> " +
-            this.browser.sdoAdapter.getTerm(c).getDescription()
-          );
-        })
-        .join("<br>");
+      nativeViewBtnClass = treeViewBtnClass = shaclViewBtnClass = "d-none";
+      nativeViewBtnAttributes =
+        treeViewBtnAttributes =
+        shaclViewBtnAttributes =
+          "";
     }
+    return NavigationBar.replace(/{{listBtnClass}}/g, listBtnClass)
+      .replace(/{{listBtnAttributes}}/g, listBtnAttributes)
+      .replace(/{{listName}}/g, listName)
+      .replace(/{{nativeViewBtnClass}}/g, nativeViewBtnClass)
+      .replace(/{{nativeViewBtnAttributes}}/g, nativeViewBtnAttributes)
+      .replace(/{{treeViewBtnClass}}/g, treeViewBtnClass)
+      .replace(/{{treeViewBtnAttributes}}/g, treeViewBtnAttributes)
+      .replace(/{{shaclViewBtnClass}}/g, shaclViewBtnClass)
+      .replace(/{{shaclViewBtnAttributes}}/g, shaclViewBtnAttributes);
   }
 
-  createBreadcrumbs() {
-    const htmlFirstBreadcrumb = this.util.createInternalLink(
-      { path: null },
-      this.util.getLanguageString(this.browser.dsRootNode["schema:name"]) ||
-        "Domain Specification"
+  setDsTitleHtml(htmlCode) {
+    const rootNode = this.b.dsRootNode;
+    const ds = this.b.ds;
+
+    // set ds name in title
+    htmlCode = htmlCode.replace(
+      /{{dsTitleName}}/g,
+      this.b.dsUtil.getDsName(ds)
     );
-    const htmlBreadcrumbs = this.browser.path
-      .split("-")
-      .map((term, index, pathSplit) => {
-        if (index % 2 === 0) {
-          return term;
-        } else {
-          const newPath = pathSplit.slice(0, index + 1).join("-");
-          return this.util.createInternalLink({ path: newPath }, term);
-        }
+
+    // schema:description
+    htmlCode = htmlCode.replace(
+      /{{dsDescription}}/g,
+      this.b.dsUtil.getDsDescription(ds)
+    );
+    // @id
+    htmlCode = htmlCode.replace(/{{dsId}}/g, rootNode["@id"]);
+    // sh:targetClass
+    const htmlTargetClasses = rootNode["sh:targetClass"]
+      .map((c) => {
+        return "<li>" + this.b.util.createTermLink(c) + "</li>";
       })
-      .join(" > ");
-    return `<h4><span class="breadcrumbs">
-            ${htmlFirstBreadcrumb} > ${htmlBreadcrumbs}
-            </span></h4>`;
-  }
-
-  // todo delete
-  createNavigation() {
-    let shaclLink;
-    const dsId = this.browser.dsId;
-    if (this.browser.locationControl) {
-      shaclLink = this.util.createInternalLink(
-        { format: "shacl" },
-        "SHACL serialization"
+      .join("");
+    htmlCode = htmlCode.replace(/{{dsTargetClasses}}/g, htmlTargetClasses);
+    // ds:subDSOf
+    if (rootNode["ds:subDSOf"]) {
+      htmlCode = htmlCode.replace(/{{showSuperDs}}/g, "");
+      htmlCode = htmlCode.replace(/{{dsSuperDs}}/g, rootNode["ds:subDSOf"]);
+    } else {
+      htmlCode = htmlCode.replace(/{{showSuperDs}}/g, "d-none");
+      htmlCode = htmlCode.replace(/{{dsSuperDs}}/g, "");
+    }
+    // schema:schemaVersion
+    htmlCode = htmlCode.replace(
+      /{{dsSdoVersion}}/g,
+      this.b.dsUtil.getDsSchemaVersion(ds)
+    );
+    // ds:usedVocabulary
+    if (rootNode["ds:usedVocabulary"]) {
+      htmlCode = htmlCode.replace(/{{showExternalVocabularies}}/g, "");
+      const htmlExternalVocabs = rootNode["ds:usedVocabulary"]
+        .map((v) => {
+          return `<li><a href="${v}" target="_blank">${v}</a></li>`;
+        })
+        .join("");
+      htmlCode = htmlCode.replace(
+        /{{dsExternalVocabularies}}/g,
+        htmlExternalVocabs
       );
     } else {
-      shaclLink = `<a href="https://semantify.it/ds/${dsId}?format=shacl" target="_blank">SHACL serialization</a>`;
+      htmlCode = htmlCode.replace(/{{showExternalVocabularies}}/g, "d-none");
+      htmlCode = htmlCode.replace(/{{dsExternalVocabularies}}/g, "");
     }
-    const listHtml = this.browser.list
-      ? " | from List: " +
-        this.util.createInternalLink(
-          {
-            dsId: null,
-            path: null,
-          },
-          this.browser.list["schema:name"]
-        )
-      : "";
-    return `<span style="float: right;">(${shaclLink}${listHtml})</span>`;
-  }
-
-  createVisBtnRow() {
-    return `<div id="btn-row" style="padding: 12px 0px 12px 5px; font-size: 14px; line-height: 1.42857143; color: #333;">Show: 
-            <span id="btn-opt" class="btn-vis btn-vis-shadow" style="margin-left: 10px; padding: 5px;">
-                <img src="" class="glyphicon glyphicon-tag optional-property"> optional
-            </span>
-            <span id="btn-man" class="btn-vis" style="margin-left: 10px; padding: 5px;">
-                <img src="" class="glyphicon glyphicon-tag mandatory-property"> mandatory
-            </span></div>`;
+    return htmlCode;
   }
 }
 
-module.exports = DSRenderer;
+module.exports = SharedFunctions;
 
-},{}],96:[function(require,module,exports){
-class ListRenderer {
-  constructor(browser) {
-    this.browser = browser;
-    this.util = browser.util;
-  }
-
-  render() {
-    const mainContent = this.createHtmlHeader() + this.createHtmlDsTable();
-    this.browser.targetElement.innerHTML = this.util.createHtmlMainContent(
-      "schema:DataSet",
-      mainContent
-    );
-  }
-
-  createHtmlHeader() {
-    const listName = this.browser.list["schema:name"] || "";
-    const externalLinkLegend = this.util.createHtmlExternalLinkLegend();
-    const listDescription = this.browser.list["schema:description"] || "";
-    return `<h1>${listName}</h1>
-            ${externalLinkLegend}
-            ${listDescription}`;
-  }
-
-  createHtmlDsTable() {
-    return this.util.createHtmlDefinitionTable(
-      ["Name", "IRI", "Description"],
-      this.createHtmlDsTbody(),
-      null,
-      { class: "supertype" }
-    );
-  }
-
-  createHtmlDsTbody() {
-    return this.browser.list["schema:hasPart"]
-      .map((ds) => {
-        return this.util.createHtmlTableRow(
-          "http://vocab.sti2.at/ds/Domain Specification",
-          ds["@id"],
-          "schema:name",
-          this.util.createInternalLink(
-            { dsId: ds["@id"].split("/").pop() },
-            ds["schema:name"] || "No Name"
-          ),
-          this.createHtmlDsSideCols(ds)
-        );
-      })
-      .join("");
-  }
-
-  createHtmlDsSideCols(ds) {
-    const idLink = this.util.createLink(ds["@id"]);
-    const description = ds["schema:description"] || "";
-    return `<td property="@id">${idLink}</td>
-            <td property="schema:description">${description}</td>`;
-  }
-}
-
-module.exports = ListRenderer;
-
-},{}],97:[function(require,module,exports){
-const NativeFrame = require("./templates/NativeFrame.js");
-
-class NativeRenderer {
-  constructor(browser) {
-    this.b = browser;
-    this.util = browser.util;
-    this.navigationBar = browser.navigationBar;
-    this.dsHandler = browser.dsHandler;
-    this.dsRenderer = browser.dsRenderer;
-  }
-
-  render() {
-    // cannot be in constructor, cause at this time the node is not initialized
-    this.dsNode = this.b.dsNode;
-    this.node = this.dsNode.node;
-
-    // const mainContent =
-    //   this.dsRenderer.createViewModeSelectors(this.dsRenderer.MODES.native) +
-    //   (this.dsNode.type === "Class"
-    //     ? this.createHtmlPropertiesTable()
-    //     : this.createHTMLEnumerationMembersTable());
-    // set frame
-    this.b.dsbContainer.innerHTML = this.util.createHtmlMainContent(
-      "rdfs:Class",
-      this.navigationBar.frame() + NativeFrame
-    );
-    // set/change content
-    this.b.dsbContext.getElementById("title-ds-name").textContent =
-      this.b.dsUtil.getDsName(this.b.ds);
-    this.navigationBar.render();
-    this.b.fixFrameSize();
-  }
-
-  createHTMLEnumerationMembersTable() {
-    let enumerationValues = this.node["sh:in"].slice(0);
-    const trs = enumerationValues
-      .map((ev) => {
-        return this.createHTMLEnumerationMemberRow(ev);
-      })
-      .join("");
-    return this.util.createHtmlDefinitionTable(
-      ["Enumeration Member", "Description"],
-      trs,
-      { style: "margin-top: 0px; border-top: none;" }
-    );
-  }
-
-  createHTMLEnumerationMemberRow(ev) {
-    const evObj = this.b.sdoAdapter.getEnumerationMember(ev["@id"]);
-    return this.util.createHtmlTableRow(
-      "rdfs:Class",
-      evObj.getIRI(),
-      "rdfs:label",
-      this.util.createTermLink(ev["@id"]),
-      this.createHTMLEnumerationMemberDescription(evObj)
-    );
-  }
-
-  createHTMLEnumerationMemberDescription(evObj) {
-    let htmlDesc = this.util.repairLinksInHTMLCode(evObj.getDescription());
-    return `<td className="prop-desc">${htmlDesc}</td>`;
-  }
-
-  createHtmlPropertiesTable() {
-    let properties;
-    properties = this.node["sh:property"].slice(0);
-    const trs = properties
-      .map((p) => {
-        return this.createClassProperty(p);
-      })
-      .join("");
-    return this.util.createHtmlDefinitionTable(
-      ["Property", "Expected Type", "Description", "Cardinality"],
-      trs,
-      { style: "margin-top: 0px; border-top: none;" }
-    );
-  }
-
-  createClassProperty(propertyNode) {
-    const path = propertyNode["sh:path"];
-    const property = this.b.sdoAdapter.getProperty(path);
-
-    return this.util.createHtmlTableRow(
-      "rdf:Property",
-      property.getIRI(),
-      "rdfs:label",
-      this.util.createTermLink(path),
-      this.createClassPropertySideCols(propertyNode),
-      "prop-name"
-    );
-  }
-
-  createClassPropertySideCols(node) {
-    const htmlExpectedTypes = this.createHtmlExpectedTypes(node);
-    const htmlPropertyDesc = this.createHtmlPropertyDescription(node);
-    const htmlCardinality = this.dsHandler.createHtmlCardinality(
-      node["sh:minCount"],
-      node["sh:maxCount"]
-    );
-    return `<td class="prop-ect">${htmlExpectedTypes}</td>
-            <td class="prop-desc">${htmlPropertyDesc}</td>
-            <td class="prop-ect" style="text-align: center">${htmlCardinality}</td>`;
-  }
-
-  createHtmlPropertyDescription(propertyNode) {
-    const name = this.util.prettyPrintIri(propertyNode["sh:path"]);
-    let description;
-    try {
-      description = this.b.sdoAdapter.getProperty(name).getDescription();
-    } catch (e) {
-      description = "";
-    }
-    const dsDescription = propertyNode["rdfs:comment"]
-      ? this.util.getLanguageString(propertyNode["rdfs:comment"])
-      : "";
-
-    let descText = "";
-    if (description !== "") {
-      if (dsDescription !== "") {
-        descText += "<b>From Vocabulary:</b> ";
-      }
-      descText += description;
-    }
-    if (dsDescription !== "") {
-      if (description !== "") {
-        descText += "<br>" + "<b>From Domain Specification:</b> ";
-      }
-      descText += dsDescription;
-    }
-    return this.util.repairLinksInHTMLCode(descText);
-  }
-
-  createHtmlExpectedTypes(propertyNode) {
-    const property = this.b.sdoAdapter.getProperty(propertyNode["sh:path"]);
-    const propertyName = this.util.prettyPrintIri(property.getIRI(true));
-    return propertyNode["sh:or"]
-      .map((rangeNode) => {
-        let name;
-        let classNode = this.util.getClassNodeIfExists(rangeNode);
-        if (rangeNode["sh:datatype"]) {
-          name = rangeNode["sh:datatype"];
-        } else if (classNode && classNode["sh:class"]) {
-          name = classNode["sh:class"];
-        }
-        const mappedDataType = this.dsHandler.dataTypeMapperFromSHACL(name);
-        if (mappedDataType !== null) {
-          return this.util.createLink(mappedDataType);
-        } else {
-          name = this.dsHandler.rangesToString(name);
-          if (
-            classNode &&
-            Array.isArray(classNode["sh:property"]) &&
-            classNode["sh:property"].length !== 0
-          ) {
-            // Case: Range is a Restricted Class
-            const newPath = this.b.path
-              ? this.b.path + "-" + propertyName + "-" + name
-              : propertyName + "-" + name;
-            return this.util.createInternalLink({ path: newPath }, name);
-          } else if (
-            classNode &&
-            classNode["sh:class"] &&
-            Array.isArray(classNode["sh:in"])
-          ) {
-            // Case: Range is a Restricted Enumeration
-            const newPath = this.b.path
-              ? this.b.path + "-" + propertyName + "-" + name
-              : propertyName + "-" + name;
-            return this.util.createInternalLink({ path: newPath }, name);
-          } else {
-            // Case: Anything else
-            return this.util.createTermLink(name);
-          }
-        }
-      })
-      .join("<br>");
-  }
-}
-
-module.exports = NativeRenderer;
-
-},{"./templates/NativeFrame.js":105}],98:[function(require,module,exports){
-const formatHighlight = require("json-format-highlight");
-
-// Renders the DS directly as JSON-LD (raw object). Some custom CSS added to increase the readability
-class SHACLRenderer {
-  constructor(browser) {
-    this.browser = browser;
-  }
-
-  render() {
-    const preStyle = `font-size: large;
-            text-align: left;
-            width: auto;
-            padding: 10px 20px;
-            margin: 20px; 
-            overflow: visible;
-            line-height: normal;
-            display: block;
-            font-family: monospace;
-            word-wrap: break-word;
-            white-space: pre-wrap;`;
-    const customColorOptions = {
-      keyColor: "black",
-      numberColor: "#3A01DC",
-      stringColor: "#DF0002",
-      trueColor: "#C801A4",
-      falseColor: "#C801A4",
-      nullColor: "cornflowerblue",
-    };
-    // replace the iFrame since this view is expected to be a whole-pager anyway (there is little sense in having this SHACL output rendered in an iFrame. If location-control is not active, then the SHACL view is a new tab redirecting to the semantify SHACL view
-    this.browser.targetElement.innerHTML =
-      `<pre style="` +
-      preStyle +
-      `">${formatHighlight(this.browser.ds, customColorOptions)}</pre>`;
-  }
-}
-
-module.exports = SHACLRenderer;
-
-},{"json-format-highlight":42}],99:[function(require,module,exports){
-class TreeRenderer {
-  constructor(browser) {
-    this.browser = browser;
-    this.util = browser.util;
-    this.dsHandler = browser.dsHandler;
-    this.dsRenderer = browser.dsRenderer;
-  }
-
-  render() {
-    const htmlHeader = this.dsRenderer.createHtmlHeader();
-    const htmlViewModeSelector = this.dsRenderer.createViewModeSelectors(
-      this.dsRenderer.MODES.tree
-    );
-    // The div-iframe is needed for padding
-    const mainContent = `${htmlHeader}
-            ${htmlViewModeSelector}
-            <div id="div-iframe">
-            <iframe id="iframe-jsTree" frameborder="0" width="100%" scrolling="no"></iframe>
-            </div>`;
-    this.browser.targetElement.innerHTML = this.util.createHtmlMainContent(
-      "rdfs:Class",
-      mainContent
-    );
-    this.initIFrameForJSTree();
-  }
-
-  initIFrameForJSTree() {
-    this.iFrame = document.getElementById("iframe-jsTree");
-    this.iFrameCW = this.iFrame.contentWindow;
-    const doc = this.iFrameCW.document;
-    const jsTreeHtml = this.createJSTreeHTML();
-    doc.open();
-    doc.write(jsTreeHtml);
-    doc.close();
-    const dsClass = this.dsHandler.generateDsClass(
-      this.browser.dsRootNode,
-      false,
-      false
-    );
-    this.mapNodeForJSTree([dsClass]);
-  }
-
-  createJSTreeHTML() {
-    const htmlVisBtnRow = this.dsRenderer.createVisBtnRow();
-    const htmlTreeStyle = this.createTreeStyle();
-    return `<head>
-            <script src="https://code.jquery.com/jquery-3.5.1.min.js" integrity="sha256-9/aliU8dGd2tb6OSsuzixeV4y/faTqgFtohetphbbj0=" crossorigin="anonymous"></script>
-            <script src="https://cdnjs.cloudflare.com/ajax/libs/jstree/3.3.10/jstree.min.js"></script>
-            <script src="https://cdnjs.cloudflare.com/ajax/libs/jstreegrid/3.10.2/jstreegrid.min.js"></script>
-            <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.1/css/bootstrap.min.css" />
-            <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/jstree/3.3.10/themes/default/style.min.css" />
-            ${htmlTreeStyle}
-            </head>
-            <body>${htmlVisBtnRow}<div id="jsTree"></div></body>`;
-  }
-
-  createTreeStyle() {
-    return `<style>
-            .optional-property { color: #ffa517; }
-            .mandatory-property { color: #00ce0c; }
-            .btn-vis-shadow {
-                cursor: pointer;
-                webkit-box-shadow: 0 4px 5px 0 rgba(0, 0, 0, 0.14), 0 1px 10px 0 rgba(0, 0, 0, 0.12), 0 2px 4px -1px rgba(0, 0, 0, 0.2);
-                box-shadow: 0 4px 5px 0 rgba(0, 0, 0, 0.14), 0 1px 10px 0 rgba(0, 0, 0, 0.12), 0 2px 4px -1px rgba(0, 0, 0, 0.2);
-            }
-            </style>`;
-  }
-
-  mapNodeForJSTree(data) {
-    const self = this;
-    this.iFrame.addEventListener("load", function () {
-      self.iFrameCW
-        .$("#jsTree")
-        .jstree({
-          plugins: ["grid"],
-          core: {
-            themes: {
-              icons: true,
-              dots: true,
-              responsive: true,
-              stripes: true,
-              rootVisible: false,
-            },
-            data: data,
-          },
-          grid: {
-            columns: [
-              {
-                width: "20%",
-                header: "Class / Property",
-              },
-              {
-                header: "Range / Type",
-                width: "20%",
-                value: function (node) {
-                  return node.data.dsRange;
-                },
-              },
-              {
-                width: "17%",
-                header: "Cardinality",
-                value: function (node) {
-                  if (node.data.dsRange) {
-                    return (
-                      '<p style="width: 100%; margin: 0; text-align: center; padding-right: 7px;">' +
-                      self.dsHandler.createHtmlCardinality(
-                        node.data.minCount,
-                        node.data.maxCount
-                      ) +
-                      "</p>"
-                    );
-                  }
-                },
-              },
-              {
-                width: "50%",
-                header: "Description",
-                value: function (node) {
-                  return (
-                    '<p style="width: 100%; overflow: hidden; margin: 0; text-overflow: ellipsis;">' +
-                    node.data.dsDescription.replaceAll("</br>", " ") +
-                    "</p>"
-                  );
-                },
-              },
-            ],
-          },
-        })
-        .bind(
-          "ready.jstree after_open.jstree after_close.jstree refresh.jstree",
-          self.adaptIframe.bind(self)
-        );
-      self.addIframeClickEvent();
-    });
-  }
-
-  adaptIframe() {
-    const scrollY = window.scrollY;
-    const scrollX = window.scrollX;
-    this.iFrame.height = "0px";
-    this.iFrame.height = this.iFrameCW.document.body.scrollHeight;
-    window.scrollTo(scrollX, scrollY);
-  }
-
-  addIframeClickEvent() {
-    this.iFrameCW.$(".btn-vis-shadow").click((event) => {
-      const $button = this.iFrameCW.$(event.currentTarget);
-      $button.removeClass("btn-vis-shadow");
-      let $otherButton, showOptional;
-      if ($button.attr("id") === "btn-opt") {
-        $otherButton = this.iFrameCW.$("#btn-man");
-        showOptional = true;
-      } else {
-        $otherButton = this.iFrameCW.$("#btn-opt");
-        showOptional = false;
-      }
-      $otherButton.addClass("btn-vis-shadow");
-      $button.off("click");
-      this.addIframeClickEvent();
-
-      const dsClass = this.dsHandler.generateDsClass(
-        this.browser.dsRootNode,
-        false,
-        showOptional
-      );
-      const jsTree = this.iFrameCW.$("#jsTree").jstree(true);
-      jsTree.settings.core.data = dsClass;
-      jsTree.refresh();
-    });
-  }
-}
-
-module.exports = TreeRenderer;
-
-},{}],100:[function(require,module,exports){
+},{"./templates/NavigationBar.js":105}],96:[function(require,module,exports){
 class Util {
   constructor(browser) {
     this.browser = browser;
@@ -20005,62 +19532,62 @@ class Util {
 
   repairLinksInHTMLCode(htmlCode) {
     let result = htmlCode;
-    // relative links of schema.org
-    result = result.replace(/<a(.*?)href="(.*?)"/g, (match, group1, group2) => {
-      if (group2.startsWith("/")) {
-        group2 = "http://schema.org" + group2;
+    // absolute links for schema.org - e.g. https://schema.org/gtin13
+    result = result.replace(/https?:\/\/schema.org\/([^,.\s]*)/g, (match) => {
+      const style = this.createExternalLinkStyle(match);
+      return `<a href="${match}" style="${style}" target="_blank">${match}</a>`;
+    });
+    // html links (including relative links of schema.org) - e.g. <a class="xyz" href="/Text"> ...
+    result = result.replace(
+      /<a(.*?)href="(.*?)"/g,
+      (match, otherLinkAttributes, url) => {
+        if (url.startsWith("/")) {
+          url = "http://schema.org" + url;
+        }
+        const style = this.createExternalLinkStyle(url);
+        return `<a ${otherLinkAttributes} href="${url}" style="${style}" target="_blank"`;
       }
-      const style = this.createExternalLinkStyle(group2);
-      return (
-        "<a" +
-        group1 +
-        'href="' +
-        group2 +
-        '" style="' +
-        style +
-        '" target="_blank"'
-      );
+    );
+    // markdown for relative links of schema.org without label - e.g. [[ImageObject]]
+    result = result.replace(/\[\[(.*?)]]/g, (match, term) => {
+      const url = "http://schema.org/" + term;
+      const style = this.createExternalLinkStyle(url);
+      return `<a href="${url}" style="${style}" target="_blank">${term}</a>`;
     });
-    // markdown for relative links of schema.org
-    result = result.replace(/\[\[(.*?)]]/g, (match, group1) => {
-      const URL = "http://schema.org/" + group1;
-      const style = this.createExternalLinkStyle(URL);
-      return (
-        '<a href="' +
-        URL +
-        '" style="' +
-        style +
-        '" target="_blank">' +
-        group1 +
-        "</a>"
-      );
-    });
-    // markdown for outgoing link
-    result = result.replace(/\[(.*?)]\((.*?)\)/g, (match, group1, group2) => {
-      const style = this.createExternalLinkStyle(group2);
-      return (
-        '<a href="' +
-        group2 +
-        '" style="' +
-        style +
-        '" target="_blank">' +
-        group1 +
-        "</a>"
-      );
+    // markdown for links (including relative schema.org) with label - e.g. [background notes](/docs/datamodel.html#identifierBg) or [WGS 84](https://en.wikipedia.org/wiki/World_Geodetic_System)
+    result = result.replace(/\[(.*?)]\((.*?)\)/g, (match, label, url) => {
+      if (url.startsWith("/")) {
+        url = "http://schema.org/" + url;
+      }
+      const style = this.createExternalLinkStyle(url);
+      return `<a href="${url}" style="${style}" target="_blank">${label}</a>`;
     });
     // new line
     result = result.replace(/\\n/g, () => {
       return "</br>";
     });
-    // bold
-    result = result.replace(/__(.*?)__/g, (match, group1) => {
-      return "<b>" + group1 + "</b>";
+    // markdown for bold
+    result = result.replace(/__(.*?)__/g, (match, text) => {
+      return `<b>${text}</b>`;
     });
-    // code
-    result = result.replace(/```(.*?)```/g, (match, group1) => {
-      return "<code>" + group1 + "</code>";
+    // markdown for code
+    result = result.replace(/```(.*?)```/g, (match, code) => {
+      return `<code>${code}</code>`;
     });
     return result;
+  }
+
+  // returns following attributes for internal links: href, onclick, data-state-changes
+  // internal links MUST have the class a-js-link
+  createInternalLinkAttributes(navigationChanges) {
+    const hrefLink = this.browser.locationControl
+      ? this.createInternalHref(navigationChanges)
+      : "javascript:void(0)";
+    const htmlOnClick = this.browser.locationControl
+      ? 'onclick="return false;"'
+      : "";
+    const htmlState = encodeURIComponent(JSON.stringify(navigationChanges));
+    return `href="${hrefLink}" ${htmlOnClick} data-state-changes="${htmlState}"`;
   }
 
   createInternalLink(navigationChanges, text) {
@@ -20116,32 +19643,16 @@ class Util {
     return htmlEscaped ? this.escHtml(url) : url;
   }
 
+  // creates an object with the navigation "coordinates" constructed from the actual navigation position and a given object containing navigation changes
   createNavigationState(navigationChanges) {
+    const parameters = ["listId", "dsId", "path", "viewMode", "format"];
     let newState = {};
-    if (navigationChanges.listId !== undefined) {
-      newState.listId = navigationChanges.listId;
-    } else {
-      newState.listId = this.browser.listId;
-    }
-    if (navigationChanges.dsId !== undefined) {
-      newState.dsId = navigationChanges.dsId;
-    } else {
-      newState.dsId = this.browser.dsId;
-    }
-    if (navigationChanges.path !== undefined) {
-      newState.path = navigationChanges.path;
-    } else {
-      newState.path = this.browser.path;
-    }
-    if (navigationChanges.viewMode !== undefined) {
-      newState.viewMode = navigationChanges.viewMode;
-    } else {
-      newState.viewMode = this.browser.viewMode;
-    }
-    if (navigationChanges.format !== undefined) {
-      newState.format = navigationChanges.format;
-    } else {
-      newState.format = this.browser.format;
+    for (const p of parameters) {
+      if (navigationChanges[p] !== undefined) {
+        newState[p] = navigationChanges[p];
+      } else {
+        newState[p] = this.browser[p];
+      }
     }
     return newState;
   }
@@ -20239,141 +19750,11 @@ class Util {
   }
 
   createHtmlLoading() {
-    return `<div class="text-center" style="margin-top: 100px;"><div class="spinner-border text-danger" style="width: 4rem; height: 4rem;" role="status">
-              <span class="visually-hidden">Loading...</span>
-            </div></div>`;
-  }
-
-  /**
-   * Create a HTML table row with RDFa (https://en.wikipedia.org/wiki/RDFa) attributes.
-   *
-   * @param {string} rdfaTypeOf - The RDFa type of the table row.
-   * @param {string} rdfaResource - The RDFa resource.
-   * @param {string} mainColRdfaProp - The RDFa property of the main column.
-   * @param {string} mainColLink - The link of the main column.
-   * @param {string} sideCols - The HTML of the side columns.
-   * @param {string|null} mainColClass - The CSS class of the main column.
-   * @returns {string} The resulting HTML.
-   */
-  createHtmlTableRow(
-    rdfaTypeOf,
-    rdfaResource,
-    mainColRdfaProp,
-    mainColLink,
-    sideCols,
-    mainColClass = null
-  ) {
-    const trContent =
-      this.createMainCol(mainColRdfaProp, mainColLink, mainColClass) + sideCols;
-    return `<tr typeof="${rdfaTypeOf}" resource="${rdfaResource}">
-            ${trContent}
-            </tr>`;
-  }
-
-  /**
-   * Create a HTML main column for a table row with RDFa (https://en.wikipedia.org/wiki/RDFa) attributes.
-   *
-   * @param {string} rdfaProp - The RDFa property of the column.
-   * @param {string} link - The link of the column.
-   * @param {string|null} className -  The CSS class of the column.
-   * @returns {string} The resulting HTML.
-   */
-  createMainCol(rdfaProp, link, className = null) {
-    return (
-      "" +
-      "<th" +
-      (className ? ' class="' + className + '"' : "") +
-      ' scope="row">' +
-      this.createCodeLink(link, { property: rdfaProp }) +
-      "</th>"
-    );
-  }
-
-  /**
-   * Create a HTML code element with a link inside it.
-   *
-   * @param {string} link - The link.
-   * @param {object|null} codeAttr - The HTML attributes of the code element.
-   * @returns {string} The resulting HTML.
-   */
-  createCodeLink(link, codeAttr = null) {
-    return (
-      "" + "<code" + this.createHtmlAttr(codeAttr) + ">" + link + "</code>"
-    );
-  }
-
-  /**
-   * Create a HTML table with class 'definition-table' and 'table'.
-   *
-   * @param {string|string[]} ths - The table header cell/s. Must include <th> tags.
-   * @param {string|string[]} trs - The table body row/s. Can already include <tr> tags to be more flexible.
-   * @param {object|null} tableAttr - The HTML attributes of the table.
-   * @param {object|null} tbodyAttr - The HTML attributes of the table body.
-   * @returns {string} The resulting HTML.
-   */
-  createHtmlDefinitionTable(ths, trs, tableAttr = null, tbodyAttr = null) {
-    if (!Array.isArray(ths)) {
-      ths = [ths];
-    }
-    if (!Array.isArray(trs)) {
-      trs = [trs];
-    }
-    const htmlTableAttr = this.createHtmlAttr(tableAttr);
-    const htmlTbodyAttr = this.createHtmlAttr(tbodyAttr);
-    const htmlTheadContent = ths
-      .map((th) => {
-        return "<th>" + th + "</th>";
-      })
-      .join("");
-    const htmlTbodyContent = trs[0].startsWith("<tr")
-      ? trs.join("")
-      : trs
-          .map((tr) => {
-            return "<tr>" + tr + "</tr>";
-          })
-          .join("");
-    return `<table class="definition-table table" ${htmlTableAttr}>
-            <thead><tr>${htmlTheadContent}</tr></thead>
-            <tbody ${htmlTbodyAttr}>
-            ${htmlTbodyContent}
-            </tbody></table>`;
-  }
-
-  /**
-   * Create a HTML div with the main content for the vocab browser element.
-   *
-   * @param {string} rdfaTypeOf - The RDFa type of the main content.
-   * @param {string} mainContent - The HTML of the main content.
-   * @returns {string} The resulting HTML.
-   */
-  createHtmlMainContent(rdfaTypeOf, mainContent) {
-    return `
-            <div>
-                <div id="mainContent" vocab="http://schema.org/" typeof="${rdfaTypeOf}" resource="${window.location}">
-                    ${mainContent}
-                </div>
+    return `<div class="d-flex align-items-center justify-content-center" style="height: 100%;">
+              <div class="spinner-border text-primary" style="width: 4rem; height: 4rem;" role="status">
+                <span class="visually-hidden">Loading...</span>
+              </div>
             </div>`;
-  }
-
-  createHtmlExternalLinkLegend() {
-    const commonExtLinkStyle = "margin-right: 3px; ";
-    const extLinkStyleBlue =
-      commonExtLinkStyle + this.createExternalLinkStyle("");
-    const extLinkStyleRed =
-      commonExtLinkStyle +
-      this.createExternalLinkStyle("http://schema.org") +
-      " margin-left: 6px;";
-
-    return (
-      '<p style="font-size: 12px; margin-top: 0">' +
-      '(<span style="' +
-      extLinkStyleBlue +
-      '"></span>External link' +
-      '<span style="' +
-      extLinkStyleRed +
-      '"></span>External link to schema.org )' +
-      "</p>"
-    );
   }
 
   createTermLink(term) {
@@ -20408,18 +19789,6 @@ class Util {
     }
   }
 
-  fade(element) {
-    let op = 0.05; // initial opacity
-    const timer = setInterval(() => {
-      if (op >= 1) {
-        clearInterval(timer);
-      }
-      element.style.opacity = op;
-      element.style.filter = "alpha(opacity=" + op * 100 + ")";
-      op += op * 0.05;
-    }, 10);
-  }
-
   getSdoAdapterFromCache(vocabUrls) {
     for (const sdoAdapterCacheEntry of this.browser.sdoCache) {
       let match = true;
@@ -20442,9 +19811,12 @@ class Util {
     return null;
   }
 
-  // Creates a hard copy of a given JSON. undefined wont be copied
-  hardCopyJson(jsonInput) {
-    return JSON.parse(JSON.stringify(jsonInput));
+  // creates a clone of the given JSON input (without reference to the original input)
+  cloneJson(input) {
+    if (input === undefined) {
+      return undefined;
+    }
+    return JSON.parse(JSON.stringify(input));
   }
 
   getFileHost() {
@@ -20510,115 +19882,39 @@ class Util {
 
 module.exports = Util;
 
-},{}],101:[function(require,module,exports){
-const navBarTemplate = require("../templates/NavigationBar.js");
-
-class NavigationBarRenderer {
-  constructor(browser) {
-    this.b = browser;
-    this.util = browser.util;
-  }
-
-  // returns the html frame for this element, which is required to be rendered in a later point of the process
-  frame() {
-    return `<div id="navbar-container"></div>`;
-  }
-
-  render() {
-    const container = this.b.dsbContext.getElementById("navbar-container");
-
-    // Edit button
-    let editDsClass, editDsHref;
-    if (this.b.editFunction) {
-      editDsClass = "";
-      editDsHref = "javascript:" + this.b.editFunction;
-    } else {
-      editDsClass = "d-none";
-      editDsHref = "";
-    }
-    // List button
-    let listName, listBtnClass, listBtnHref;
-    if (this.b.listId) {
-      listBtnClass = "";
-      listBtnHref = "javascript:" + this.b.editFunction;
-      if (this.b.list) {
-        listName = this.b.list["schema:name"] || "List";
-      }
-    } else {
-      listBtnClass = "d-none";
-      listBtnHref = "";
-    }
-    let navBarHtml = navBarTemplate;
-    navBarHtml = navBarHtml.replace(/{{editDsClass}}/g, editDsClass);
-    navBarHtml = navBarHtml.replace(/{{editDsHref}}/g, editDsHref);
-    navBarHtml = navBarHtml.replace(/{{listBtnClass}}/g, listBtnClass);
-    navBarHtml = navBarHtml.replace(/{{listBtnHref}}/g, listBtnHref);
-    navBarHtml = navBarHtml.replace(/{{listName}}/g, listName);
-    container.innerHTML = navBarHtml;
-  }
-}
-
-module.exports = NavigationBarRenderer;
-
-},{"../templates/NavigationBar.js":107}],102:[function(require,module,exports){
+},{}],97:[function(require,module,exports){
 const DSBrowserStyles = `/* Common */
-.optional-property { color: #ffa517; }
-.mandatory-property { color: #00ce0c; }
-
-table.definition-table { border: 1px solid #98A0A6; width: 100%;}
-
-.ds-selector {
-    padding: 0 !important;
-}
-.ds-selector-tabs .selectors {
-    border-bottom: 1px solid #98A0A6 !important;
-}
-.ds-selector-tabs .selectors a:first-child { margin-left: 0px; }
-
-.ds-selector-tabs .selectors a.selected {
-    border: 1px solid #98A0A6 !important;
+.optional-property {
+    color: #ffa517;
 }
 
-#btn-row { padding: 12px 0px 12px 5px; }
-.btn-vis { padding: 5px; }
-.btn-vis-shadow {
-    cursor: pointer;
-    webkit-box-shadow: 0 4px 5px 0 rgba(0, 0, 0, 0.14), 0 1px 10px 0 rgba(0, 0, 0, 0.12), 0 2px 4px -1px rgba(0, 0, 0, 0.2);
-    box-shadow: 0 4px 5px 0 rgba(0, 0, 0, 0.14), 0 1px 10px 0 rgba(0, 0, 0, 0.12), 0 2px 4px -1px rgba(0, 0, 0, 0.2);
-}
-
-/* Tree view */
-#div-iframe { padding-right: 6px; }
-#table-view, #iframe-jsTree {
-     border-left: 1px solid #98A0A6;
-     border-right: 1px solid  #98A0A6;
-     border-bottom: 1px solid  #98A0A6;
-}
-#iframe-jsTree { padding: 2px; }
-
-.jstree-grid-wrapper {
-    display: inline-table !important;
+.mandatory-property {
+    color: #00ce0c;
 }
 
 /* New and used */
 
-.navbar-nav .active {
-    border-bottom: 2px solid rgba(0, 0, 0, 0.55);
-}
-
 #ds-browser-main-container {
     background-color: #f5f5f5;
+    height: 100%;
+}
+
+#ds-browser-main-container > div.withNav {
+    height: calc(100% - 60px);
+    margin-top: 60px;
+    overflow-y: scroll;
+}
+
+#ds-browser-main-container > div.noNav {
+    height: 100%;
+    overflow-y: scroll;
 }`;
 module.exports = DSBrowserStyles;
 
-},{}],103:[function(require,module,exports){
+},{}],98:[function(require,module,exports){
 const documentStyles = require("./../styles/DSBrowserStyles.js");
 const DSBrowserIFrameContent = ` 
 <head>
-    <script src="https://code.jquery.com/jquery-3.6.0.min.js" crossorigin="anonymous"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jstree/3.3.10/jstree.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jstreegrid/3.10.2/jstreegrid.min.js"></script>
-     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/jstree/3.3.10/themes/default/style.min.css" />
     <!-- Font Awesome -->
     <link
       href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.1/css/all.min.css"
@@ -20649,93 +19945,125 @@ const DSBrowserIFrameContent = `
 
 module.exports = DSBrowserIFrameContent;
 
-},{"./../styles/DSBrowserStyles.js":102}],104:[function(require,module,exports){
-const DSTitleFrame = `
+},{"./../styles/DSBrowserStyles.js":97}],99:[function(require,module,exports){
+const DsTitle = `
   <div class="row">
     <div class="col-12 mt-3 text-dark">
-      <h2 id="title-ds-name" property="schema:name"></h2>
+      <h2 class="mb-0">
+        <span>{{dsTitleName}}</span>
+        <span><a id="ds-title-btn-edit" class="btn btn-floating btn-sm btn-primary ms-1 mb-1" href="#" role="button"><i class="fas fa-pen"></i></a></span>
+      </h2>
     </div>
     <div class="col-12">
-      <a class="ms-1" href="#">See details</a>
+      <a id="ds-title-link-details" class="ms-1"
+       data-mdb-toggle="collapse" href="#ds-title-details-container" role="button" aria-expanded="false" aria-controls="ds-title-details-container">details <i class="fas fa-caret-down"></i></a>
+      <!-- Collapsed content -->
+      <div class="collapse mt-1" id="ds-title-details-container">
+        <div class="card">
+          <div class="card-body p-2 ps-3">
+            <table class="table table-sm">
+              <tbody>
+                <tr>
+                  <td colspan="2">{{dsDescription}}</td>
+                </tr>
+                <tr>
+                  <th style="width: 190px;">ID</th>
+                  <td><a href="{{dsId}}" target="_blank">{{dsId}}</a></td>
+                </tr>
+                  <tr class="{{showSuperDs}}">
+                  <th>Super-DS</th>
+                <td><a href="{{dsSuperDs}}" target="_blank">{{dsSuperDs}}</a></td>
+                </tr>
+                <tr>
+                  <th>Target Class(es)</th>
+                  <td class="ps-2"><ul class="m-0">{{dsTargetClasses}}</ul></td>
+                </tr>
+                </tr>
+                <tr>
+                  <th>Schema.org version</th>
+                  <td>{{dsSdoVersion}}</td>
+                </tr>
+                <tr class="{{showExternalVocabularies}}">
+                  <th>External Vocabularies</th>
+                  <td class="ps-2"><ul class="m-0">{{dsExternalVocabularies}}</ul></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
 `;
+module.exports = DsTitle;
 
-module.exports = DSTitleFrame;
+},{}],100:[function(require,module,exports){
+const ListTableDsRow = `
+  <tr>
+    <th scope="row">{{ds}}</th>
+    <td>{{details}}</td>
+  </tr>
+`;
+
+module.exports = ListTableDsRow;
+
+},{}],101:[function(require,module,exports){
+const NativeTableClassHeader = `
+  <thead>
+    <tr class="bg-primary text-white align-middle">
+      <th scope="col">Property</th>
+      <th scope="col" class="text-center" style="width: 115px;">Cardinality</th>
+      <th scope="col" class="text-center">Expected Type</th>
+      <th scope="col">Description</th>
+    </tr>
+  </thead>
+`;
+
+module.exports = NativeTableClassHeader;
+
+},{}],102:[function(require,module,exports){
+const NativeTableClassRow = `
+  <tr>
+    <th scope="row">{{property}}</th>
+    <td class="text-center">{{cardinality}}</td>
+    <td class="text-center">{{expectedType}}</td>
+    <td>{{details}}</td>
+  </tr>
+`;
+
+module.exports = NativeTableClassRow;
+
+},{}],103:[function(require,module,exports){
+const NativeTableEnumerationHeader = `
+  <thead>
+    <tr class="bg-primary text-white align-middle">
+      <th scope="col">Enumeration Member</th>
+      <th scope="col">Description</th>
+    </tr>
+  </thead>
+`;
+
+module.exports = NativeTableEnumerationHeader;
+
+},{}],104:[function(require,module,exports){
+const NativeTableEnumerationRow = `
+  <tr>
+    <th scope="row">{{enumerationMember}}</th>
+    <td>{{details}}</td>
+  </tr>
+`;
+
+module.exports = NativeTableEnumerationRow;
 
 },{}],105:[function(require,module,exports){
-const DSTitleFrame = require("./DSTitleFrame.js");
-const NativeTable = require("./NativeTable.js");
-const NativeFrame = ` 
-<div class="container-xl">
-    ${DSTitleFrame}
-    <div class="card my-3 rounded-3 shadow-3">
-        <div class="card-body">
-            <div class="card-text">
-                <nav aria-label="breadcrumb">
-                 
-                    <ol class="breadcrumb">
-                    <li class="breadcrumb-item"><i class="fas fa-code-branch"></i></li>
-                        <li class="breadcrumb-item"><a href="#">PropertyValue</a></li>
-                        <li class="breadcrumb-item"><a href="#">identifier</a></li>
-                        <li class="breadcrumb-item active" aria-current="page">PropertyValue</li>
-                    </ol>
-                </nav>
-            </div>
-            ${NativeTable}
-        </div>
-    </div>
-</div>
-`;
-
-module.exports = NativeFrame;
-
-},{"./DSTitleFrame.js":104,"./NativeTable.js":106}],106:[function(require,module,exports){
-const NativeTable = `
-  <div class="row">
-    <div class="col-12">
-      <table id="native-table" class="table caption-top table-hover">
-        <caption>
-          link caption
-        </caption>
-        <thead>
-          <tr class="table-dark">
-            <th scope="col">Property</th>
-            <th scope="col" class="text-center" style="width: 115px;">Cardinality</th>
-            <th scope="col" class="text-center">Expected Type</th>
-            <th scope="col">Details</th>
-          </tr>
-        </thead>
-        <tbody>
-         <tr>
-            <th scope="row">name</th>
-            <td class="text-center">1</td>
-            <td class="text-center">Text</td>
-            <td >The name of the item.</td>
-          </tr>
-          <tr>
-            <th scope="row">description</th>
-            <td class="text-center">0+</td>
-            <td class="text-center">Text</td>
-            <td >The description of the item.</td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
-  </div>
-`;
-
-module.exports = NativeTable;
-
-},{}],107:[function(require,module,exports){
 const NavigationBar = `
 <!-- Navbar-->
-<nav class="navbar navbar-expand-lg navbar-light bg-light">
+<nav class="navbar navbar-expand-lg navbar-light bg-light fixed-top">
   <div class="container-xl justify-content-between">
     <!-- Left elements -->
     <ul class="navbar-nav flex-row d-flex" style="min-width: 100px;">
         <li class="nav-item me-3 me-lg-1">
-           <a id="nav-list-button" class="nav-link {{listBtnClass}}" href="{{listBtnHref}}">
+           <a id="nav-list-button" class="nav-link a-js-link {{listBtnClass}}" {{listBtnAttributes}}">
             <span><i class="far fa-list-alt fa-sm"></i></span>
             <span id="nav-list-button-text">{{listName}}</span>
           </a>
@@ -20746,17 +20074,17 @@ const NavigationBar = `
     <!-- Center elements -->
     <ul class="navbar-nav flex-row d-flex">
       <li class="nav-item me-3 me-lg-1">
-        <a class="nav-link active" href="#">
+        <a class="nav-link a-js-link {{nativeViewBtnClass}}" {{nativeViewBtnAttributes}}>
          Native view
         </a>
       </li>
       <li class="nav-item me-3 me-lg-1">
-        <a class="nav-link" href="#">
+        <a class="nav-link a-js-link {{treeViewBtnClass}}" {{treeViewBtnAttributes}}>
           Tree view
         </a>
       </li>
       <li class="nav-item me-3 me-lg-1">
-        <a class="nav-link" href="#">
+        <a class="nav-link a-js-link" href="#">
           Hierarchy view
         </a>
       </li>
@@ -20766,13 +20094,7 @@ const NavigationBar = `
     <!-- Right elements -->
     <ul class="navbar-nav flex-row" style="min-width: 100px;">
       <li class="nav-item me-3 me-lg-1">
-        <a class="nav-link {{editDsClass}}" href="{{editDsHref}}">
-          <span><i class="fas fa-edit fa-sm"></i></span>
-          <span>Edit DS</span>
-        </a>
-      </li>
-      <li class="nav-item me-3 me-lg-1">
-        <a class="nav-link d-sm-flex align-items-sm-center" href="#">
+        <a class="nav-link align-items-sm-center a-js-link {{shaclViewBtnClass}}" {{shaclViewBtnAttributes}}">
          <span><i class="far fa-file-code fa-sm me-1"></i></span>
            <span>SHACL</span>
         </a>
@@ -20786,5 +20108,589 @@ const NavigationBar = `
 
 module.exports = NavigationBar;
 
-},{}]},{},[93])(93)
+},{}],106:[function(require,module,exports){
+const ListTableDsRow = require("../templates/ListTableDsRow.js");
+
+class ListView {
+  constructor(dsBrowser) {
+    this.b = dsBrowser;
+  }
+
+  render() {
+    // creates the html code for this view
+    let listViewHtml = this.getFrame();
+
+    // set html for navigationBar
+    listViewHtml = listViewHtml.replace(
+      /{{navigationBar}}/g,
+      this.b.sharedFunctions.getNavigationBarHTML()
+    );
+
+    // set list title
+    listViewHtml = listViewHtml.replace(
+      /{{listTitleName}}/g,
+      this.b.list["schema:name"] || "List"
+    );
+
+    // set list description
+    listViewHtml = listViewHtml.replace(
+      /{{listDescription}}/g,
+      this.b.list["schema:description"] || "No List description available."
+    );
+
+    // set ds table body
+    const tableBodyHtml =
+      "<tbody>" +
+      this.b.list["schema:hasPart"]
+        .map((ds) => {
+          return this.getDsRowHTML(ds);
+        })
+        .join("") +
+      "</tbody>";
+    listViewHtml = listViewHtml.replace(/{{tableBody}}/g, tableBodyHtml);
+
+    // append the view to the DSB main container
+    this.b.dsbContainer.innerHTML = listViewHtml;
+  }
+
+  // returns the base html code for this view
+  getFrame() {
+    return `<div id="list-view" class="noNav">
+      <!--Page content-->
+      <div class="container-xl">
+        <!--Title-->
+        <div class="row">
+          <div class="col-12 mt-4 text-dark">
+            <h2 class="mb-0">
+              <span>{{listTitleName}}</span>
+            </h2>
+          </div>
+          <div class="col-12 mb-3 mt-2">
+             {{listDescription}}
+          </div>
+        </div>
+        <!--Table for DS node Content  -->
+        <table class="table bg-light rounded shadow-2">
+           <thead>
+              <tr class="bg-primary text-white align-middle">
+                <th scope="col">Domain Specification</th>
+                <th scope="col">Description</th>
+              </tr>
+           </thead>    
+           {{tableBody}}
+        </table>
+      </div>
+    </div>
+`;
+  }
+
+  // returns the html for a ds row in the list table
+  getDsRowHTML(ds) {
+    // name as link
+    const dsName = ds["schema:name"] || "DS with no name";
+    const linkAttributes = this.b.util.createInternalLinkAttributes({
+      dsId: ds["@id"].substring(ds["@id"].lastIndexOf("/") + 1),
+    });
+    const linkHtml = `<a class="a-js-link" ${linkAttributes} >${dsName}</a>`;
+    // description
+    const details = this.b.util.repairLinksInHTMLCode(ds["schema:description"]);
+
+    return ListTableDsRow.replace(/{{ds}}/g, linkHtml).replace(
+      /{{details}}/g,
+      details
+    );
+  }
+}
+
+module.exports = ListView;
+
+},{"../templates/ListTableDsRow.js":100}],107:[function(require,module,exports){
+const DSTitleFrame = require("../templates/DsTitle.js");
+const NativeTableClassHeader = require("../templates/NativeTableClassHeader.js");
+const NativeTableClassRow = require("../templates/NativeTableClassRow.js");
+const NativeTableEnumerationHeader = require("../templates/NativeTableEnumerationHeader.js");
+const NativeTableEnumerationRow = require("../templates/NativeTableEnumerationRow.js");
+
+class NativeView {
+  constructor(dsBrowser) {
+    this.b = dsBrowser;
+  }
+
+  // renders (creates and appends) this view
+  render() {
+    // creates the html code for this view
+    let nativeHtml = this.getFrame();
+
+    // set html for navigationBar
+    nativeHtml = nativeHtml.replace(
+      /{{navigationBar}}/g,
+      this.b.sharedFunctions.getNavigationBarHTML()
+    );
+
+    // set ds title
+    nativeHtml = this.b.sharedFunctions.setDsTitleHtml(nativeHtml);
+
+    // set ds path breadcrumbs
+    nativeHtml = nativeHtml.replace(
+      /{{dsPathBreadcrumbs}}/g,
+      this.getDsPathBreadcrumbsHTML()
+    );
+
+    // set table based on node type
+    if (this.b.dsNode.type === "Class") {
+      // todo what if standard class ? no sh:property
+      nativeHtml = nativeHtml.replace(/{{tableHead}}/g, NativeTableClassHeader);
+      const tableBodyHtml =
+        "<tbody>" +
+        this.b.dsNode.node["sh:property"]
+          .map((p) => {
+            return this.getPropertyRowHTML(p);
+          })
+          .join("") +
+        "</tbody>";
+      nativeHtml = nativeHtml.replace(/{{tableBody}}/g, tableBodyHtml);
+    } else {
+      // todo what if standard enumeration ? no sh:in
+      nativeHtml = nativeHtml.replace(
+        /{{tableHead}}/g,
+        NativeTableEnumerationHeader
+      );
+      const tableBodyHtml =
+        "<tbody>" +
+        this.b.dsNode.node["sh:in"]
+          .map((em) => {
+            return this.getEnumerationMemberRowHTML(em);
+          })
+          .join("") +
+        "</tbody>";
+      nativeHtml = nativeHtml.replace(/{{tableBody}}/g, tableBodyHtml);
+    }
+    // append the view to the DSB main container
+    this.b.dsbContainer.innerHTML = nativeHtml;
+  }
+
+  // returns the base html code for this view
+  getFrame() {
+    return `<div id="native-view" class="withNav">
+      <!--Navigation Bar-->
+      {{navigationBar}}
+      <!--Page content-->
+      <div class="container-xl">
+        <!--Title-->
+        ${DSTitleFrame}
+        <!--Breadcrumbs for DS Path-->
+        <div class="card my-3 shadow-2">
+          <div class="card-body d-flex p-2 align-items-center">
+            <div title="Current path within the Domain Specification" class="align-items-center px-2">
+              <span><i class="fas fa-code-branch"></i></span>
+            </div>
+            <div id="native-path" class="align-items-center">{{dsPathBreadcrumbs}}</div>
+          </div>
+        </div>
+        <!--Table for DS node Content  -->
+        <table id="native-table" class="table bg-light rounded shadow-2">
+          {{tableHead}}
+          {{tableBody}}
+        </table>
+      </div>
+    </div>`;
+  }
+
+  // returns the html for the ds path breadcrumbs
+  getDsPathBreadcrumbsHTML() {
+    // create first step of the breadcrumbs (always visible), which is the class of the root node
+    let htmlBreadcrumbs = this.b.util.createInternalLink(
+      { path: null },
+      this.b.dsHandler.rangesToString(this.b.dsRootNode["sh:targetClass"])
+    );
+    // add additional steps for the breadcrumbs if needed (given by the actual path within the ds)
+    if (this.b.path) {
+      htmlBreadcrumbs =
+        htmlBreadcrumbs +
+        " > " +
+        this.b.path
+          .split("-")
+          .map((term, index, pathSplit) => {
+            if (index % 2 === 0) {
+              // property term
+              return term;
+            } else {
+              // class/enumeration term
+              const newPath = pathSplit.slice(0, index + 1).join("-");
+              return this.b.util.createInternalLink({ path: newPath }, term);
+            }
+          })
+          .join(" > ");
+    }
+    return ` <span class="breadcrumbs">${htmlBreadcrumbs}</span>`;
+  }
+
+  // returns the html for a property table row
+  getPropertyRowHTML(p) {
+    let isFromSuperDS = this.isPropertyFromSuperDs(p);
+    let iconsHtml = "";
+    if (isFromSuperDS) {
+      iconsHtml = ` <i class="fas fa-angle-double-down" title="This property originates from the Super-DS"></i>`;
+    }
+    const propertyLink = this.b.util.createTermLink(p["sh:path"]) + iconsHtml;
+    const expectedType = this.createHtmlExpectedTypes(p);
+    const details = this.createHtmlPropertyDescription(p);
+    const cardinality = this.b.dsHandler.createHtmlCardinality(
+      p["sh:minCount"],
+      p["sh:maxCount"]
+    );
+    return NativeTableClassRow.replace(/{{property}}/g, propertyLink)
+      .replace(/{{cardinality}}/g, cardinality)
+      .replace(/{{expectedType}}/g, expectedType)
+      .replace(/{{details}}/g, details);
+  }
+
+  isPropertyFromSuperDs(p) {
+    // properties from a super ds are only considered for the root node
+    // if there is no unpopulated version of the DS it means the DS was not DS-V7 in the first place (no superDS feature)
+    if (this.b.path !== null || !this.b.dsUnpopulated) {
+      return false;
+    }
+    const rootNode = this.b.dsUtil.getDsRootNode(this.b.dsUnpopulated);
+    const unpopulatedPropertyNode = rootNode["sh:property"].find(
+      (propNode) => propNode["sh:path"] === p["sh:path"]
+    );
+    return unpopulatedPropertyNode !== undefined;
+  }
+
+  // returns the html for a enumeration member table row
+  getEnumerationMemberRowHTML(em) {
+    const emObj = this.b.sdoAdapter.getEnumerationMember(em["@id"]);
+    const enumerationMemberLink = this.b.util.createTermLink(em["@id"]);
+    const details = this.b.util.repairLinksInHTMLCode(emObj.getDescription());
+    return NativeTableEnumerationRow.replace(
+      /{{enumerationMember}}/g,
+      enumerationMemberLink
+    ).replace(/{{details}}/g, details);
+  }
+
+  createHtmlExpectedTypes(propertyNode) {
+    const property = this.b.sdoAdapter.getProperty(propertyNode["sh:path"]);
+    const propertyName = this.b.util.prettyPrintIri(property.getIRI(true));
+    return propertyNode["sh:or"]
+      .map((rangeNode) => {
+        let name;
+        let classNode = this.b.util.getClassNodeIfExists(rangeNode);
+        if (rangeNode["sh:datatype"]) {
+          name = rangeNode["sh:datatype"];
+        } else if (classNode && classNode["sh:class"]) {
+          name = classNode["sh:class"];
+        }
+        const mappedDataType = this.b.dsHandler.dataTypeMapperFromSHACL(name);
+        if (mappedDataType !== null) {
+          let specialName = null;
+          if (name === "rdf:langString") {
+            specialName = "Localized Text";
+          } else if (name === "rdf:HTML") {
+            specialName = "HTML Text";
+          }
+          return this.b.util.createLink(mappedDataType, specialName);
+        } else {
+          name = this.b.dsHandler.rangesToString(name);
+          if (
+            classNode &&
+            Array.isArray(classNode["sh:property"]) &&
+            classNode["sh:property"].length !== 0
+          ) {
+            // Case: Range is a Restricted Class
+            const newPath = this.b.path
+              ? this.b.path + "-" + propertyName + "-" + name
+              : propertyName + "-" + name;
+            return this.b.util.createInternalLink({ path: newPath }, name);
+          } else if (
+            classNode &&
+            classNode["sh:class"] &&
+            Array.isArray(classNode["sh:in"])
+          ) {
+            // Case: Range is a Restricted Enumeration
+            const newPath = this.b.path
+              ? this.b.path + "-" + propertyName + "-" + name
+              : propertyName + "-" + name;
+            return this.b.util.createInternalLink({ path: newPath }, name);
+          } else {
+            // Case: Anything else
+            return this.b.util.createTermLink(name);
+          }
+        }
+      })
+      .join("<br>");
+  }
+
+  createHtmlPropertyDescription(propertyNode) {
+    const name = this.b.util.prettyPrintIri(propertyNode["sh:path"]);
+    let description;
+    try {
+      description = this.b.sdoAdapter.getProperty(name).getDescription();
+    } catch (e) {
+      description = "";
+    }
+    const dsDescription = propertyNode["rdfs:comment"]
+      ? this.b.util.getLanguageString(propertyNode["rdfs:comment"])
+      : "";
+
+    let descText = "";
+    if (description !== "") {
+      if (dsDescription !== "") {
+        descText += "<b>From Vocabulary:</b> ";
+      }
+      descText += description;
+    }
+    if (dsDescription !== "") {
+      if (description !== "") {
+        descText += "<br>" + "<b>From Domain Specification:</b> ";
+      }
+      descText += dsDescription;
+    }
+    return this.b.util.repairLinksInHTMLCode(descText);
+  }
+}
+
+module.exports = NativeView;
+
+},{"../templates/DsTitle.js":99,"../templates/NativeTableClassHeader.js":101,"../templates/NativeTableClassRow.js":102,"../templates/NativeTableEnumerationHeader.js":103,"../templates/NativeTableEnumerationRow.js":104}],108:[function(require,module,exports){
+const formatHighlight = require("json-format-highlight");
+
+// Renders the DS directly as JSON-LD (raw object). Some custom CSS added to increase the readability
+class SHACLView {
+  constructor(dsBrowser) {
+    this.b = dsBrowser;
+  }
+
+  // renders (creates and appends) this view
+  render() {
+    // the SHACL code for the DS is preprocessed with a library to highlight parts of the JSON syntax
+    const preContent = formatHighlight(this.b.ds, {
+      keyColor: "black",
+      numberColor: "#3A01DC",
+      stringColor: "#DF0002",
+      trueColor: "#C801A4",
+      falseColor: "#C801A4",
+      nullColor: "cornflowerblue",
+    });
+    // creates the html code for this view
+    let viewHtml = this.getFrame();
+    viewHtml = viewHtml.replace(/{{preContent}}/g, preContent);
+    // append the view to the DSB main container
+    this.b.dsbContainer.innerHTML = viewHtml;
+  }
+
+  // returns the base html code for this view
+  getFrame() {
+    return `<div id="shacl-view" class="noNav" >
+      <pre style="
+        font-size: large;
+        text-align: left;
+        width: auto;
+        background-color: whitesmoke;
+        padding: 15px 20px;
+        margin: 0;
+        overflow: visible;
+        line-height: normal;
+        display: block;
+        font-family: monospace;
+        word-wrap: break-word;
+        white-space: pre-wrap;
+        ">{{preContent}}</pre>
+    </div>`;
+  }
+}
+
+module.exports = SHACLView;
+
+},{"json-format-highlight":42}],109:[function(require,module,exports){
+const DSTitleFrame = require("../templates/DsTitle.js");
+
+class TreeView {
+  constructor(dsBrowser) {
+    this.b = dsBrowser;
+    this.dsHandler = this.b.dsHandler;
+  }
+
+  // renders (creates and appends) this view
+  render() {
+    // creates the html code for this view
+    let nativeHtml = this.getFrame();
+
+    // set html for navigationBar
+    nativeHtml = nativeHtml.replace(
+      /{{navigationBar}}/g,
+      this.b.sharedFunctions.getNavigationBarHTML()
+    );
+
+    // set ds title
+    nativeHtml = this.b.sharedFunctions.setDsTitleHtml(nativeHtml);
+
+    // append the view to the DSB main container
+    this.b.dsbContainer.innerHTML = nativeHtml;
+    // initialize the tree iframe
+    this.initIFrameForJSTree();
+  }
+
+  // returns the base html code for this view
+  getFrame() {
+    return `<div id="tree-view" class="withNav">
+      <!--Navigation Bar-->
+      {{navigationBar}}
+      <!--Page content-->
+      <div class="container-xl">
+        <!--Title-->
+        ${DSTitleFrame}
+        <!--tree iframe-->
+        <div id="div-iframe">
+          <iframe id="iframe-jsTree" frameborder="0" width="100%" scrolling="no"></iframe>
+        </div>
+      </div>
+    </div>`;
+  }
+
+  initIFrameForJSTree() {
+    this.iFrame = this.b.dsbContext.getElementById("iframe-jsTree");
+    this.iFrameCW = this.iFrame.contentWindow;
+    const doc = this.iFrameCW.document;
+    const jsTreeHtml = this.createJSTreeHTML();
+    doc.open();
+    doc.write(jsTreeHtml);
+    doc.close();
+    const dsClass = this.dsHandler.generateDsClass(
+      this.b.dsRootNode,
+      false,
+      false
+    );
+    this.mapNodeForJSTree([dsClass]);
+  }
+
+  createJSTreeHTML() {
+    const htmlTreeStyle = this.createTreeStyle();
+    // JQuery is needed for the JSTree plugin
+    return `<head>
+            <script src="https://code.jquery.com/jquery-3.6.0.min.js" crossorigin="anonymous"></script>
+            <script src="https://cdnjs.cloudflare.com/ajax/libs/jstree/3.3.10/jstree.min.js"></script>
+            <script src="https://cdnjs.cloudflare.com/ajax/libs/jstreegrid/3.10.2/jstreegrid.min.js"></script>
+            <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.1/css/bootstrap.min.css" />
+            <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/jstree/3.3.10/themes/default/style.min.css" />
+            ${htmlTreeStyle}
+            </head>
+            <body><div id="jsTree"></div></body>`;
+  }
+
+  createTreeStyle() {
+    return `<style>
+            .optional-property { color: #ffa517; }
+            .mandatory-property { color: #00ce0c; }
+            </style>`;
+  }
+
+  mapNodeForJSTree(data) {
+    const self = this;
+    this.iFrame.addEventListener("load", function () {
+      self.iFrameCW
+        .$("#jsTree")
+        .jstree({
+          plugins: ["grid"],
+          core: {
+            themes: {
+              icons: true,
+              dots: true,
+              responsive: true,
+              stripes: true,
+              rootVisible: false,
+            },
+            data: data,
+          },
+          grid: {
+            columns: [
+              {
+                width: "20%",
+                header: "Class / Property",
+              },
+              {
+                header: "Range / Type",
+                width: "20%",
+                value: function (node) {
+                  return node.data.dsRange;
+                },
+              },
+              {
+                width: "17%",
+                header: "Cardinality",
+                value: function (node) {
+                  if (node.data.dsRange) {
+                    return (
+                      '<p style="width: 100%; margin: 0; text-align: center; padding-right: 7px;">' +
+                      self.dsHandler.createHtmlCardinality(
+                        node.data.minCount,
+                        node.data.maxCount
+                      ) +
+                      "</p>"
+                    );
+                  }
+                },
+              },
+              {
+                width: "50%",
+                header: "Description",
+                value: function (node) {
+                  return (
+                    '<p style="width: 100%; overflow: hidden; margin: 0; text-overflow: ellipsis;">' +
+                    node.data.dsDescription.replaceAll("</br>", " ") +
+                    "</p>"
+                  );
+                },
+              },
+            ],
+          },
+        })
+        .bind(
+          "ready.jstree after_open.jstree after_close.jstree refresh.jstree",
+          self.adaptIframe.bind(self)
+        );
+      self.addIframeClickEvent();
+    });
+  }
+
+  adaptIframe() {
+    const scrollY = window.scrollY;
+    const scrollX = window.scrollX;
+    this.iFrame.height = "0px";
+    this.iFrame.height = this.iFrameCW.document.body.scrollHeight;
+    window.scrollTo(scrollX, scrollY); // todo is this correct?
+  }
+
+  addIframeClickEvent() {
+    // todo use tree js plugins for this optiopnal/mandatory functionality
+    this.iFrameCW.$(".btn-vis-shadow").click((event) => {
+      const $button = this.iFrameCW.$(event.currentTarget);
+      // $button.removeClass("btn-vis-shadow");
+      let $otherButton, showOptional;
+      if ($button.attr("id") === "btn-opt") {
+        $otherButton = this.iFrameCW.$("#btn-man");
+        showOptional = true;
+      } else {
+        $otherButton = this.iFrameCW.$("#btn-opt");
+        showOptional = false;
+      }
+      // $otherButton.addClass("btn-vis-shadow");
+      $button.off("click");
+      this.addIframeClickEvent();
+
+      const dsClass = this.dsHandler.generateDsClass(
+        this.b.dsRootNode,
+        false,
+        showOptional
+      );
+      const jsTree = this.iFrameCW.$("#jsTree").jstree(true);
+      jsTree.settings.core.data = dsClass;
+      jsTree.refresh();
+    });
+  }
+}
+
+module.exports = TreeView;
+
+},{"../templates/DsTitle.js":99}]},{},[93])(93)
 });

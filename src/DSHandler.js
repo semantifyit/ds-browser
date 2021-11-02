@@ -103,6 +103,8 @@ class DSHandler {
         return "https://schema.org/Text";
       case "rdf:langString":
         return "https://schema.org/Text";
+      case "rdf:HTML":
+        return "https://schema.org/Text";
       case "xsd:boolean":
         return "https://schema.org/Boolean";
       case "xsd:date":
