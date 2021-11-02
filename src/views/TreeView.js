@@ -54,7 +54,7 @@ class TreeView {
     const dsClass = this.dsHandler.generateDsClass(
       this.b.dsRootNode,
       false,
-      false
+      true
     );
     this.mapNodeForJSTree([dsClass]);
   }
@@ -160,15 +160,17 @@ class TreeView {
     // todo use tree js plugins for this optiopnal/mandatory functionality
     this.iFrameCW.$(".btn-vis-shadow").click((event) => {
       const $button = this.iFrameCW.$(event.currentTarget);
+
       // $button.removeClass("btn-vis-shadow");
       let $otherButton, showOptional;
-      if ($button.attr("id") === "btn-opt") {
-        $otherButton = this.iFrameCW.$("#btn-man");
-        showOptional = true;
-      } else {
-        $otherButton = this.iFrameCW.$("#btn-opt");
-        showOptional = false;
-      }
+      showOptional = true;
+      // if ($button.attr("id") === "btn-opt") {
+      //   $otherButton = this.iFrameCW.$("#btn-man");
+      //   showOptional = true;
+      // } else {
+      //   $otherButton = this.iFrameCW.$("#btn-opt");
+      //   showOptional = false;
+      // }
       // $otherButton.addClass("btn-vis-shadow");
       $button.off("click");
       this.addIframeClickEvent();
